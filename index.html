@@ -166,6 +166,8 @@ form.add{display:grid;grid-template-columns:1fr 70px 130px auto;gap:8px;margin:1
 /* botões sempre juntos e na mesma linha, no pé do card */
 .vfoot{display:flex;align-items:center;gap:8px;margin-top:auto;padding-top:8px}
 .vfoot a{white-space:nowrap}
+.vhide{margin-left:auto;flex:none;width:30px;height:30px;display:grid;place-items:center;background:none;color:var(--muted);font:700 15px/1 var(--f-ui);padding:0;border-radius:50%;border:1px solid var(--line)}
+.vhide:hover{color:var(--bad);background:var(--hover)}
 .bdsum{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:16px}
 .bdcard h3{display:flex;align-items:center;gap:8px;font:700 17px var(--f-ui);margin-bottom:8px}
 .bdcard.hoje h3{color:var(--accent)}
@@ -494,6 +496,7 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
           <div class="seg" id="vg-mod" role="group" aria-label="Modelo de trabalho"></div>
           <select id="vg-nivel" aria-label="Nível"><option value="">Todos os níveis</option></select>
           <input id="vg-q" type="search" placeholder="Buscar cargo ou empresa" aria-label="Buscar cargo ou empresa" autocomplete="off">
+          <label class="chk" id="vg-hidwrap" hidden><input type="checkbox" id="vg-hid"> <span id="vg-hidtxt">ver encerradas</span></label>
         </div>
       </div>
       <div id="vg-list" class="vgrid"></div>
@@ -1631,7 +1634,12 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
 
   /* Vagas de Análise de Dados e BI (vagas.json, coletado do portal Mentora Dados).
      Remoto de qualquer lugar; presencial ou híbrido só em São Paulo ou Sorocaba. */
-  var VG={all:[],mod:"",nivel:"",q:""};
+  var VG={all:[],mod:"",nivel:"",q:"",verOcultas:false};
+  /* Vagas marcadas como encerradas: guardadas neste navegador pelo código da vaga no portal,
+     então continuam escondidas quando o robô atualiza a lista. */
+  var VGHID="rac-vagas-encerradas",vgHidden=(function(){try{return JSON.parse(localStorage.getItem(VGHID)||"{}")}catch(e){return {}}})();
+  function vgSaveHidden(){try{localStorage.setItem(VGHID,JSON.stringify(vgHidden))}catch(e){}}
+  function vgToggleHidden(id){if(vgHidden[id])delete vgHidden[id];else vgHidden[id]=Date.now();vgSaveHidden();vgDraw()}
   var NIVEIS=["Estágio","Júnior","Pleno","Sênior","Especialista","Líder"];
   function vgLink(v){
     var ap=v.ap||"";
@@ -1646,10 +1654,18 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
       h("h3",{text:v.t}),
       h("div",{class:"emp"},v.e||"Empresa não informada",v.cidade?h("span",{text:" · "+v.cidade.replace(/\s*\((Presencial|Híbrido)\)\s*$/,"")}):null),
       sal,
-      h("div",{class:"vfoot"},ext(lk[0],lk[1],"ghostbtn pri"),v.or?ext(v.or,"Post original","ghostbtn"):null))}
+      h("div",{class:"vfoot"},ext(lk[0],lk[1],"ghostbtn pri"),v.or?ext(v.or,"Post original","ghostbtn"):null,vgHideBtn(v)))}
+  function vgHideBtn(v){
+    var off=!!vgHidden[v.id];
+    var b=h("button",{type:"button",class:"vhide",title:off?"Mostrar esta vaga de novo":"Esconder esta vaga (já encerrada)","aria-label":(off?"Mostrar de novo: ":"Marcar como encerrada: ")+v.t,text:off?"↺":"✕"});
+    b.onclick=function(){vgToggleHidden(v.id)};return b}
   function vgDraw(){
     var q=norm(VG.q),box=$("#vg-list");box.innerHTML="";
-    var base=VG.all.filter(function(v){return (!VG.nivel||v.nv===VG.nivel)&&(!q||norm(v.t+" "+v.e+" "+(v.cidade||"")).indexOf(q)>=0)});
+    var nHid=VG.all.filter(function(v){return vgHidden[v.id]}).length;
+    $("#vg-hidwrap").hidden=!nHid;$("#vg-hidtxt").textContent="ver encerradas ("+nHid+")";
+    if(!nHid)VG.verOcultas=false;$("#vg-hid").checked=VG.verOcultas;
+    $("#cnt-vagas").textContent=VG.all.length-nHid;
+    var base=VG.all.filter(function(v){return (VG.verOcultas?!!vgHidden[v.id]:!vgHidden[v.id])&&(!VG.nivel||v.nv===VG.nivel)&&(!q||norm(v.t+" "+v.e+" "+(v.cidade||"")).indexOf(q)>=0)});
     var seg=$("#vg-mod");seg.innerHTML="";
     [["","Todas"],["Remoto","Remoto"],["Híbrido","Híbrido"],["Presencial","Presencial"]].forEach(function(o){
       var n=base.filter(function(v){return !o[0]||v.m===o[0]}).length;
@@ -1670,6 +1686,7 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
     }).catch(function(){$("#vg-info").textContent="Não consegui carregar as vagas agora."})}
   $("#vg-nivel").addEventListener("change",function(e){VG.nivel=e.target.value;vgDraw()});
   $("#vg-q").addEventListener("input",function(e){VG.q=e.target.value;vgDraw()});
+  $("#vg-hid").addEventListener("change",function(e){VG.verOcultas=e.target.checked;vgDraw()});
   vgLoad();
 
   /* Aniversários */

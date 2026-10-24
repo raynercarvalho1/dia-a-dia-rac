@@ -147,6 +147,18 @@ a.who:hover{color:var(--accent);text-decoration:underline}
 .bdrow{display:grid;grid-template-columns:48px minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--line)}
 .dayh+.bdrow{border-top:0}
 .bdn{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bdrow{grid-template-columns:30px 48px minmax(0,1fr) auto auto}
+.star{background:none;padding:2px;border-radius:6px;color:var(--line);font-size:19px;line-height:1}
+.star:hover{color:var(--warn)}
+.star[aria-pressed="true"]{color:#F2B705}
+.bdrow.fav{background:color-mix(in srgb,#F2B705 9%,transparent)}
+.favcnt{font:600 13px var(--f-ui);color:var(--ink);margin-right:auto}
+.ghostbtn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.ghostbtn:disabled{opacity:.45;cursor:not-allowed}
+.bdtools select{flex:0 1 170px}
+.alertbar{display:flex;align-items:center;gap:10px;margin:0 0 18px;padding:12px 16px;border-radius:12px;background:var(--side);color:var(--ink);text-decoration:none;box-shadow:var(--shadow);border-left:5px solid var(--c-aniversarios);font:500 15px/1.4 var(--f-ui)}
+.alertbar b{color:var(--c-aniversarios)}
+.alertbar .cake{font-size:22px}
 @media(max-width:560px){form.add{grid-template-columns:1fr 1fr}form.add input[name=nome]{grid-column:1/-1}}
 input,select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:9px 10px;min-width:0}
 button{font:600 14px var(--f-body);background:var(--accent);color:var(--accent-ink);border:0;border-radius:4px;padding:9px 14px;cursor:pointer}
@@ -393,6 +405,7 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
     <h1 id="ptitle">Esportes</h1>
     <span class="date" id="hoje"></span>
   </div>
+  <a class="alertbar" id="bdalert" href="#aniversarios" hidden></a>
   <section id="esportes" hidden>
     <div id="sp-beisebol" hidden>
       <div class="pills" aria-label="Beisebol">
@@ -452,10 +465,19 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
         <h2>Todos os aniversários</h2>
         <div class="bdtools">
           <input id="bd-busca" type="search" placeholder="Filtrar por nome" aria-label="Filtrar aniversários por nome" autocomplete="off">
+          <select id="bd-mes" aria-label="Filtrar por mês"><option value="0">Todos os meses</option></select>
+          <label class="chk"><input type="checkbox" id="bd-fav"> só os marcados</label>
+        </div>
+        <div class="bdtools">
+          <span class="favcnt" id="bd-favcnt"></span>
+          <button type="button" class="ghostbtn" id="bd-markall">Marcar os que estão na tela</button>
+          <button type="button" class="ghostbtn pri" id="bd-ics">Baixar calendário com alertas (.ics)</button>
+          <button type="button" class="ghostbtn" id="bd-csv">Baixar marcados (.csv)</button>
           <label class="filebtn" for="bd-file">Importar do Facebook (CSV)</label>
           <input type="file" id="bd-file" accept=".csv,text/csv" hidden>
           <button type="button" class="ghostbtn" id="bd-clear">Apagar todos</button>
         </div>
+        <p class="sub">Clique na ⭐ para marcar quem importa. Os marcados aparecem num aviso no topo do site na véspera e no dia. O calendário (.ics) leva dois alertas para cada marcado: às 9h da véspera e às 9h do dia; abra o arquivo no celular para os alertas chegarem mesmo com o site fechado.</p>
         <p class="sub" id="bd-imp">A lista fica guardada só neste navegador. Para ter no celular, importe o arquivo lá também.</p>
         <form class="add" id="form" autocomplete="off">
           <input id="f-nome" name="nome" placeholder="Nome" required maxlength="60" aria-label="Nome">
@@ -1534,31 +1556,84 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
     c.appendChild(ul);
     if(list.length>8)c.appendChild(h("p",{class:"sub",text:"e mais "+(list.length-8)+" na lista abaixo."}));
     return c}
+  function withDates(){return items.map(function(x){var n=nextDate(x.dia,x.mes);return Object.assign({},x,{dias:n.days,prox:n.year})})}
+  /* Aviso no topo do site: marcados que fazem aniversário hoje ou amanhã */
+  function bdAlert(list){
+    var bar=$("#bdalert"),favs=list.filter(function(x){return x.fav&&x.dias<=1});
+    if(!favs.length){bar.hidden=true;return}
+    function names(arr){return arr.map(function(x){var a=idade(x);return x.nome+(a?" ("+a+")":"")}).join(", ")}
+    var hoje=favs.filter(function(x){return x.dias===0}),amanha=favs.filter(function(x){return x.dias===1});
+    bar.innerHTML="";bar.appendChild(h("span",{class:"cake",text:"🎂"}));
+    var t=h("span");
+    if(hoje.length)t.appendChild(h("span",null,h("b",{text:"Hoje: "}),names(hoje)));
+    if(hoje.length&&amanha.length)t.appendChild(document.createTextNode(" · "));
+    if(amanha.length)t.appendChild(h("span",null,h("b",{text:"Amanhã: "}),names(amanha)));
+    bar.appendChild(t);bar.hidden=false}
   function render(){
     var box=$("#bdays"),sum=$("#bd-summary");box.innerHTML="";sum.innerHTML="";
     $("#cnt-aniv").textContent=items.length;
-    var list=items.map(function(x){var n=nextDate(x.dia,x.mes);return Object.assign({},x,{dias:n.days,prox:n.year})}).sort(function(a,b){return a.dias-b.dias||a.nome.localeCompare(b.nome)});
-    sum.appendChild(sumCard("Hoje",list.filter(function(x){return x.dias===0}),"Ninguém faz aniversário hoje.","hoje"));
-    sum.appendChild(sumCard("Próximos 7 dias",list.filter(function(x){return x.dias>0&&x.dias<=7}),"Nenhum nos próximos 7 dias.","semana"));
-    sum.appendChild(sumCard("Próximos 30 dias",list.filter(function(x){return x.dias>7&&x.dias<=30}),"Nenhum entre 8 e 30 dias.","mes"));
+    var list=withDates().sort(function(a,b){return a.dias-b.dias||(b.fav?1:0)-(a.fav?1:0)||a.nome.localeCompare(b.nome)});
+    bdAlert(list);
+    var nfav=items.filter(function(x){return x.fav}).length;
+    $("#bd-favcnt").textContent=nfav?"⭐ "+nfav+(nfav===1?" marcado":" marcados"):"Ninguém marcado ainda";
+    $("#bd-ics").disabled=$("#bd-csv").disabled=!nfav;
+    function pref(arr){return arr.slice().sort(function(a,b){return (b.fav?1:0)-(a.fav?1:0)||a.dias-b.dias})}
+    sum.appendChild(sumCard("Hoje",pref(list.filter(function(x){return x.dias===0})),"Ninguém faz aniversário hoje.","hoje"));
+    sum.appendChild(sumCard("Próximos 7 dias",pref(list.filter(function(x){return x.dias>0&&x.dias<=7})),"Nenhum nos próximos 7 dias.","semana"));
+    sum.appendChild(sumCard("Próximos 30 dias",pref(list.filter(function(x){return x.dias>7&&x.dias<=30})),"Nenhum entre 8 e 30 dias.","mes"));
     $("#bd-clear").hidden=!items.length;
     if(!items.length){
       box.appendChild(h("div",{class:"empty",text:"Nenhum aniversário ainda. Importe o CSV do Facebook ou adicione um por um aqui em cima."}));
       $("#bnote").textContent="";return}
-    var q=norm($("#bd-busca").value.trim());
-    var shown=q?list.filter(function(x){return norm(x.nome).indexOf(q)>=0}):list;
-    if(!shown.length){box.appendChild(h("p",{class:"empty",text:"Ninguém com esse nome."}))}
+    var q=norm($("#bd-busca").value.trim()),mes=+$("#bd-mes").value,soFav=$("#bd-fav").checked;
+    var shown=list.filter(function(x){return (!q||norm(x.nome).indexOf(q)>=0)&&(!mes||x.mes===mes)&&(!soFav||x.fav)});
+    visiveis=shown;
+    if(!shown.length){box.appendChild(h("p",{class:"empty",text:soFav&&!nfav?"Você ainda não marcou ninguém. Clique na ⭐ ao lado do nome.":"Ninguém com esse filtro."}))}
     var lastMes=null;
     shown.forEach(function(x){
       if(x.mes!==lastMes){lastMes=x.mes;box.appendChild(h("h3",{class:"dayh",text:MESES[x.mes-1]}))}
       var a=idade(x),b=h("button",{type:"button",class:"ghost","aria-label":"Remover "+x.nome,text:"remover"});
       b.onclick=function(){remove(x.id)};
-      box.appendChild(h("div",{class:"bdrow"},
+      var st=h("button",{type:"button",class:"star","aria-pressed":x.fav?"true":"false","aria-label":(x.fav?"Desmarcar ":"Marcar ")+x.nome,title:x.fav?"Desmarcar":"Marcar como importante",text:"★"});
+      st.onclick=function(){toggleFav(x.id)};
+      box.appendChild(h("div",{class:"bdrow"+(x.fav?" fav":"")},st,
         h("span",{class:"when",text:dd(x.dia)+"/"+dd(x.mes)}),
         h("span",{class:"bdn"},fbLink(x,"who"),a?h("span",{class:"sub",text:" faz "+a}):null),
         h("span",{class:"count"+(x.dias===0?" hoje":x.dias<=7?" soon":""),text:countTxt(x)}),b))});
     var doMes=list.filter(function(x){return x.mes===now.getMonth()+1}).length;
     $("#bnote").textContent=items.length+" aniversários guardados · "+doMes+" em "+MESES[now.getMonth()].toLowerCase()+"."}
+  var visiveis=[];
+  function toggleFav(id){items.forEach(function(x){if(x.id===id)x.fav=!x.fav});lsWrite();render()}
+  MESES.forEach(function(m,i){var o=document.createElement("option");o.value=i+1;o.textContent=m;$("#bd-mes").appendChild(o)});
+  $("#bd-mes").addEventListener("change",render);
+  $("#bd-fav").addEventListener("change",render);
+  $("#bd-markall").addEventListener("click",function(){
+    var ids={};visiveis.forEach(function(x){ids[x.id]=1});
+    items.forEach(function(x){if(ids[x.id])x.fav=true});lsWrite();render()});
+
+  /* Arquivos gerados no navegador: calendário .ics com alertas e lista .csv dos marcados */
+  function baixar(nome,tipo,conteudo){
+    var a=h("a",{href:URL.createObjectURL(new Blob([conteudo],{type:tipo})),download:nome});
+    document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},1000)}
+  function marcados(){return withDates().filter(function(x){return x.fav}).sort(function(a,b){return a.mes-b.mes||a.dia-b.dia})}
+  function icsTxt(t){return String(t).replace(/([,;\\])/g,"\\$1").replace(/\n/g,"\\n")}
+  $("#bd-ics").addEventListener("click",function(){
+    var stamp=new Date().toISOString().replace(/[-:]/g,"").replace(/\.\d+/,"");
+    var L=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Dia a Dia RAC//Aniversarios//PT-BR","CALSCALE:GREGORIAN","X-WR-CALNAME:Aniversários (Dia a Dia RAC)"];
+    marcados().forEach(function(x){
+      var nome=icsTxt(x.nome),uid="rac-"+norm(x.nome).replace(/[^a-z0-9]+/g,"-")+"-"+dd(x.mes)+dd(x.dia);
+      L.push("BEGIN:VEVENT","UID:"+uid+"@diaadia-rac","DTSTAMP:"+stamp,
+        "DTSTART;VALUE=DATE:"+x.prox+dd(x.mes)+dd(x.dia),"RRULE:FREQ=YEARLY","SUMMARY:🎂 Aniversário de "+nome,
+        "DESCRIPTION:"+icsTxt((x.ano?"Nasceu em "+x.ano+"\n":"")+(x.link||"")),"TRANSP:TRANSPARENT",
+        "BEGIN:VALARM","ACTION:DISPLAY","DESCRIPTION:Amanhã é aniversário de "+nome,"TRIGGER:-PT15H","END:VALARM",
+        "BEGIN:VALARM","ACTION:DISPLAY","DESCRIPTION:Hoje é aniversário de "+nome,"TRIGGER:PT9H","END:VALARM",
+        "END:VEVENT")});
+    L.push("END:VCALENDAR");
+    baixar("aniversarios-marcados.ics","text/calendar;charset=utf-8",L.join("\r\n")+"\r\n")});
+  $("#bd-csv").addEventListener("click",function(){
+    function q(v){return '"'+String(v).replace(/"/g,'""')+'"'}
+    var out=["Nome,Ano,Mes,Dia,Perfil"].concat(marcados().map(function(x){return [q(x.nome),x.ano||"",x.mes,x.dia,q(x.link||"")].join(",")}));
+    baixar("aniversarios-marcados.csv","text/csv;charset=utf-8","﻿"+out.join("\r\n"))});
   function lsRead(){try{return JSON.parse(localStorage.getItem(LS)||"[]")}catch(e){return[]}}
   function lsWrite(){try{localStorage.setItem(LS,JSON.stringify(items))}catch(e){}}
   function bkey(x){return norm(x.nome)+"|"+x.dia+"|"+x.mes}

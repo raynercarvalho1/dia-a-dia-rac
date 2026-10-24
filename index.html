@@ -5,6 +5,15 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Dia a Dia RAC</title>
 <meta name="claude:viewport-fit-sides" content="cover">
+<!-- App instalável: ícone "RAC" na tela inicial, abre em tela cheia -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#005A9C">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="RAC">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <script>
 /* Tema escolhido na barra lateral; o padrão é o claro, mesmo com o sistema no escuro */
 (function(){var t="light";try{t=localStorage.getItem("rac-tema")||"light"}catch(e){}
@@ -1752,6 +1761,9 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
     items=[];lsWrite();render();$("#bd-imp").textContent="Lista apagada deste navegador."});
 
   items=lsRead();render();
+  /* App instalável (ícone RAC na tela inicial). O service worker busca sempre a versão nova na rede. */
+  if("serviceWorker" in navigator&&(location.protocol==="https:"||location.hostname==="localhost")){
+    navigator.serviceWorker.register("sw.js").catch(function(){})}
 })();
 </script>
 </body>

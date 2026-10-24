@@ -84,6 +84,12 @@ begin
   end loop;
 end $$;
 
+-- Acesso pela API: só para quem está logado (o projeto foi criado sem expor tabelas automaticamente).
+-- Visitantes sem login (papel anon) não recebem permissão nenhuma.
+grant usage on schema public to authenticated;
+grant select, insert, update, delete on public.mercados, public.produtos, public.notas, public.itens, public.orcamentos to authenticated;
+revoke all on public.mercados, public.produtos, public.notas, public.itens, public.orcamentos from anon;
+
 -- Visão pronta para o painel: um item por linha, com data, mercado e mês
 create or replace view public.compras
 with (security_invoker = true) as
@@ -95,3 +101,6 @@ from public.itens i
 join public.notas n on n.id = i.nota_id
 join public.mercados m on m.id = n.mercado_id
 left join public.produtos p on p.id = i.produto_id;
+
+grant select on public.compras to authenticated;
+revoke all on public.compras from anon;

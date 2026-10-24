@@ -219,7 +219,7 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
 .watch a:hover{border-color:var(--accent)}
 
 /* Destaque */
-.hero{position:relative;display:block;border-radius:10px;overflow:hidden;color:var(--on-img);text-decoration:none;background:var(--img-ground);aspect-ratio:16/7;min-height:320px;max-width:100%}
+.hero{position:relative;display:block;border-radius:10px;overflow:hidden;color:var(--on-img);text-decoration:none;background:var(--img-ground);aspect-ratio:21/8;min-height:250px;max-height:340px;width:100%;max-width:100%}
 .hero .shade{position:absolute;inset:0;background:linear-gradient(to top,var(--scrim) 8%,rgba(5,9,7,.25) 60%,transparent)}
 .hero .ov{position:absolute;left:0;right:0;bottom:0;padding:clamp(16px,3vw,28px);display:grid;gap:10px;justify-items:start}
 .hero .chipl{position:static}
@@ -230,7 +230,7 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
 .hero .cta{display:inline-flex;align-items:center;gap:8px;background:var(--brand);color:var(--on-img);padding:8px 16px 8px 8px;border-radius:99px;font:700 16px var(--f-display);text-transform:uppercase;letter-spacing:.04em}
 .hero .cta i{width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.2);display:grid;place-items:center}
 .hero .cta svg{width:12px;height:12px;fill:var(--on-img);margin-left:2px}
-@media(max-width:640px){.hero{aspect-ratio:auto;min-height:400px}}
+@media(max-width:640px){.hero{aspect-ratio:auto;min-height:320px;max-height:none}}
 
 /* Faixa do time */
 .banner{position:relative;overflow:hidden;border-radius:10px;padding:clamp(18px,3vw,26px);color:var(--on-img);background:linear-gradient(120deg,var(--tc) 0%,color-mix(in srgb,var(--tc) 50%,#000) 100%);display:flex;align-items:center;gap:18px;flex-wrap:wrap}
@@ -254,6 +254,7 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
 .tbl .num{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:13px}
 .tbl.ls .num{min-width:28px;font:600 17px var(--f-display)}
 .tbl.ls td.tot{font-weight:800;color:var(--accent)}
+.tbl.ls td.runs{color:var(--accent-ink);background:var(--accent);border-radius:4px;text-align:center;font-weight:800}
 .pc{display:inline-flex;align-items:center;gap:10px;min-width:0}
 .ph.s{width:30px;height:30px}
 .ph{width:34px;height:34px;border-radius:50%;object-fit:cover;background:var(--line);flex:none}
@@ -1101,7 +1102,11 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
     root.appendChild(section("Destaque",null,function(body){
       return sched.then(function(gs){var fin=finished(gs);body.innerHTML="";
         if(!fin.length){body.appendChild(h("p",{class:"empty",text:"Nenhum jogo nos últimos 30 dias."}));return}
-        body.appendChild(hero(fin[fin.length-1]))})}));
+        var top=fin[fin.length-1],more=h("div",{class:"stack",style:"margin-top:16px"},h("div",{class:"panel"},loading()));
+        body.appendChild(hero(top));body.appendChild(more);
+        mlbFeed(top.id).then(function(feed){more.innerHTML="";
+          more.appendChild(mlbLinePanel(top,feed));more.appendChild(mlbBoxPanel(top,feed))
+        }).catch(function(){more.innerHTML="";more.appendChild(h("div",{class:"panel"},h("p",{class:"empty",text:"Não consegui carregar o placar deste jogo agora."})))})})}));
     root.appendChild(section("Últimos resultados","Clique no card para ver como foi o jogo",function(body){
       return sched.then(function(gs){var fin=finished(gs).slice(0,-1);body.innerHTML="";
         if(!fin.length){body.appendChild(h("p",{class:"empty",text:"Sem outros jogos recentes."}));return}
@@ -1252,7 +1257,7 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
     var box=h("div",{class:"stack"},h("div",{class:"panel"},loading()));root.appendChild(box);
     function load(){
       Promise.all([
-        getJson("https://statsapi.mlb.com/api/v1.1/game/"+pk+"/feed/live"),
+        mlbFeed(pk),
         mlbSched("gamePk="+pk).catch(function(){return []}),
         mlbContent(pk).catch(function(){return null})
       ]).then(function(r){
@@ -1272,41 +1277,51 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
           (gd.gameInfo&&gd.gameInfo.gameDurationMinutes)?"Duração: "+Math.floor(gd.gameInfo.gameDurationMinutes/60)+"h"+pad(gd.gameInfo.gameDurationMinutes%60):null],decBox));
         if(g.state==="pre"){box.appendChild(watchBlock(g));return}
         box.appendChild(stage(g,mlbVideos(content),[["Gameday na MLB.com","https://www.mlb.com/gameday/"+pk]]));
-        /* placar por entrada */
-        var inns=ls.innings||[],n=Math.max(9,inns.length);
-        var cols=["Time"];for(var i=1;i<=n;i++)cols.push(String(i));cols.push("R","H","E");
-        function lrow(side){var t=g[side],tt=(ls.teams||{})[side]||{};
-          var row=[h("span",{class:"tn"},logoImg(t.id,"sm"),gd.teams[side].abbreviation||t.name)];
-          for(var i=0;i<n;i++){var x=inns[i]&&inns[i][side];row.push(x&&x.runs!==undefined?String(x.runs):(inns[i]&&side==="home"?"x":"–"))}
-          row.push(dash(tt.runs),dash(tt.hits),dash(tt.errors));return row}
-        var lp=panel("Placar por entrada");
-        var tb=table(cols,[lrow("away"),lrow("home")],1,"ls");
-        tb.querySelectorAll("tr").forEach(function(tr){var c=tr.children;if(c.length>3)c[c.length-3].classList.add("tot")});
-        lp.appendChild(tb);
-        lp.appendChild(h("p",{class:"note",text:"R corridas, H rebatidas válidas, E erros. “x” quando o time da casa não precisou rebater na última entrada."}));
-        box.appendChild(lp);
+        box.appendChild(mlbLinePanel(g,feed));
         /* resumo */
         var rc=content&&content.editorial&&content.editorial.recap&&content.editorial.recap.mlb;
         if(rc&&(rc.headline||rc.body))box.appendChild(recapPanel(rc.headline,rc.subhead||rc.seoTitle,rc.body,rc.url||("https://www.mlb.com/gameday/"+pk),"MLB.com"));
-        /* box score */
-        var bp=panel("Box score");
-        ["away","home"].forEach(function(side){
-          var ts=ld.boxscore.teams[side];
-          bp.appendChild(h("div",{class:"teamh"},logoImg(g[side].id),h("h3",{text:g[side].name})));
-          var bat=(ts.batters||[]).map(function(id){return ts.players["ID"+id]}).filter(function(p){return p&&p.battingOrder&&p.stats&&p.stats.batting&&p.stats.batting.atBats!==undefined});
-          bp.appendChild(h("div",{class:"cat",text:"Rebatedores"}));
-          bp.appendChild(table(["Jogador","Pos","AB","R","H","RBI","HR","BB","K"],bat.map(function(p){var s=p.stats.batting,sub=!/00$/.test(p.battingOrder);
-            var pos=(p.allPositions||[]).map(function(x){return x.abbreviation}).join("-")||(p.position&&p.position.abbreviation)||"";
-            return [mlbCell(p.person.id,(sub?"↳ ":"")+p.person.fullName),pos,dash(s.atBats),dash(s.runs),dash(s.hits),dash(s.rbi),dash(s.homeRuns),dash(s.baseOnBalls),dash(s.strikeOuts)]})));
-          bp.appendChild(h("div",{class:"cat",text:"Arremessadores"}));
-          bp.appendChild(table(["Jogador","IP","H","R","ER","BB","K","Arr."],(ts.pitchers||[]).map(function(id){var p=ts.players["ID"+id],s=(p&&p.stats&&p.stats.pitching)||{};
-            if(!p)return null;
-            var note=(s.note||"").replace("(W,","(V,").replace("(L,","(D,").replace("(S,","(SV,").replace("(H,","(HLD,");
-            return [mlbCell(p.person.id,p.person.fullName,note?" "+note:""),dash(s.inningsPitched),dash(s.hits),dash(s.runs),dash(s.earnedRuns),dash(s.baseOnBalls),dash(s.strikeOuts),dash(s.numberOfPitches)]}).filter(Boolean)))});
-        bp.appendChild(h("p",{class:"note",text:"AB vezes ao bastão, R corridas, H rebatidas, RBI corridas impulsionadas, HR home runs, BB walks, K strikeouts. IP entradas arremessadas, ER corridas limpas, Arr. arremessos. ↳ entrou durante o jogo. V vitória, D derrota, SV save, HLD hold."}));
-        box.appendChild(bp)
+        box.appendChild(mlbBoxPanel(g,feed))
       }).catch(function(e){box.innerHTML="";box.appendChild(h("div",{class:"panel"},failed(load,e)))})}
     load()}
+
+  function mlbFeed(pk){return once("feed"+pk,function(){return getJson("https://statsapi.mlb.com/api/v1.1/game/"+pk+"/feed/live")})}
+  /* Placar entrada por entrada: corridas de cada time em cada entrada, mais R, H e E */
+  function mlbLinePanel(g,feed){
+    var gd=feed.gameData,ls=feed.liveData.linescore||{};
+    var inns=ls.innings||[],n=Math.max(9,inns.length);
+    var cols=["Time"];for(var i=1;i<=n;i++)cols.push(String(i));cols.push("R","H","E");
+    function lrow(side){var t=g[side],tt=(ls.teams||{})[side]||{};
+      var row=[h("span",{class:"tn"},logoImg(t.id,"sm"),gd.teams[side].abbreviation||t.name)];
+      for(var i=0;i<n;i++){var x=inns[i]&&inns[i][side];row.push(x&&x.runs!==undefined?String(x.runs):(inns[i]&&side==="home"?"x":"–"))}
+      row.push(dash(tt.runs),dash(tt.hits),dash(tt.errors));return row}
+    var lp=panel("Placar por entrada");
+    var tb=table(cols,[lrow("away"),lrow("home")],1,"ls");
+    tb.querySelectorAll("tr").forEach(function(tr){var c=tr.children;if(c.length>3)c[c.length-3].classList.add("tot")});
+    /* entradas com corrida ficam em destaque */
+    tb.querySelectorAll("tbody tr").forEach(function(tr){Array.prototype.forEach.call(tr.children,function(td,i){
+      if(i>0&&i<=n&&/^[1-9]\d*$/.test(td.textContent))td.classList.add("runs")})});
+    lp.appendChild(tb);
+    lp.appendChild(h("p",{class:"note",text:"R corridas, H rebatidas válidas, E erros. Em destaque, as entradas em que saíram corridas. “x” quando o time da casa não precisou rebater na última entrada."}));
+    return lp}
+  /* Box score: rebatedores e arremessadores dos dois times, com foto e redes sociais */
+  function mlbBoxPanel(g,feed){
+    var ld=feed.liveData,bp=panel("Box score");
+    ["away","home"].forEach(function(side){
+      var ts=ld.boxscore.teams[side];
+      bp.appendChild(h("div",{class:"teamh"},logoImg(g[side].id),h("h3",{text:g[side].name})));
+      var bat=(ts.batters||[]).map(function(id){return ts.players["ID"+id]}).filter(function(p){return p&&p.battingOrder&&p.stats&&p.stats.batting&&p.stats.batting.atBats!==undefined});
+      bp.appendChild(h("div",{class:"cat",text:"Rebatedores"}));
+      bp.appendChild(table(["Jogador","Pos","AB","R","H","RBI","HR","BB","K"],bat.map(function(p){var s=p.stats.batting,sub=!/00$/.test(p.battingOrder);
+        var pos=(p.allPositions||[]).map(function(x){return x.abbreviation}).join("-")||(p.position&&p.position.abbreviation)||"";
+        return [mlbCell(p.person.id,(sub?"↳ ":"")+p.person.fullName),pos,dash(s.atBats),dash(s.runs),dash(s.hits),dash(s.rbi),dash(s.homeRuns),dash(s.baseOnBalls),dash(s.strikeOuts)]})));
+      bp.appendChild(h("div",{class:"cat",text:"Arremessadores"}));
+      bp.appendChild(table(["Jogador","IP","H","R","ER","BB","K","Arr."],(ts.pitchers||[]).map(function(id){var p=ts.players["ID"+id],s=(p&&p.stats&&p.stats.pitching)||{};
+        if(!p)return null;
+        var note=(s.note||"").replace("(W,","(V,").replace("(L,","(D,").replace("(S,","(SV,").replace("(H,","(HLD,");
+        return [mlbCell(p.person.id,p.person.fullName,note?" "+note:""),dash(s.inningsPitched),dash(s.hits),dash(s.runs),dash(s.earnedRuns),dash(s.baseOnBalls),dash(s.strikeOuts),dash(s.numberOfPitches)]}).filter(Boolean)))});
+    bp.appendChild(h("p",{class:"note",text:"AB vezes ao bastão, R corridas, H rebatidas, RBI corridas impulsionadas, HR home runs, BB walks, K strikeouts. IP entradas arremessadas, ER corridas limpas, Arr. arremessos. ↳ entrou durante o jogo. V vitória, D derrota, SV save, HLD hold."}));
+    return bp}
 
   /* Peças comuns das páginas de jogo (MLB e ESPN) */
   function scoreBand(g,extra,more){

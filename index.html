@@ -119,7 +119,23 @@ a.link{color:var(--accent);font-weight:600;text-underline-offset:3px}
 .job .row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .pill{font:500 11px var(--f-mono);padding:2px 7px;border-radius:99px;background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--accent)}
 .pill.warn{background:color-mix(in srgb,var(--warn) 16%,transparent);color:var(--warn)}
-form.add{display:grid;grid-template-columns:1fr 70px 130px auto;gap:8px;margin-bottom:16px}
+form.add{display:grid;grid-template-columns:1fr 70px 130px auto;gap:8px;margin:14px 0 16px}
+.bdsum{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:16px}
+.bdcard h3{display:flex;align-items:center;gap:8px;font:700 17px var(--f-ui);margin-bottom:8px}
+.bdcard.hoje h3{color:var(--accent)}
+.bdmini{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.bdmini li{display:flex;justify-content:space-between;gap:10px;min-width:0}
+.bdmini .who{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.who{font-weight:600;color:var(--ink);text-decoration:none}
+a.who:hover{color:var(--accent);text-decoration:underline}
+.bdtools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:6px}
+.bdtools input[type=search]{flex:1 1 200px}
+.filebtn{font:600 13px var(--f-ui);padding:8px 14px;border-radius:99px;background:var(--accent);color:var(--accent-ink);cursor:pointer}
+.filebtn:hover{filter:brightness(1.08)}
+.ghostbtn.danger{border-color:var(--bad);color:var(--bad)}
+.bdrow{display:grid;grid-template-columns:48px minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--line)}
+.dayh+.bdrow{border-top:0}
+.bdn{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media(max-width:560px){form.add{grid-template-columns:1fr 1fr}form.add input[name=nome]{grid-column:1/-1}}
 input,select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:9px 10px;min-width:0}
 button{font:600 14px var(--f-body);background:var(--accent);color:var(--accent-ink);border:0;border-radius:4px;padding:9px 14px;cursor:pointer}
@@ -424,9 +440,17 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
   </section>
 
   <section id="aniversarios" hidden>
-    <div class="grid">
-      <div class="panel" style="grid-column:1/-1">
-        <h2>Aniversários</h2>
+    <div class="stack">
+      <div class="bdsum" id="bd-summary"></div>
+      <div class="panel">
+        <h2>Todos os aniversários</h2>
+        <div class="bdtools">
+          <input id="bd-busca" type="search" placeholder="Filtrar por nome" aria-label="Filtrar aniversários por nome" autocomplete="off">
+          <label class="filebtn" for="bd-file">Importar do Facebook (CSV)</label>
+          <input type="file" id="bd-file" accept=".csv,text/csv" hidden>
+          <button type="button" class="ghostbtn" id="bd-clear">Apagar todos</button>
+        </div>
+        <p class="sub" id="bd-imp">A lista fica guardada só neste navegador. Para ter no celular, importe o arquivo lá também.</p>
         <form class="add" id="form" autocomplete="off">
           <input id="f-nome" name="nome" placeholder="Nome" required maxlength="60" aria-label="Nome">
           <input id="f-dia" name="dia" type="number" min="1" max="31" placeholder="Dia" required aria-label="Dia">
@@ -1496,45 +1520,58 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
   MESES.forEach(function(m,i){var o=document.createElement("option");o.value=i+1;o.textContent=m;sel.appendChild(o)});
   sel.value=now.getMonth()+1;
 
-  var items=[],store=null,LS="painel-aniversarios";
-  function daysUntil(d,m){
+  /* Aniversários: guardados só no navegador (localStorage). O CSV exportado do Facebook é lido aqui mesmo,
+     sem sair do computador; nada disso vai para o GitHub. */
+  var items=[],LS="painel-aniversarios";
+  function nextDate(d,m){
     var t=new Date(now.getFullYear(),now.getMonth(),now.getDate());
     var n=new Date(now.getFullYear(),m-1,d);
     if(n<t)n=new Date(now.getFullYear()+1,m-1,d);
-    return Math.round((n-t)/86400000);
-  }
+    return {days:Math.round((n-t)/86400000),year:n.getFullYear()}}
+  function dd(n){return String(n).padStart(2,"0")}
+  function countTxt(x){return x.dias===0?"hoje":x.dias===1?"amanhã":"em "+x.dias+" dias"}
+  function idade(x){return x.ano?(x.prox-x.ano):null}
+  function fbLink(x,cls){
+    return x.link?h("a",{class:cls,href:x.link,target:"_blank",rel:"noopener",text:x.nome}):h("span",{class:cls,text:x.nome})}
+  function sumCard(title,list,emptyTxt,cls){
+    var c=h("div",{class:"panel bdcard "+cls},h("h3",null,title,h("span",{class:"cnt",text:String(list.length)})));
+    if(!list.length){c.appendChild(h("p",{class:"sub",text:emptyTxt}));return c}
+    var ul=h("ul",{class:"bdmini"});
+    list.slice(0,8).forEach(function(x){var a=idade(x);
+      ul.appendChild(h("li",null,fbLink(x,"who"),h("span",{class:"sub",text:dd(x.dia)+"/"+dd(x.mes)+(a?" · faz "+a:"")})))});
+    c.appendChild(ul);
+    if(list.length>8)c.appendChild(h("p",{class:"sub",text:"e mais "+(list.length-8)+" na lista abaixo."}));
+    return c}
   function render(){
-    var box=$("#bdays");box.innerHTML="";
+    var box=$("#bdays"),sum=$("#bd-summary");box.innerHTML="";sum.innerHTML="";
     $("#cnt-aniv").textContent=items.length;
+    var list=items.map(function(x){var n=nextDate(x.dia,x.mes);return Object.assign({},x,{dias:n.days,prox:n.year})}).sort(function(a,b){return a.dias-b.dias||a.nome.localeCompare(b.nome)});
+    sum.appendChild(sumCard("Hoje",list.filter(function(x){return x.dias===0}),"Ninguém faz aniversário hoje.","hoje"));
+    sum.appendChild(sumCard("Próximos 7 dias",list.filter(function(x){return x.dias>0&&x.dias<=7}),"Nenhum nos próximos 7 dias.","semana"));
+    sum.appendChild(sumCard("Próximos 30 dias",list.filter(function(x){return x.dias>7&&x.dias<=30}),"Nenhum entre 8 e 30 dias.","mes"));
+    $("#bd-clear").hidden=!items.length;
     if(!items.length){
-      box.innerHTML='<div class="empty">Nenhum aniversário ainda. Adicione o primeiro acima e ele aparece aqui com a contagem de dias.</div>';return}
-    var list=items.map(function(x){return Object.assign({},x,{dias:daysUntil(x.dia,x.mes)})}).sort(function(a,b){return a.dias-b.dias});
-    var ul=document.createElement("ul");ul.className="clean";
-    list.forEach(function(x){
-      var li=document.createElement("li");li.className="bday";
-      var left=document.createElement("span");left.className="who";left.textContent=x.nome;
-      var sub=document.createElement("span");sub.className="sub";sub.textContent="  "+String(x.dia).padStart(2,"0")+"/"+String(x.mes).padStart(2,"0");
-      left.appendChild(sub);
-      var right=document.createElement("span");right.style.cssText="display:flex;align-items:center;gap:6px";
-      var c=document.createElement("span");c.className="count"+(x.dias===0?" hoje":x.dias<=7?" soon":"");
-      c.textContent=x.dias===0?"hoje":x.dias===1?"amanhã":"em "+x.dias+" dias";
-      var b=document.createElement("button");b.className="ghost";b.type="button";b.textContent="remover";b.setAttribute("aria-label","Remover "+x.nome);
+      box.appendChild(h("div",{class:"empty",text:"Nenhum aniversário ainda. Importe o CSV do Facebook ou adicione um por um aqui em cima."}));
+      $("#bnote").textContent="";return}
+    var q=norm($("#bd-busca").value.trim());
+    var shown=q?list.filter(function(x){return norm(x.nome).indexOf(q)>=0}):list;
+    if(!shown.length){box.appendChild(h("p",{class:"empty",text:"Ninguém com esse nome."}))}
+    var lastMes=null;
+    shown.forEach(function(x){
+      if(x.mes!==lastMes){lastMes=x.mes;box.appendChild(h("h3",{class:"dayh",text:MESES[x.mes-1]}))}
+      var a=idade(x),b=h("button",{type:"button",class:"ghost","aria-label":"Remover "+x.nome,text:"remover"});
       b.onclick=function(){remove(x.id)};
-      right.appendChild(c);right.appendChild(b);li.appendChild(left);li.appendChild(right);ul.appendChild(li)});
-    box.appendChild(ul);
+      box.appendChild(h("div",{class:"bdrow"},
+        h("span",{class:"when",text:dd(x.dia)+"/"+dd(x.mes)}),
+        h("span",{class:"bdn"},fbLink(x,"who"),a?h("span",{class:"sub",text:" faz "+a}):null),
+        h("span",{class:"count"+(x.dias===0?" hoje":x.dias<=7?" soon":""),text:countTxt(x)}),b))});
     var doMes=list.filter(function(x){return x.mes===now.getMonth()+1}).length;
-    $("#bnote").textContent=doMes+(doMes===1?" aniversário":" aniversários")+" em "+MESES[now.getMonth()].toLowerCase()+".";
-  }
+    $("#bnote").textContent=items.length+" aniversários guardados · "+doMes+" em "+MESES[now.getMonth()].toLowerCase()+"."}
   function lsRead(){try{return JSON.parse(localStorage.getItem(LS)||"[]")}catch(e){return[]}}
   function lsWrite(){try{localStorage.setItem(LS,JSON.stringify(items))}catch(e){}}
-  function add(it){
-    if(store){store.doc(it.id).set({nome:it.nome,dia:it.dia,mes:it.mes}).catch(function(){})}
-    else{items.push(it);lsWrite();render()}
-  }
-  function remove(id){
-    if(store){store.doc(id).delete().catch(function(){})}
-    else{items=items.filter(function(x){return x.id!==id});lsWrite();render()}
-  }
+  function bkey(x){return norm(x.nome)+"|"+x.dia+"|"+x.mes}
+  function add(it){items.push(it);lsWrite();render()}
+  function remove(id){items=items.filter(function(x){return x.id!==id});lsWrite();render()}
   $("#form").addEventListener("submit",function(e){
     e.preventDefault();
     var nome=$("#f-nome").value.trim(),dia=parseInt($("#f-dia").value,10),mes=parseInt(sel.value,10);
@@ -1542,19 +1579,58 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
     add({id:"b"+Date.now().toString(36),nome:nome,dia:dia,mes:mes});
     $("#f-nome").value="";$("#f-dia").value="";
   });
+  $("#bd-busca").addEventListener("input",render);
+
+  /* Importa o CSV do Facebook: "Name","Year","Month","Day","Link to Profile" */
+  function parseCsv(text){
+    var rows=[],row=[],f="",q=false;
+    for(var i=0;i<text.length;i++){var c=text[i];
+      if(q){if(c==='"'){if(text[i+1]==='"'){f+='"';i++}else q=false}else f+=c}
+      else if(c==='"')q=true;
+      else if(c===","){row.push(f);f=""}
+      else if(c==="\n"||c==="\r"){if(c==="\r"&&text[i+1]==="\n")i++;row.push(f);rows.push(row);row=[];f=""}
+      else f+=c}
+    if(f||row.length){row.push(f);rows.push(row)}
+    return rows.filter(function(r){return r.some(function(x){return x.trim()})})}
+  function importCsv(text){
+    var rows=parseCsv(text.replace(/^﻿/,""));
+    if(!rows.length)throw new Error("arquivo vazio");
+    var head=rows[0].map(function(x){return x.trim().toLowerCase()});
+    function col(n){return head.indexOf(n)}
+    var cN=col("name"),cY=col("year"),cM=col("month"),cD=col("day"),cL=col("link to profile");
+    if(cN<0||cM<0||cD<0)throw new Error("não achei as colunas Name, Month e Day");
+    var seen={},added=0,dup=0,bad=0;
+    items.forEach(function(x){seen[bkey(x)]=1});
+    rows.slice(1).forEach(function(r,i){
+      var nome=(r[cN]||"").replace(/^['"\-\s]+|['"\s]+$/g,"").trim(),mes=parseInt(r[cM],10),dia=parseInt(r[cD],10),ano=parseInt(r[cY],10);
+      if(!nome||!(mes>=1&&mes<=12)||!(dia>=1&&dia<=31)){bad++;return}
+      var it={id:"fb"+Date.now().toString(36)+i,nome:nome,dia:dia,mes:mes};
+      if(ano>1900&&ano<=now.getFullYear())it.ano=ano;
+      var link=(r[cL]||"").trim();if(/^https:\/\/(www\.)?facebook\.com\//.test(link))it.link=link;
+      var k=bkey(it);if(seen[k]){dup++;return}
+      seen[k]=1;items.push(it);added++});
+    lsWrite();render();
+    return {added:added,dup:dup,bad:bad}}
+  $("#bd-file").addEventListener("change",function(e){
+    var f=e.target.files&&e.target.files[0],msg=$("#bd-imp");if(!f)return;
+    var rd=new FileReader();
+    rd.onload=function(){
+      try{var r=importCsv(String(rd.result));
+        msg.textContent="Importei "+r.added+(r.added===1?" aniversário":" aniversários")+(r.dup?" e pulei "+r.dup+(r.dup===1?" repetido":" repetidos"):"")+(r.bad?" ("+r.bad+(r.bad===1?" linha sem data)":" linhas sem data)"):"")+". Ficam guardados só neste navegador."}
+      catch(err){msg.textContent="Não consegui ler esse arquivo ("+err.message+"). Use o CSV de datas de nascimento exportado do Facebook."}
+      e.target.value=""};
+    rd.onerror=function(){msg.textContent="Não consegui abrir o arquivo."};
+    rd.readAsText(f,"utf-8")});
+  /* Apagar tudo pede uma segunda confirmação na própria página */
+  var clearArmed=false;
+  $("#bd-clear").addEventListener("click",function(){
+    var b=$("#bd-clear");
+    if(!clearArmed){clearArmed=true;b.textContent="Clique de novo para apagar os "+items.length;b.classList.add("danger");
+      setTimeout(function(){clearArmed=false;b.textContent="Apagar todos";b.classList.remove("danger")},5000);return}
+    clearArmed=false;b.textContent="Apagar todos";b.classList.remove("danger");
+    items=[];lsWrite();render();$("#bd-imp").textContent="Lista apagada deste navegador."});
 
   items=lsRead();render();
-  /* No artifact publicado, os aniversários ficam no banco compartilhado (db); fora dele, no navegador */
-  if(window.claude&&claude.use){
-    claude.use("db").then(function(db){
-      if(!db)return;
-      store=db.collection("aniversarios");
-      store.onSnapshot(function(snap){
-        items=snap.docs.map(function(d){var v=d.data()||{};return{id:d.id,nome:String(v.nome||""),dia:+v.dia,mes:+v.mes}});
-        render();
-      },function(){store=null});
-    }).catch(function(){});
-  }
 })();
 </script>
 </body>

@@ -161,8 +161,11 @@ form.add{display:grid;grid-template-columns:1fr 70px 130px auto;gap:8px;margin:1
 .vp.pre{background:color-mix(in srgb,var(--warn) 16%,transparent);color:var(--warn)}
 .vp.new{background:var(--c-aniversarios);color:#fff}
 .vsal{font:600 13px var(--f-ui);color:var(--good)}
-.vfoot{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:auto;padding-top:6px}
-.vfoot .when{margin-right:auto}
+.vpills{align-items:center}
+.vpills .vage{margin-left:auto;font-size:12px}
+/* botões sempre juntos e na mesma linha, no pé do card */
+.vfoot{display:flex;align-items:center;gap:8px;margin-top:auto;padding-top:8px}
+.vfoot a{white-space:nowrap}
 .bdsum{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:16px}
 .bdcard h3{display:flex;align-items:center;gap:8px;font:700 17px var(--f-ui);margin-bottom:8px}
 .bdcard.hoje h3{color:var(--accent)}
@@ -1639,11 +1642,11 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
     var cls=v.m==="Remoto"?"rem":v.m==="Híbrido"?"hib":"pre",lk=vgLink(v);
     var sal=v.s&&!/^A combinar$/i.test(v.s)?h("div",{class:"vsal",text:v.s}):null;
     return h("article",{class:"panel vcard"},
-      h("div",{class:"vpills"},v.d<=3?h("span",{class:"vp new",text:"Nova"}):null,h("span",{class:"vp "+cls,text:v.m}),v.nv?h("span",{class:"vp",text:v.nv}):null),
+      h("div",{class:"vpills"},v.d<=3?h("span",{class:"vp new",text:"Nova"}):null,h("span",{class:"vp "+cls,text:v.m}),v.nv?h("span",{class:"vp",text:v.nv}):null,h("span",{class:"when vage",text:v.a})),
       h("h3",{text:v.t}),
       h("div",{class:"emp"},v.e||"Empresa não informada",v.cidade?h("span",{text:" · "+v.cidade.replace(/\s*\((Presencial|Híbrido)\)\s*$/,"")}):null),
       sal,
-      h("div",{class:"vfoot"},h("span",{class:"when",text:v.a}),ext(lk[0],lk[1],"ghostbtn pri"),v.or?ext(v.or,"Post original","ghostbtn"):null))}
+      h("div",{class:"vfoot"},ext(lk[0],lk[1],"ghostbtn pri"),v.or?ext(v.or,"Post original","ghostbtn"):null))}
   function vgDraw(){
     var q=norm(VG.q),box=$("#vg-list");box.innerHTML="";
     var base=VG.all.filter(function(v){return (!VG.nivel||v.nv===VG.nivel)&&(!q||norm(v.t+" "+v.e+" "+(v.cidade||"")).indexOf(q)>=0)});

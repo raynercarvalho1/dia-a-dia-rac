@@ -141,6 +141,28 @@ a.link{color:var(--accent);font-weight:600;text-underline-offset:3px}
 .pill{font:500 11px var(--f-mono);padding:2px 7px;border-radius:99px;background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--accent)}
 .pill.warn{background:color-mix(in srgb,var(--warn) 16%,transparent);color:var(--warn)}
 form.add{display:grid;grid-template-columns:1fr 70px 130px auto;gap:8px;margin:14px 0 16px}
+/* Vagas */
+.vhead{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:10px 16px}
+.vhead h2{margin:0 0 2px}
+.vfil{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:14px}
+.vfil .seg{flex:1 1 320px}
+.vfil .seg button{font-size:13px;padding:7px 6px}
+.vfil select{flex:0 1 170px}
+.vfil input{flex:1 1 200px}
+.vgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:14px}
+.vcard{display:flex;flex-direction:column;gap:8px}
+.vcard h3{font:700 17px/1.25 var(--f-ui);margin:0;text-wrap:balance}
+.vcard .emp{font-size:14px;color:var(--ink);font-weight:600}
+.vcard .emp span{color:var(--muted);font-weight:400}
+.vpills{display:flex;flex-wrap:wrap;gap:6px}
+.vp{font:600 12px var(--f-ui);padding:3px 9px;border-radius:99px;background:var(--hover);color:var(--muted)}
+.vp.rem{background:color-mix(in srgb,var(--good) 16%,transparent);color:var(--good)}
+.vp.hib{background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--accent)}
+.vp.pre{background:color-mix(in srgb,var(--warn) 16%,transparent);color:var(--warn)}
+.vp.new{background:var(--c-aniversarios);color:#fff}
+.vsal{font:600 13px var(--f-ui);color:var(--good)}
+.vfoot{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:auto;padding-top:6px}
+.vfoot .when{margin-right:auto}
 .bdsum{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:16px}
 .bdcard h3{display:flex;align-items:center;gap:8px;font:700 17px var(--f-ui);margin-bottom:8px}
 .bdcard.hoje h3{color:var(--accent)}
@@ -450,28 +472,27 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
   </template>
 
   <section id="vagas" hidden>
-    <div class="grid">
+    <div class="stack">
       <div class="panel">
-        <h2>Home office</h2>
-        <div class="job"><h3>Analista de Dados Júnior</h3><div class="row"><span class="pill">100% home office</span><span class="sub">e-commerce · Vagas.com.br · há 2 dias</span></div><a class="link" href="https://www.vagas.com.br/vagas-de-analista-de-dados" target="_blank" rel="noopener">Ver vagas de analista de dados</a></div>
-        <div class="job"><h3>Analista de Dados Jr (Analytics)</h3><div class="row"><span class="pill">100% home office</span><span class="sub">pipelines, dashboards, SQL · InfoJobs</span></div><a class="link" href="https://www.infojobs.com.br/vaga-de-analista-dados-jr-em-sao-paulo__11871756.aspx" target="_blank" rel="noopener">Abrir vaga</a></div>
-        <div class="job"><h3>Analista de Dados Júnior, sem experiência</h3><div class="row"><span class="pill">remoto</span><span class="sub">EP Conexões &amp; Negócios · Indeed</span></div><a class="link" href="https://br.indeed.com/q-data-science-junior-vagas.html" target="_blank" rel="noopener">Abrir busca</a></div>
+        <div class="vhead">
+          <div><h2>Análise de Dados e BI</h2><p class="sub" id="vg-info">Carregando as vagas…</p></div>
+          <a class="ghostbtn pri" href="https://mentoradados.com/portal-de-vagas-v2/" target="_blank" rel="noopener">Abrir o portal</a>
+        </div>
+        <div class="vfil">
+          <div class="seg" id="vg-mod" role="group" aria-label="Modelo de trabalho"></div>
+          <select id="vg-nivel" aria-label="Nível"><option value="">Todos os níveis</option></select>
+          <input id="vg-q" type="search" placeholder="Buscar cargo ou empresa" aria-label="Buscar cargo ou empresa" autocomplete="off">
+        </div>
       </div>
+      <div id="vg-list" class="vgrid"></div>
       <div class="panel">
-        <h2>Sorocaba</h2>
-        <div class="job"><h3>Analista de inteligência de dados (jr e pleno)</h3><div class="row"><span class="pill">Sorocaba</span><span class="sub">BNE</span></div><a class="link" href="https://www.bne.com.br/vagas-de-emprego-para-analista-de-inteligencia-do-mercado-em-sorocaba-sp" target="_blank" rel="noopener">Ver vagas</a></div>
-        <div class="job"><h3>Analista com dashboards e KPIs (OTIF, Fill Rate)</h3><div class="row"><span class="pill warn">anúncio de junho, confirme se está aberta</span><span class="sub">Vagas.com.br</span></div><a class="link" href="https://www.vagas.com.br/vagas-de-analista-em-sorocaba" target="_blank" rel="noopener">Ver vagas</a></div>
-        <div class="job"><h3>Analista de sistemas júnior</h3><div class="row"><span class="pill">híbrido</span><span class="sub">próximo da sua experiência em requisitos · BNE</span></div><a class="link" href="https://www.bne.com.br/vagas-de-emprego-para-analista-de-sistemas-em-sorocaba-sp" target="_blank" rel="noopener">Ver vagas</a></div>
+        <h2>Buscas prontas</h2>
+        <ul class="clean">
+          <li><a class="link" href="https://www.linkedin.com/jobs/search/?keywords=analista%20de%20dados&f_WT=2&location=Brasil" target="_blank" rel="noopener">LinkedIn: analista de dados, remoto, Brasil</a></li>
+          <li><a class="link" href="https://www.linkedin.com/jobs/search/?keywords=analista%20de%20BI&location=S%C3%A3o%20Paulo" target="_blank" rel="noopener">LinkedIn: analista de BI em São Paulo</a></li>
+          <li><a class="link" href="https://www.linkedin.com/jobs/search/?keywords=analista%20de%20dados&location=Sorocaba" target="_blank" rel="noopener">LinkedIn: analista de dados em Sorocaba</a></li>
+        </ul>
       </div>
-    </div>
-    <div class="panel" style="margin-top:16px">
-      <h2>Buscas prontas</h2>
-      <ul class="clean">
-        <li><a class="link" href="https://www.linkedin.com/jobs/search/?keywords=analista%20de%20dados%20junior&location=Sorocaba" target="_blank" rel="noopener">LinkedIn: analista de dados júnior em Sorocaba</a></li>
-        <li><a class="link" href="https://www.linkedin.com/jobs/search/?keywords=analista%20de%20dados&f_WT=2&location=Brasil" target="_blank" rel="noopener">LinkedIn: analista de dados, remoto, Brasil</a></li>
-        <li><a class="link" href="https://br.indeed.com/jobs?q=analista+de+dados+power+bi&l=Sorocaba%2C+SP" target="_blank" rel="noopener">Indeed: analista de dados com Power BI em Sorocaba</a></li>
-      </ul>
-      <p class="note">A busca de hoje trouxe poucas vagas de dados em Sorocaba. Boa parte do que apareceu é de analista de outras áreas, que deixei de fora. Perfil usado: dados júnior, SQL e Power BI.</p>
     </div>
   </section>
 
@@ -667,7 +688,7 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
     XCATS.forEach(function(c){total+=c.h.length;
       g.appendChild(h("a",{class:"it",href:"#x/"+c.k,"data-k":"x/"+c.k},catIco(c),h("span",{class:"t",text:c.n}),h("span",{class:"cnt",text:String(c.h.length)})))});
     $("#cnt-x").textContent=total;
-    $("#cnt-vagas").textContent=document.querySelectorAll("#vagas .job").length;
+    $("#cnt-vagas").textContent="";
     $("#cnt-breve").textContent=document.querySelectorAll("#em-breve .panel").length})();
 
   /* Busca na barra lateral: seções, times, categorias e perfis do X */
@@ -1591,6 +1612,49 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
     applyOwner()});
   applyOwner();
   route();
+
+  /* Vagas de Análise de Dados e BI (vagas.json, coletado do portal Mentora Dados).
+     Remoto de qualquer lugar; presencial ou híbrido só em São Paulo ou Sorocaba. */
+  var VG={all:[],mod:"",nivel:"",q:""};
+  var NIVEIS=["Estágio","Júnior","Pleno","Sênior","Especialista","Líder"];
+  function vgLink(v){
+    var ap=v.ap||"";
+    if(/^mailto:/.test(ap))return [ap,"Enviar e-mail"];
+    if(/^https?:\/\/\(/.test(ap)||/mentoradados\.com\/portal-de-vagas-v2\/#?$/.test(ap)||!ap)return ["https://mentoradados.com/portal-de-vagas-v2/","Ver no portal"];
+    return [ap,"Candidatar-se"]}
+  function vgCard(v){
+    var cls=v.m==="Remoto"?"rem":v.m==="Híbrido"?"hib":"pre",lk=vgLink(v);
+    var sal=v.s&&!/^A combinar$/i.test(v.s)?h("div",{class:"vsal",text:v.s}):null;
+    return h("article",{class:"panel vcard"},
+      h("div",{class:"vpills"},v.d<=3?h("span",{class:"vp new",text:"Nova"}):null,h("span",{class:"vp "+cls,text:v.m}),v.nv?h("span",{class:"vp",text:v.nv}):null),
+      h("h3",{text:v.t}),
+      h("div",{class:"emp"},v.e||"Empresa não informada",v.cidade?h("span",{text:" · "+v.cidade.replace(/\s*\((Presencial|Híbrido)\)\s*$/,"")}):null),
+      sal,
+      h("div",{class:"vfoot"},h("span",{class:"when",text:v.a}),ext(lk[0],lk[1],"ghostbtn pri"),v.or?ext(v.or,"Post original","ghostbtn"):null))}
+  function vgDraw(){
+    var q=norm(VG.q),box=$("#vg-list");box.innerHTML="";
+    var base=VG.all.filter(function(v){return (!VG.nivel||v.nv===VG.nivel)&&(!q||norm(v.t+" "+v.e+" "+(v.cidade||"")).indexOf(q)>=0)});
+    var seg=$("#vg-mod");seg.innerHTML="";
+    [["","Todas"],["Remoto","Remoto"],["Híbrido","Híbrido"],["Presencial","Presencial"]].forEach(function(o){
+      var n=base.filter(function(v){return !o[0]||v.m===o[0]}).length;
+      var b=h("button",{type:"button","aria-pressed":VG.mod===o[0]?"true":"false",text:o[1]+" ("+n+")"});
+      b.onclick=function(){VG.mod=o[0];vgDraw()};seg.appendChild(b)});
+    var list=base.filter(function(v){return !VG.mod||v.m===VG.mod});
+    if(!list.length){box.appendChild(h("div",{class:"panel"},h("p",{class:"empty",text:"Nenhuma vaga com esse filtro."})));return}
+    list.forEach(function(v){box.appendChild(vgCard(v))})}
+  function vgLoad(){
+    getJson("vagas.json?v="+Date.now()).then(function(d){
+      VG.all=(d.vagas||[]).slice().sort(function(a,b){return a.d-b.d});
+      var nv=NIVEIS.filter(function(n){return VG.all.some(function(v){return v.nv===n})});
+      nv.forEach(function(n){var o=document.createElement("option");o.value=n;o.textContent=n;$("#vg-nivel").appendChild(o)});
+      var dt=new Date(d.coletado);
+      $("#vg-info").textContent=VG.all.length+" vagas publicadas há menos de 2 meses · remotas de qualquer lugar e presenciais ou híbridas em São Paulo e Sorocaba · atualizado em "+dt.toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"})+".";
+      $("#cnt-vagas").textContent=VG.all.length;
+      vgDraw()
+    }).catch(function(){$("#vg-info").textContent="Não consegui carregar as vagas agora."})}
+  $("#vg-nivel").addEventListener("change",function(e){VG.nivel=e.target.value;vgDraw()});
+  $("#vg-q").addEventListener("input",function(e){VG.q=e.target.value;vgDraw()});
+  vgLoad();
 
   /* Aniversários */
   var sel=$("#f-mes");

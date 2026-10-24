@@ -157,6 +157,13 @@ a.who:hover{color:var(--accent);text-decoration:underline}
 .ghostbtn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .ghostbtn:disabled{opacity:.45;cursor:not-allowed}
 .bdtools select{flex:0 1 170px}
+.lockbox{max-width:380px;margin:30px auto;display:grid;justify-items:center;gap:10px;text-align:center}
+.lockbox h2{margin:0}
+.lockbox .sub{margin:0}
+.lockbox input[type=password]{width:100%;text-align:center}
+.lockbox button{width:100%}
+.lockic{width:56px;height:56px;border-radius:50%;background:var(--c-aniversarios);color:#fff;display:grid;place-items:center}
+.lockic svg{width:26px;height:26px}
 .alertbar{display:flex;align-items:center;gap:10px;margin:0 0 18px;padding:12px 16px;border-radius:12px;background:var(--side);color:var(--ink);text-decoration:none;box-shadow:var(--shadow);border-left:5px solid var(--c-aniversarios);font:500 15px/1.4 var(--f-ui)}
 .alertbar b{color:var(--c-aniversarios)}
 .alertbar .cake{font-size:22px}
@@ -460,7 +467,16 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
   </section>
 
   <section id="aniversarios" hidden>
-    <div class="stack">
+    <form class="panel lockbox" id="bd-gate" autocomplete="off">
+      <div class="lockic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div>
+      <h2>Área restrita</h2>
+      <p class="sub">Digite a senha para ver a lista de aniversários.</p>
+      <input type="password" id="bd-pw" placeholder="Senha" aria-label="Senha" autocomplete="current-password" required>
+      <label class="chk"><input type="checkbox" id="bd-keep" checked> lembrar neste aparelho</label>
+      <button type="submit" id="bd-enter">Entrar</button>
+      <p class="sub" id="bd-pwmsg" role="status"></p>
+    </form>
+    <div class="stack" id="bd-area">
       <div class="bdsum" id="bd-summary"></div>
       <div class="panel">
         <h2>Todos os aniversários</h2>
@@ -477,7 +493,7 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
           <label class="filebtn" for="bd-file">Importar do Facebook (CSV)</label>
           <input type="file" id="bd-file" accept=".csv,text/csv" hidden>
           <button type="button" class="ghostbtn" id="bd-clear">Apagar todos</button>
-          <button type="button" class="ghostbtn" id="bd-lock" title="Esconde a seção de Aniversários neste aparelho. A lista continua guardada.">Esconder neste aparelho</button>
+          <button type="button" class="ghostbtn" id="bd-lock" title="Fecha a área restrita neste aparelho. A lista continua guardada.">Sair</button>
         </div>
         <p class="sub">Clique na ⭐ para marcar quem importa. Os marcados aparecem num aviso no topo do site na véspera e no dia. O calendário (.ics) leva dois alertas para cada marcado: às 9h da véspera e às 9h do dia; abra o arquivo no celular para os alertas chegarem mesmo com o site fechado.</p>
         <p class="sub" id="bd-imp">A lista fica guardada só neste navegador. Para ter no celular, importe o arquivo lá também.</p>
@@ -1529,34 +1545,43 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
       }).catch(function(e){box.innerHTML="";box.appendChild(h("div",{class:"panel"},failed(load,e)))})}
     load()}
 
-  /* Seções só do dono (Aniversários). Ficam escondidas para visitantes e aparecem nos aparelhos onde o Rayner
-     abriu o link secreto uma vez (#dono-...). O site guarda só o SHA-256 do código, nunca o código em si.
-     A lista de aniversários nunca sai do navegador; isto apenas esconde a seção de quem não é o dono. */
-  var OWNER_HASH="6eb00797966def470902c833587ef022a5799389988a6519e44e66c20fb5aedd",OWNERLS="rac-dono";
-  function isOwner(){try{return localStorage.getItem(OWNERLS)===OWNER_HASH}catch(e){return false}}
+  /* Área restrita (Aniversários): aparece para todos, mas pede senha.
+     O site é estático, então a senha é conferida no navegador: o código guarda só um PBKDF2-SHA256
+     (600 mil rodadas, com sal) dela, nunca a senha. A lista em si nunca sai do navegador. */
+  var PW_SALT="0b70542847749db03f4b1afa9e1cbbd3",PW_HASH="a2a0c7726afe41d996f0ac9a5d88e4c4d752960b26cb0859010a5e6b354a881d",OWNERLS="rac-dono";
+  function isOwner(){
+    try{return localStorage.getItem(OWNERLS)===PW_HASH||sessionStorage.getItem(OWNERLS)===PW_HASH}catch(e){return false}}
+  function hexToBytes(x){var b=new Uint8Array(x.length/2);for(var i=0;i<b.length;i++)b[i]=parseInt(x.substr(i*2,2),16);return b}
+  function pbkdf2(pw){
+    return crypto.subtle.importKey("raw",new TextEncoder().encode(pw),"PBKDF2",false,["deriveBits"]).then(function(k){
+      return crypto.subtle.deriveBits({name:"PBKDF2",hash:"SHA-256",salt:hexToBytes(PW_SALT),iterations:600000},k,256)}).then(function(bits){
+      return Array.prototype.map.call(new Uint8Array(bits),function(x){return x.toString(16).padStart(2,"0")}).join("")})}
   function applyOwner(){
-    var own=isOwner(),i=tabs.indexOf("aniversarios");
-    if(!own&&i>=0)tabs.splice(i,1);
-    if(own&&i<0)tabs.push("aniversarios");
-    document.querySelectorAll('.side a.it[data-k="aniversarios"]').forEach(function(a){a.hidden=!own});
-    if(!own){$("#aniversarios").hidden=true;$("#bdalert").hidden=true}}
-  function sha256hex(t){
-    return crypto.subtle.digest("SHA-256",new TextEncoder().encode(t)).then(function(b){
-      return Array.prototype.map.call(new Uint8Array(b),function(x){return x.toString(16).padStart(2,"0")}).join("")})}
-  function unlock(){
-    var m=/^#dono-(.+)$/.exec(location.hash||"");
-    if(!m||!window.crypto||!crypto.subtle)return Promise.resolve();
-    return sha256hex(m[1]).then(function(hx){
-      if(hx===OWNER_HASH){try{localStorage.setItem(OWNERLS,OWNER_HASH)}catch(e){}}
-      /* tira o código da barra de endereço e do histórico */
-      history.replaceState(null,"",location.pathname+location.search+(hx===OWNER_HASH?"#aniversarios":"#esportes"))}).catch(function(){})}
+    var own=isOwner();
+    $("#bd-gate").hidden=own;$("#bd-area").hidden=!own;
+    if(!own)$("#bdalert").hidden=true}
+  var tries=0;
+  $("#bd-gate").addEventListener("submit",function(e){
+    e.preventDefault();
+    var pw=$("#bd-pw").value,msg=$("#bd-pwmsg"),btn=$("#bd-enter");
+    if(!pw)return;
+    if(!window.crypto||!crypto.subtle){msg.textContent="Este navegador não consegue conferir a senha aqui. Abra o site pelo endereço https.";return}
+    btn.disabled=true;msg.textContent="Conferindo…";
+    pbkdf2(pw).then(function(hx){
+      if(hx===PW_HASH){
+        try{($("#bd-keep").checked?localStorage:sessionStorage).setItem(OWNERLS,PW_HASH)}catch(err){}
+        $("#bd-pw").value="";msg.textContent="";tries=0;applyOwner();render();btn.disabled=false}
+      else{
+        /* espera crescente a cada erro, para desencorajar tentativas */
+        tries++;var wait=Math.min(30,tries*2);
+        msg.textContent="Senha incorreta. Tente de novo em "+wait+" segundos.";
+        setTimeout(function(){btn.disabled=false;msg.textContent="Senha incorreta."},wait*1000)}
+    }).catch(function(){btn.disabled=false;msg.textContent="Não consegui conferir a senha agora."})});
   $("#bd-lock").addEventListener("click",function(){
-    try{localStorage.removeItem(OWNERLS)}catch(e){}
-    applyOwner();location.hash="#esportes"});
+    try{localStorage.removeItem(OWNERLS);sessionStorage.removeItem(OWNERLS)}catch(e){}
+    applyOwner()});
   applyOwner();
-  unlock().then(function(){applyOwner();route();render()});
-  /* link secreto colado numa aba que já estava aberta */
-  window.addEventListener("hashchange",function(){if(/^#dono-/.test(location.hash))unlock().then(function(){applyOwner();route();render()})});
+  route();
 
   /* Aniversários */
   var sel=$("#f-mes");

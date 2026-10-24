@@ -312,6 +312,15 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
 .xp b{font:700 16px var(--f-ui)}
 .xp .xacts{justify-content:center}
 .how{margin:0;padding-left:18px;display:grid;gap:8px}
+.feedbox{min-height:120px;border-radius:10px;overflow:hidden}
+.feedbox>a{color:var(--muted)}
+.gate{display:grid;justify-items:center;text-align:center;gap:10px;padding:26px 12px 10px}
+.gate h3{font:700 20px/1.2 var(--f-ui)}
+.gate p{margin:0;max-width:52ch;color:var(--muted);font-size:14px}
+.gatei{width:52px;height:52px;border-radius:50%;background:var(--c-x);color:var(--side);display:grid;place-items:center}
+.gatei svg{width:24px;height:24px}
+.ghostbtn{font:600 13px var(--f-ui);padding:6px 12px;border-radius:99px;border:1px solid var(--line);color:var(--ink);background:var(--side)}
+.ghostbtn:hover{border-color:var(--accent)}
 .ico b{font:700 12px var(--f-ui)}
 .cat{margin:12px 0 2px;font:700 13px var(--f-display);text-transform:uppercase;letter-spacing:.06em;color:var(--accent)}
 @media (prefers-reduced-motion: reduce){img.cover{transition:none}a.card:hover img.cover,a.hero:hover img.cover{transform:none}}
@@ -524,6 +533,39 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
     {k:"beisebol",n:"Beisebol",c:"#0B9A4B",h:["KutterIsKing","DMAC_LA"]}];
   /* Links das Listas do X por categoria. Quando criar uma lista no X, cole o link aqui, ex.: amigos:"https://x.com/i/lists/123" */
   var XLISTS={};
+  var XSVG='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>';
+  /* Lista geral do Rayner no X, mostrada dentro do site no topo da aba */
+  var XFEED="https://x.com/i/lists/2113789073005408281";
+  function listId(u){var m=/lists\/(\d+)/.exec(u||"");return m?m[1]:null}
+  var widgetsP=null;
+  function loadWidgets(){
+    if(!widgetsP)widgetsP=new Promise(function(res){
+      var sc=document.createElement("script");sc.src="https://platform.twitter.com/widgets.js";sc.async=true;sc.charset="utf-8";
+      sc.onload=function(){res(window.twttr||null)};sc.onerror=function(){res(null)};document.head.appendChild(sc)});
+    return widgetsP}
+  function isDark(){var t=document.documentElement.getAttribute("data-theme");return t?t==="dark":matchMedia("(prefers-color-scheme: dark)").matches}
+  /* Lista do X embutida. O X só mostra o conteúdo para quem está logado no X neste mesmo navegador;
+     sem login a área fica vazia, e aí aparece o cartão de entrar. */
+  function feedPanel(url,title){
+    var id=listId(url),p=panel(title,"Posts da lista, do mais novo para o mais antigo. Curtir, responder e repostar ficam em cada post.");
+    var box=h("div",{class:"feedbox"}),gate=h("div",{class:"gate"});gate.hidden=true;
+    var again=h("button",{type:"button",class:"ghostbtn",text:"Já entrei, carregar de novo"});
+    gate.appendChild(h("div",{class:"gatei"},svg(XSVG)));
+    gate.appendChild(h("h3",{text:"Entre no X para ver os posts aqui"}));
+    gate.appendChild(h("p",{text:"O X só mostra a lista dentro de outros sites para quem está logado no X neste mesmo navegador. Entre pela página do X e volte para esta aba. Funciona no Chrome e no Edge; Safari e Firefox costumam bloquear."}));
+    gate.appendChild(h("div",{class:"xacts"},ext("https://x.com/i/flow/login","Entrar no X","pri"),again,ext(url,"Abrir a lista no X","")));
+    p.appendChild(box);p.appendChild(gate);
+    function showGate(){box.hidden=true;gate.hidden=false}
+    function load(){
+      box.hidden=false;gate.hidden=true;box.innerHTML="";
+      box.appendChild(h("a",{class:"twitter-timeline",href:"https://twitter.com/i/lists/"+id,"data-height":"760","data-dnt":"true","data-chrome":"noheader nofooter transparent","data-theme":isDark()?"dark":"light",text:"Carregando a lista…"}));
+      loadWidgets().then(function(tw){
+        if(!tw||!tw.widgets){showGate();return}
+        tw.widgets.load(box);
+        setTimeout(function(){var f=box.querySelector("iframe");if(!f||f.offsetHeight<120)showGate()},8000)})}
+    again.onclick=load;
+    load();
+    return p}
   function x36(handles){
     var since=Math.floor(Date.now()/1000)-36*3600;
     return "https://x.com/search?q="+encodeURIComponent("("+handles.map(function(x){return "from:"+x}).join(" OR ")+") since_time:"+since)+"&src=typed_query&f=live"}
@@ -558,11 +600,13 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
         h("li",null,h("b",{text:"Posts das últimas 36h: "}),"abre a busca do X em “Mais recentes”, só com os perfis da categoria e só das últimas 36 horas, do mais novo para o mais antigo."),
         h("li",null,h("b",{text:"Curtir, responder e repostar: "}),"cada post aberto no X já tem esses botões, e a ação sai da sua conta. Contas privadas aparecem se você as segue."),
         h("li",null,h("b",{text:"Listas do X: "}),"crie uma lista para cada categoria no X e me mande o link. Aí o botão “Abrir a lista no X” aparece aqui.")));
+      if(XFEED)root.appendChild(feedPanel(XFEED,"Minha lista no X"));
       root.appendChild(how);
       XCATS.forEach(function(c){root.appendChild(xCatHead(c,true))});
       return}
     var c=XCATS.filter(function(x){return x.k===cat})[0];
     root.appendChild(xCatHead(c,false));
+    if(XLISTS[c.k])root.appendChild(feedPanel(XLISTS[c.k],c.n+" no X"));
     root.appendChild(h("div",{class:"xgrid"},c.h.map(function(x){
       return h("div",{class:"panel xp"},avatar(x,"av big"),h("b",{text:"@"+x}),
         h("div",{class:"xacts"},x36link([x],"Últimas 36h","pri"),ext("https://x.com/"+x,"Perfil",""),ext("https://x.com/intent/post?text="+encodeURIComponent("@"+x+" "),"Mencionar","")))})));

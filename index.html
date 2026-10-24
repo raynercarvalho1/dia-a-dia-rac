@@ -370,6 +370,14 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
 .btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .recap h3{font:800 26px/1.1 var(--f-display);margin-bottom:8px;text-wrap:balance}
 .recap p{margin:0 0 10px;max-width:72ch}
+/* Box score: os dois times lado a lado; empilha em telas estreitas */
+.bxcols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 28px;align-items:start}
+.bxcol{min-width:0}
+.bxcol .tbl{font-size:13px}
+.bxcol .tbl th,.bxcol .tbl td{padding-right:7px}
+.bxcol .ph{width:28px;height:28px}
+.bxcol .pc{gap:7px}
+@media(max-width:1100px){.bxcols{grid-template-columns:minmax(0,1fr)}}
 .teamh{display:flex;align-items:center;gap:10px;margin:20px 0 6px}
 .teamh:first-child{margin-top:0}
 .teamh h3{font:800 20px var(--f-display);text-transform:uppercase}
@@ -1336,16 +1344,18 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
   /* Box score: rebatedores e arremessadores dos dois times, com foto e redes sociais */
   function mlbBoxPanel(g,feed){
     var ld=feed.liveData,bp=panel("Box score");
+    var cols=h("div",{class:"bxcols"});bp.appendChild(cols);
     ["away","home"].forEach(function(side){
+      var col=h("div",{class:"bxcol"});cols.appendChild(col);
       var ts=ld.boxscore.teams[side];
-      bp.appendChild(h("div",{class:"teamh"},logoImg(g[side].id),h("h3",{text:g[side].name})));
+      col.appendChild(h("div",{class:"teamh"},logoImg(g[side].id),h("h3",{text:g[side].name})));
       var bat=(ts.batters||[]).map(function(id){return ts.players["ID"+id]}).filter(function(p){return p&&p.battingOrder&&p.stats&&p.stats.batting&&p.stats.batting.atBats!==undefined});
-      bp.appendChild(h("div",{class:"cat",text:"Rebatedores"}));
-      bp.appendChild(table(["Jogador","Pos","AB","R","H","RBI","HR","BB","K"],bat.map(function(p){var s=p.stats.batting,sub=!/00$/.test(p.battingOrder);
+      col.appendChild(h("div",{class:"cat",text:"Rebatedores"}));
+      col.appendChild(table(["Jogador","Pos","AB","R","H","RBI","HR","BB","K"],bat.map(function(p){var s=p.stats.batting,sub=!/00$/.test(p.battingOrder);
         var pos=(p.allPositions||[]).map(function(x){return x.abbreviation}).join("-")||(p.position&&p.position.abbreviation)||"";
         return [mlbCell(p.person.id,(sub?"↳ ":"")+p.person.fullName),pos,dash(s.atBats),dash(s.runs),dash(s.hits),dash(s.rbi),dash(s.homeRuns),dash(s.baseOnBalls),dash(s.strikeOuts)]})));
-      bp.appendChild(h("div",{class:"cat",text:"Arremessadores"}));
-      bp.appendChild(table(["Jogador","IP","H","R","ER","BB","K","Arr."],(ts.pitchers||[]).map(function(id){var p=ts.players["ID"+id],s=(p&&p.stats&&p.stats.pitching)||{};
+      col.appendChild(h("div",{class:"cat",text:"Arremessadores"}));
+      col.appendChild(table(["Jogador","IP","H","R","ER","BB","K","Arr."],(ts.pitchers||[]).map(function(id){var p=ts.players["ID"+id],s=(p&&p.stats&&p.stats.pitching)||{};
         if(!p)return null;
         var note=(s.note||"").replace("(W,","(V,").replace("(L,","(D,").replace("(S,","(SV,").replace("(H,","(HLD,");
         return [mlbCell(p.person.id,p.person.fullName,note?" "+note:""),dash(s.inningsPitched),dash(s.hits),dash(s.runs),dash(s.earnedRuns),dash(s.baseOnBalls),dash(s.strikeOuts),dash(s.numberOfPitches)]}).filter(Boolean)))});
@@ -1529,8 +1539,10 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
     var teams=(s.boxscore&&s.boxscore.players)||[];
     if(!teams.length){p.appendChild(h("p",{class:"empty",text:"Box score ainda não disponível."}));return p}
     var order=[g.away.abbr,g.home.abbr];
+    var cols=h("div",{class:"bxcols"});p.appendChild(cols);
     teams.slice().sort(function(a,b){return order.indexOf(a.team.abbreviation)-order.indexOf(b.team.abbreviation)}).forEach(function(t){
-      p.appendChild(h("div",{class:"teamh"},img(espnLogo(sport,t.team),"lg"),h("h3",{text:t.team.displayName})));
+      var col=h("div",{class:"bxcol"});cols.appendChild(col);
+      col.appendChild(h("div",{class:"teamh"},img(espnLogo(sport,t.team),"lg"),h("h3",{text:t.team.displayName})));
       if(sport==="nba"){
         var st=t.statistics[0]||{labels:[],athletes:[]},idx=NBACOLS.map(function(c){return (st.labels||[]).indexOf(c)});
         var played=(st.athletes||[]).filter(function(a){return !a.didNotPlay&&a.stats&&a.stats.length});
@@ -1538,16 +1550,16 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
           var rows=played.filter(function(a){return !!a.starter===grp[1]}).map(function(a){
             return [athCell(sport,a)].concat(idx.map(function(i){return i<0?"–":dash(a.stats[i])}))});
           if(!rows.length)return;
-          p.appendChild(h("div",{class:"cat",text:grp[0]}));
-          p.appendChild(table(["Jogador"].concat(NBACOLS),rows,1))});
+          col.appendChild(h("div",{class:"cat",text:grp[0]}));
+          col.appendChild(table(["Jogador"].concat(NBACOLS),rows,1))});
         var dnp=(st.athletes||[]).filter(function(a){return a.didNotPlay});
-        if(dnp.length)p.appendChild(h("p",{class:"sub",text:"Não jogaram: "+dnp.map(function(a){return a.athlete.displayName}).join(", ")+"."}))}
+        if(dnp.length)col.appendChild(h("p",{class:"sub",text:"Não jogaram: "+dnp.map(function(a){return a.athlete.displayName}).join(", ")+"."}))}
       else{
         NFLCATS.forEach(function(cat){
           var st=t.statistics.filter(function(x){return x.name===cat[0]})[0];
           if(!st||!st.athletes||!st.athletes.length)return;
-          p.appendChild(h("div",{class:"cat",text:cat[1]}));
-          p.appendChild(table(["Jogador"].concat(st.labels),st.athletes.map(function(a){return [athCell(sport,a)].concat(a.stats.map(dash))}),1))})}});
+          col.appendChild(h("div",{class:"cat",text:cat[1]}));
+          col.appendChild(table(["Jogador"].concat(st.labels),st.athletes.map(function(a){return [athCell(sport,a)].concat(a.stats.map(dash))}),1))})}});
     p.appendChild(h("p",{class:"note",text:sport==="nba"
       ?"MIN minutos, PTS pontos, REB rebotes, AST assistências, FG arremessos de quadra (certos-tentados), 3PT de três, FT lances livres, STL roubos, BLK tocos, TO erros, +/- saldo com ele em quadra."
       :"C/ATT passes completos/tentados, YDS jardas, AVG média, TD touchdowns, INT interceptações, CAR corridas, REC recepções, TGTS alvos, TOT tackles, SACKS sacks, FG field goals, XP pontos extras."}));

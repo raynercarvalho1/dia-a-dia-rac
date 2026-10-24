@@ -570,8 +570,6 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
     {k:"beisebol",n:"Beisebol",c:"#0B9A4B",h:["KutterIsKing","DMAC_LA"]}];
   /* Links das Listas do X por categoria. Quando criar uma lista no X, cole o link aqui, ex.: amigos:"https://x.com/i/lists/123" */
   var XLISTS={};
-  /* Lista geral do Rayner no X; o X não mostra posts recentes dentro de outros sites, então o botão abre a lista lá */
-  var XFEED="https://x.com/i/lists/2113789073005408281";
   function x36(handles){
     var since=Math.floor(Date.now()/1000)-36*3600;
     return "https://x.com/search?q="+encodeURIComponent("("+handles.map(function(x){return "from:"+x}).join(" OR ")+") since_time:"+since)+"&src=typed_query&f=live"}
@@ -606,8 +604,6 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
         h("li",null,h("b",{text:"Posts das últimas 36h: "}),"abre a busca do X em “Mais recentes”, só com os perfis da categoria e só das últimas 36 horas, do mais novo para o mais antigo."),
         h("li",null,h("b",{text:"Curtir, responder e repostar: "}),"cada post aberto no X já tem esses botões, e a ação sai da sua conta. Contas privadas aparecem se você as segue."),
         h("li",null,h("b",{text:"Listas do X: "}),"crie uma lista para cada categoria no X e me mande o link. Aí o botão “Abrir a lista no X” aparece aqui.")));
-      if(XFEED){var mine=h("div",{class:"panel xhead"},h("div",{class:"xht"},h("h2",{text:"Minha lista no X"}),h("p",{class:"sub",text:"Abre a sua lista no X, com os posts do mais novo para o mais antigo."})),
-        h("div",{class:"xacts"},ext(XFEED,"Abrir a minha lista no X","pri")));root.appendChild(mine)}
       root.appendChild(how);
       XCATS.forEach(function(c){root.appendChild(xCatHead(c,true))});
       return}

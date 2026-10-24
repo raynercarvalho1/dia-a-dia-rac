@@ -303,9 +303,10 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
 .tbl td{padding:6px 10px 6px 0;border-top:1px solid var(--line);white-space:nowrap}
 .tbl tr:first-child td{border-top:0}
 .tbl .num{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:13px}
-.tbl.ls .num{min-width:28px;font:600 17px var(--f-display)}
+/* placar por entrada/quarto: todas as colunas de número centralizadas, com a mesma largura */
+.tbl.ls th.num,.tbl.ls td.num{min-width:34px;padding:6px 4px;text-align:center;font:600 17px var(--f-display)}
 .tbl.ls td.tot{font-weight:800;color:var(--accent)}
-.tbl.ls td.runs{color:var(--accent-ink);background:var(--accent);border-radius:4px;text-align:center;font-weight:800}
+.tbl.ls .rb{display:inline-block;min-width:26px;padding:1px 6px;border-radius:5px;background:var(--accent);color:var(--accent-ink);font-weight:800}
 .pc{display:inline-flex;align-items:center;gap:10px;min-width:0}
 .ph.s{width:30px;height:30px}
 .ph{width:34px;height:34px;border-radius:50%;object-fit:cover;background:var(--line);flex:none}
@@ -1328,7 +1329,7 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
     tb.querySelectorAll("tr").forEach(function(tr){var c=tr.children;if(c.length>3)c[c.length-3].classList.add("tot")});
     /* entradas com corrida ficam em destaque */
     tb.querySelectorAll("tbody tr").forEach(function(tr){Array.prototype.forEach.call(tr.children,function(td,i){
-      if(i>0&&i<=n&&/^[1-9]\d*$/.test(td.textContent))td.classList.add("runs")})});
+      if(i>0&&i<=n&&/^[1-9]\d*$/.test(td.textContent)){var v=td.textContent;td.textContent="";td.appendChild(h("span",{class:"rb",text:v}))}})});
     lp.appendChild(tb);
     lp.appendChild(h("p",{class:"note",text:"R corridas, H rebatidas válidas, E erros. Em destaque, as entradas em que saíram corridas. “x” quando o time da casa não precisou rebater na última entrada."}));
     return lp}

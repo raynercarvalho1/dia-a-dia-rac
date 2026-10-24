@@ -50,6 +50,7 @@
 :root[data-sec="x"]{--accent:var(--c-x);--accent-ink:var(--side)}
 
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 /* Layout: foto em tela cheia ao fundo; barra lateral branca com ícones coloridos e contadores;
    conteúdo em cartões translúcidos por cima da foto */
 body{background:var(--img-ground);color:var(--ink);font:400 15px/1.5 var(--f-body);margin:0}
@@ -476,6 +477,7 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
           <label class="filebtn" for="bd-file">Importar do Facebook (CSV)</label>
           <input type="file" id="bd-file" accept=".csv,text/csv" hidden>
           <button type="button" class="ghostbtn" id="bd-clear">Apagar todos</button>
+          <button type="button" class="ghostbtn" id="bd-lock" title="Esconde a seção de Aniversários neste aparelho. A lista continua guardada.">Esconder neste aparelho</button>
         </div>
         <p class="sub">Clique na ⭐ para marcar quem importa. Os marcados aparecem num aviso no topo do site na véspera e no dia. O calendário (.ics) leva dois alertas para cada marcado: às 9h da véspera e às 9h do dia; abra o arquivo no celular para os alertas chegarem mesmo com o site fechado.</p>
         <p class="sub" id="bd-imp">A lista fica guardada só neste navegador. Para ter no celular, importe o arquivo lá também.</p>
@@ -646,7 +648,7 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
   /* Busca na barra lateral: seções, times, categorias e perfis do X */
   function norm(t){return t.normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase()}
   var DEST=[];
-  document.querySelectorAll(".side a.it[data-k]").forEach(function(a){DEST.push({t:a.querySelector(".t").textContent,href:a.getAttribute("href"),ico:a.querySelector(".ico")})});
+  document.querySelectorAll(".side a.it[data-k]").forEach(function(a){DEST.push({t:a.querySelector(".t").textContent,href:a.getAttribute("href"),ico:a.querySelector(".ico"),el:a})});
   XCATS.forEach(function(c){c.h.forEach(function(x){DEST.push({t:"@"+x+" · "+c.n,href:"https://x.com/"+x,ext:true,av:x})})});
   var teamsAdded=false;
   $("#busca").addEventListener("focus",function(){
@@ -655,7 +657,7 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
   function searchDraw(){
     var q=norm($("#busca").value.trim()),box=$("#results");box.innerHTML="";
     if(!q)return;
-    var hits=DEST.filter(function(d){return norm(d.t).indexOf(q)>=0}).slice(0,8);
+    var hits=DEST.filter(function(d){return !(d.el&&d.el.hidden)&&norm(d.t).indexOf(q)>=0}).slice(0,8);
     if(!hits.length){box.appendChild(h("p",{class:"sub",style:"padding:4px 8px;margin:0",text:"Nada encontrado."}));return}
     hits.forEach(function(d){
       var icon=d.ico?d.ico.cloneNode(true):d.logo?img(d.logo,"ico"):d.av?avatar(d.av,"ico"):null;
@@ -1527,7 +1529,34 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
       }).catch(function(e){box.innerHTML="";box.appendChild(h("div",{class:"panel"},failed(load,e)))})}
     load()}
 
-  route();
+  /* Seções só do dono (Aniversários). Ficam escondidas para visitantes e aparecem nos aparelhos onde o Rayner
+     abriu o link secreto uma vez (#dono-...). O site guarda só o SHA-256 do código, nunca o código em si.
+     A lista de aniversários nunca sai do navegador; isto apenas esconde a seção de quem não é o dono. */
+  var OWNER_HASH="6eb00797966def470902c833587ef022a5799389988a6519e44e66c20fb5aedd",OWNERLS="rac-dono";
+  function isOwner(){try{return localStorage.getItem(OWNERLS)===OWNER_HASH}catch(e){return false}}
+  function applyOwner(){
+    var own=isOwner(),i=tabs.indexOf("aniversarios");
+    if(!own&&i>=0)tabs.splice(i,1);
+    if(own&&i<0)tabs.push("aniversarios");
+    document.querySelectorAll('.side a.it[data-k="aniversarios"]').forEach(function(a){a.hidden=!own});
+    if(!own){$("#aniversarios").hidden=true;$("#bdalert").hidden=true}}
+  function sha256hex(t){
+    return crypto.subtle.digest("SHA-256",new TextEncoder().encode(t)).then(function(b){
+      return Array.prototype.map.call(new Uint8Array(b),function(x){return x.toString(16).padStart(2,"0")}).join("")})}
+  function unlock(){
+    var m=/^#dono-(.+)$/.exec(location.hash||"");
+    if(!m||!window.crypto||!crypto.subtle)return Promise.resolve();
+    return sha256hex(m[1]).then(function(hx){
+      if(hx===OWNER_HASH){try{localStorage.setItem(OWNERLS,OWNER_HASH)}catch(e){}}
+      /* tira o código da barra de endereço e do histórico */
+      history.replaceState(null,"",location.pathname+location.search+(hx===OWNER_HASH?"#aniversarios":"#esportes"))}).catch(function(){})}
+  $("#bd-lock").addEventListener("click",function(){
+    try{localStorage.removeItem(OWNERLS)}catch(e){}
+    applyOwner();location.hash="#esportes"});
+  applyOwner();
+  unlock().then(function(){applyOwner();route();render()});
+  /* link secreto colado numa aba que já estava aberta */
+  window.addEventListener("hashchange",function(){if(/^#dono-/.test(location.hash))unlock().then(function(){applyOwner();route();render()})});
 
   /* Aniversários */
   var sel=$("#f-mes");
@@ -1559,7 +1588,7 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
   function withDates(){return items.map(function(x){var n=nextDate(x.dia,x.mes);return Object.assign({},x,{dias:n.days,prox:n.year})})}
   /* Aviso no topo do site: marcados que fazem aniversário hoje ou amanhã */
   function bdAlert(list){
-    var bar=$("#bdalert"),favs=list.filter(function(x){return x.fav&&x.dias<=1});
+    var bar=$("#bdalert"),favs=isOwner()?list.filter(function(x){return x.fav&&x.dias<=1}):[];
     if(!favs.length){bar.hidden=true;return}
     function names(arr){return arr.map(function(x){var a=idade(x);return x.nome+(a?" ("+a+")":"")}).join(", ")}
     var hoje=favs.filter(function(x){return x.dias===0}),amanha=favs.filter(function(x){return x.dias===1});

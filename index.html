@@ -5,36 +5,43 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Dia a Dia RAC</title>
 <meta name="claude:viewport-fit-sides" content="cover">
+<script>
+/* Tema escolhido na barra lateral; o padrão é o claro, mesmo com o sistema no escuro */
+(function(){var t="light";try{t=localStorage.getItem("rac-tema")||"light"}catch(e){}
+  if(t!=="auto")document.documentElement.setAttribute("data-theme",t)})();
+</script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Outfit:wght@500;600;700;800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
-/* Tokens: neutros levemente esverdeados; a barra lateral é sólida e os cartões são translúcidos sobre a foto.
-   Cada seção tem a sua cor (esportes verde, vagas azul, aniversários rosa, X grafite, em breve laranja). */
+/* Tokens nas cores dos Dodgers: azul Dodger como cor principal, vermelho do número do uniforme como destaque,
+   neutros levemente azulados e branco. A barra lateral é sólida e os cartões são translúcidos sobre a foto.
+   Cada seção tem a sua cor dentro da mesma família (esportes azul Dodger, vagas azul-céu, aniversários vermelho,
+   X grafite, em breve prata). */
 :root{
-  --bg:#EEF1EF; --surface:rgba(255,255,255,.88); --ink:#111814; --muted:#59665F; --line:#DAE1DC;
-  --side:#FFFFFF; --hover:#EFF2F0; --glass:rgba(255,255,255,.80); --veil:linear-gradient(180deg,rgba(8,16,24,.10),rgba(8,16,24,.34));
-  --accent:#067A36; --accent-ink:#FFFFFF; --brand:#058C3C; --brand-ink:#FFFFFF;
-  --good:#1E7A4C; --warn:#A5610B; --bad:#B3312B; --live:#D9232A;
-  --on-img:#FFFFFF; --scrim:rgba(5,9,7,.82); --chip-bg:rgba(5,9,7,.66); --img-ground:#1B2420;
-  --shadow:0 1px 2px rgba(10,20,15,.08),0 8px 24px rgba(10,20,15,.12);
-  --c-esportes:#0B9A4B; --c-vagas:#1D6FE0; --c-aniversarios:#D6307F; --c-embreve:#E2700F; --c-x:#1F2328;
+  --bg:#EEF3F9; --surface:rgba(255,255,255,.92); --ink:#0E1B2C; --muted:#53627A; --line:#D6E0EC;
+  --side:#FFFFFF; --hover:#EAF1F9; --glass:rgba(255,255,255,.86); --veil:linear-gradient(180deg,rgba(255,255,255,.18),rgba(0,40,90,.16));
+  --accent:#005A9C; --accent-ink:#FFFFFF; --brand:#005A9C; --brand-ink:#FFFFFF;
+  --good:#1E7A4C; --warn:#A5610B; --bad:#C8102E; --live:#E4002B;
+  --on-img:#FFFFFF; --scrim:rgba(2,14,32,.82); --chip-bg:rgba(2,14,32,.66); --img-ground:#0E2240;
+  --shadow:0 1px 2px rgba(0,30,70,.08),0 8px 24px rgba(0,30,70,.12);
+  --c-esportes:#005A9C; --c-vagas:#2E8BD8; --c-aniversarios:#D6283B; --c-embreve:#7B8CA3; --c-x:#1F2328;
   --f-ui:"Outfit","Hanken Grotesk",system-ui,sans-serif;
   --f-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
   --f-body:"Hanken Grotesk",system-ui,sans-serif;
   --f-mono:"JetBrains Mono",ui-monospace,monospace;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#0C110E; --surface:rgba(18,24,22,.86); --ink:#E6EDE9; --muted:#9AA6A0; --line:#2A3530;
-  --side:#141A17; --hover:#1F2824; --glass:rgba(18,24,22,.78); --veil:linear-gradient(180deg,rgba(3,6,5,.45),rgba(3,6,5,.62));
-  --accent:#45C97C; --accent-ink:#04170B; --brand:#0A6A31; --brand-ink:#FFFFFF;
-  --good:#55C08A; --warn:#E0A252; --bad:#F08A84; --live:#FF5A5F;
-  --c-esportes:#4FD18A; --c-vagas:#73AEFF; --c-aniversarios:#F27EB9; --c-embreve:#FFA65E; --c-x:#E7E9EA;
+  --bg:#08111D; --surface:rgba(12,24,42,.86); --ink:#E7EEF7; --muted:#9AAAC0; --line:#22324A;
+  --side:#0D1A2C; --hover:#16263D; --glass:rgba(12,24,42,.78); --veil:linear-gradient(180deg,rgba(2,8,18,.45),rgba(2,8,18,.62));
+  --accent:#6CB4F0; --accent-ink:#04182E; --brand:#005A9C; --brand-ink:#FFFFFF;
+  --good:#55C08A; --warn:#E0A252; --bad:#FF7A85; --live:#FF5A5F;
+  --c-esportes:#6CB4F0; --c-vagas:#8CCBFF; --c-aniversarios:#FF7A85; --c-embreve:#B4C0D0; --c-x:#E7E9EA;
   --shadow:0 0 0 1px rgba(255,255,255,.06),0 8px 24px rgba(0,0,0,.3); color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#0C110E; --surface:rgba(18,24,22,.86); --ink:#E6EDE9; --muted:#9AA6A0; --line:#2A3530;
-  --side:#141A17; --hover:#1F2824; --glass:rgba(18,24,22,.78); --veil:linear-gradient(180deg,rgba(3,6,5,.45),rgba(3,6,5,.62));
-  --accent:#45C97C; --accent-ink:#04170B; --brand:#0A6A31; --brand-ink:#FFFFFF;
-  --good:#55C08A; --warn:#E0A252; --bad:#F08A84; --live:#FF5A5F;
-  --c-esportes:#4FD18A; --c-vagas:#73AEFF; --c-aniversarios:#F27EB9; --c-embreve:#FFA65E; --c-x:#E7E9EA;
+  --bg:#08111D; --surface:rgba(12,24,42,.86); --ink:#E7EEF7; --muted:#9AAAC0; --line:#22324A;
+  --side:#0D1A2C; --hover:#16263D; --glass:rgba(12,24,42,.78); --veil:linear-gradient(180deg,rgba(2,8,18,.45),rgba(2,8,18,.62));
+  --accent:#6CB4F0; --accent-ink:#04182E; --brand:#005A9C; --brand-ink:#FFFFFF;
+  --good:#55C08A; --warn:#E0A252; --bad:#FF7A85; --live:#FF5A5F;
+  --c-esportes:#6CB4F0; --c-vagas:#8CCBFF; --c-aniversarios:#FF7A85; --c-embreve:#B4C0D0; --c-x:#E7E9EA;
   --shadow:0 0 0 1px rgba(255,255,255,.06),0 8px 24px rgba(0,0,0,.3); color-scheme:dark}
 /* A seção aberta empresta a sua cor para links, títulos e botões */
 :root[data-sec="vagas"]{--accent:var(--c-vagas)}
@@ -52,7 +59,7 @@ body{background:var(--img-ground);color:var(--ink);font:400 15px/1.5 var(--f-bod
 .side{position:sticky;top:12px;align-self:start;height:calc(100vh - 24px);overflow-y:auto;background:var(--side);border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,.22);padding:14px 10px;display:flex;flex-direction:column;gap:16px;z-index:30}
 .sidetop{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:2px 6px}
 .logo{text-decoration:none;display:flex;align-items:center;gap:6px;font:800 23px/1 var(--f-ui);letter-spacing:-.035em}
-.logo .w{background:linear-gradient(90deg,var(--c-esportes),var(--c-vagas) 75%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.logo .w{background:linear-gradient(90deg,var(--c-esportes),var(--c-vagas));-webkit-background-clip:text;background-clip:text;color:transparent}
 .logo .r{font:800 10px/1 var(--f-ui);letter-spacing:.08em;color:#fff;background:var(--c-aniversarios);padding:4px 5px 3px;border-radius:4px}
 .iconbtn{background:none;color:var(--muted);padding:6px;border-radius:8px;display:inline-grid;place-items:center}
 .iconbtn:hover{background:var(--hover);color:var(--ink)}
@@ -77,6 +84,10 @@ img.ico{background:#fff;object-fit:contain;padding:2px;box-shadow:0 0 0 1px var(
 .wx svg{width:22px;height:22px;flex:none}
 .wx b{font-weight:700}
 .bgpick{display:flex;align-items:center;gap:6px}
+.themes{display:flex;align-items:center;gap:6px}
+.seg{display:flex;flex:1;background:var(--hover);border-radius:8px;padding:2px;gap:2px}
+.seg button{flex:1;background:none;color:var(--muted);font:600 12px var(--f-ui);padding:5px 4px;border-radius:6px}
+.seg button[aria-pressed="true"]{background:var(--side);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
 .bgpick button{width:46px;height:30px;border-radius:7px;background:var(--img-ground) center/cover;border:2px solid transparent;padding:0}
 .bgpick button[aria-pressed="true"]{border-color:var(--accent)}
 .credit{font-size:11px;line-height:1.4}
@@ -374,6 +385,7 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
     <div class="grp" id="grp-x"><h4>Listas do X</h4></div>
     <div class="sidefoot">
       <div class="wx" id="tempo">Carregando o tempo em Sorocaba…</div>
+      <div class="themes"><span>Tema</span><div class="seg" id="themepick" role="group" aria-label="Tema"><button type="button" data-t="light">Claro</button><button type="button" data-t="dark">Escuro</button><button type="button" data-t="auto">Auto</button></div></div>
       <div class="bgpick" id="bgpick"><span>Fundo</span></div>
       <div class="credit" id="credit"></div>
     </div>
@@ -544,6 +556,13 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
     var bt=h("button",{type:"button",title:b.n,"aria-label":"Fundo: "+b.n,style:'background-image:url("'+b.u+'")'});bt.dataset.k=b.k;
     bt.onclick=function(){setBg(b.k)};$("#bgpick").appendChild(bt)});
   setBg((function(){try{return localStorage.getItem("rac-fundo")}catch(e){return null}})());
+  /* Seletor de tema: Claro (padrão), Escuro ou Auto (segue o sistema) */
+  function setTheme(t){
+    if(t==="auto")document.documentElement.removeAttribute("data-theme");else document.documentElement.setAttribute("data-theme",t);
+    document.querySelectorAll("#themepick button").forEach(function(b){b.setAttribute("aria-pressed",b.dataset.t===t?"true":"false")});
+    try{localStorage.setItem("rac-tema",t)}catch(e){}}
+  document.querySelectorAll("#themepick button").forEach(function(b){b.onclick=function(){setTheme(b.dataset.t)}});
+  setTheme((function(){try{return localStorage.getItem("rac-tema")||"light"}catch(e){return "light"}})());
 
   /* ===== Perfis no X, por categoria =====
      Ler posts pela API do X é pago, então o site leva direto ao X: a busca "Mais recentes" com since_time

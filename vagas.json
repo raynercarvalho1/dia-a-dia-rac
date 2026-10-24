@@ -1,7 +1,8 @@
 {
 "fonte": "https://mentoradados.com/portal-de-vagas-v2/",
-"coletado": "2026-10-24T15:51:42.165Z",
+"coletado": "2026-10-24T16:42:50Z",
 "filtro": "Análise de Dados / BI e Inteligência de Negócios. Remoto de qualquer lugar; presencial ou híbrido só em São Paulo ou Sorocaba. Publicadas há menos de 2 meses.",
+"paginas_lidas": 16,
 "vagas": [
 {
 "id": "13821",
@@ -12,9 +13,10 @@
 "nv": "Pleno",
 "s": "A combinar",
 "a": "há 22 horas",
-"d": 0,
+"d": 1,
 "ap": "mailto:luander.victor@decisionbr.com.br",
-"or": "https://lnkd.in/p/dJgsPqaC"
+"or": "https://lnkd.in/p/dJgsPqaC",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-pleno-senior-7/"
 },
 {
 "id": "13811",
@@ -27,7 +29,8 @@
 "a": "há 1 dia",
 "d": 1,
 "ap": "https://platform.aurorarecruit.ai/registerCandidate?token=3f024b09-3f1f-4a3f-83da-c0b5743a7907&language=pt-BR",
-"or": "https://lnkd.in/p/dEHqRbq4"
+"or": "https://lnkd.in/p/dEHqRbq4",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-pleno-191/"
 },
 {
 "id": "13803",
@@ -40,7 +43,8 @@
 "a": "há 1 dia",
 "d": 1,
 "ap": "mailto:raquel.domingues@pasqualisolution.com.br",
-"or": "https://lnkd.in/p/dcXswyTW"
+"or": "https://lnkd.in/p/dcXswyTW",
+"pl": "https://mentoradados.com/vagas/analista-de-business-intelligence-bi-pleno-8/"
 },
 {
 "id": "13795",
@@ -53,7 +57,8 @@
 "a": "há 1 dia",
 "d": 1,
 "ap": "mailto:fbenetti@k2partnering.com",
-"or": "https://lnkd.in/p/dCehcjeT"
+"or": "https://lnkd.in/p/dCehcjeT",
+"pl": "https://mentoradados.com/vagas/desenvolvedora-power-bi-pleno/"
 },
 {
 "id": "13762",
@@ -66,7 +71,8 @@
 "a": "há 2 dias",
 "d": 2,
 "ap": "mailto:vanessaalves@tscemrh.com.br",
-"or": "https://lnkd.in/p/dCz5hice"
+"or": "https://lnkd.in/p/dCz5hice",
+"pl": "https://mentoradados.com/vagas/especialista-senior-em-digital-analytics-web-product-analytics-2/"
 },
 {
 "id": "13732",
@@ -79,7 +85,8 @@
 "a": "há 3 dias",
 "d": 3,
 "ap": "https://jobs.quickin.io/evtit/jobs/6ac4f269c81d250013eaf79d?src=LinkedIn",
-"or": "https://lnkd.in/p/d2hWfwXV"
+"or": "https://lnkd.in/p/d2hWfwXV",
+"pl": "https://mentoradados.com/vagas/analista-power-bi-senior-2/"
 },
 {
 "id": "13728",
@@ -92,7 +99,8 @@
 "a": "há 3 dias",
 "d": 3,
 "ap": "https://insideoutpr.inhire.app/vagas/4cefb265-8c14-454d-9788-80a048b9a28e/analista-de-bi-pleno",
-"or": "https://lnkd.in/p/dcqrYm_R"
+"or": "https://lnkd.in/p/dcqrYm_R",
+"pl": "https://mentoradados.com/vagas/analista-de-bi-pleno-77/"
 },
 {
 "id": "13722",
@@ -105,7 +113,8 @@
 "a": "há 3 dias",
 "d": 3,
 "ap": "https://lnkd.in/p/dCxRJs2u",
-"or": "https://lnkd.in/p/dCxRJs2u"
+"or": "https://lnkd.in/p/dCxRJs2u",
+"pl": "https://mentoradados.com/vagas/data-analyst-senior-2/"
 },
 {
 "id": "13714",
@@ -118,7 +127,8 @@
 "a": "há 3 dias",
 "d": 3,
 "ap": "https://kpmg.inhire.app/vagas/0d06818a-b38f-4092-9cbf-af707f80e9dc/analista-de-dados",
-"or": "https://lnkd.in/p/dmEKgdbx"
+"or": "https://lnkd.in/p/dmEKgdbx",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-3/"
 },
 {
 "id": "13686",
@@ -131,7 +141,8 @@
 "a": "há 4 dias",
 "d": 4,
 "ap": "https://lamoda.gupy.io/job/eyJqb2JJZCI6MTI3MzYzODMsInNvdXJjZSI6Imd1cHlfcG9ydGFsIn0=?jobBoardSource=gupy_portal",
-"or": "https://lnkd.in/p/d_jVSZjw"
+"or": "https://lnkd.in/p/d_jVSZjw",
+"pl": "https://mentoradados.com/vagas/analista-de-digital-analytics-pleno-2/"
 },
 {
 "id": "13676",
@@ -144,7 +155,8 @@
 "a": "há 4 dias",
 "d": 4,
 "ap": "mailto:clucena@k-labdigital.com",
-"or": "https://lnkd.in/p/drHBhDeG"
+"or": "https://lnkd.in/p/drHBhDeG",
+"pl": "https://mentoradados.com/vagas/engenheiro-bi-senior/"
 },
 {
 "id": "13670",
@@ -156,8 +168,9 @@
 "s": "A combinar",
 "a": "há 4 dias",
 "d": 4,
-"ap": "http://(11)%2097602-4050/",
-"or": "https://lnkd.in/p/dyenYtYm"
+"ap": "https://mentoradados.com/vagas/especialista-senior-em-digital-analytics-web-product-analytics/",
+"or": "https://lnkd.in/p/dyenYtYm",
+"pl": "https://mentoradados.com/vagas/especialista-senior-em-digital-analytics-web-product-analytics/"
 },
 {
 "id": "13668",
@@ -170,7 +183,8 @@
 "a": "há 4 dias",
 "d": 4,
 "ap": "https://vwgs-sam.gupy.io/job/eyJqb2JJZCI6MTI3Mzc2NjgsInNvdXJjZSI6ImxpbmtlZGluIn0=?jobBoardSource=linkedin",
-"or": "https://lnkd.in/p/dFuCHM8S"
+"or": "https://lnkd.in/p/dFuCHM8S",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-pleno-189/"
 },
 {
 "id": "13664",
@@ -183,7 +197,8 @@
 "a": "há 4 dias",
 "d": 4,
 "ap": "https://insi.jobs.recrut.ai/vagas/job/PYOVLL",
-"or": "https://lnkd.in/p/dh8XHQwK"
+"or": "https://lnkd.in/p/dh8XHQwK",
+"pl": "https://mentoradados.com/vagas/analista-de-digital-analytics-pleno/"
 },
 {
 "id": "13660",
@@ -196,7 +211,22 @@
 "a": "há 4 dias",
 "d": 4,
 "ap": "https://growdev.inhire.app/vagas/689cc4a2-f3cb-43c4-adf9-e04fbc0e7bd2/analista-de-bi-pleno-or-foco-em-dataviz-e-ux",
-"or": "https://lnkd.in/p/dYqJ7hae"
+"or": "https://lnkd.in/p/dYqJ7hae",
+"pl": "https://mentoradados.com/vagas/analista-de-bi-pleno-foco-em-dataviz-e-ux/"
+},
+{
+"id": "13637",
+"t": "Analista de Inteligência Comercial Pleno",
+"e": "Itatiaia",
+"m": "Presencial",
+"cidade": "São Paulo - SP (Presencial)",
+"nv": "Pleno",
+"s": "A combinar",
+"a": "há 5 dias",
+"d": 5,
+"ap": "mailto:trabalheconosco.es@minhaitatiaia.com.br",
+"or": "https://lnkd.in/p/dmkf43nE",
+"pl": "https://mentoradados.com/vagas/analista-de-inteligencia-comercial-pleno-5/"
 },
 {
 "id": "13617",
@@ -209,7 +239,8 @@
 "a": "há 5 dias",
 "d": 5,
 "ap": "https://lwsa.inhire.app/octadesk/vagas/326ae112-4eaa-457c-b0a0-a70431a649cf/octadesk-or-analista-de-dados-pleno-or-hibrido",
-"or": "https://lnkd.in/p/dqGYC67N"
+"or": "https://lnkd.in/p/dqGYC67N",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-pleno-188/"
 },
 {
 "id": "13615",
@@ -222,7 +253,8 @@
 "a": "há 5 dias",
 "d": 5,
 "ap": "https://lnkd.in/p/dwSpeF2e",
-"or": ""
+"or": "",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-pleno-187/"
 },
 {
 "id": "13581",
@@ -233,9 +265,10 @@
 "nv": "Estágio",
 "s": "A combinar",
 "a": "há 1 semana",
-"d": 7,
+"d": 8,
 "ap": "mailto:curriculos@licitacao.com.br",
-"or": "https://lnkd.in/p/dtHiyJSn"
+"or": "https://lnkd.in/p/dtHiyJSn",
+"pl": "https://mentoradados.com/vagas/estagio-em-dados-e-business-intelligence-bi/"
 },
 {
 "id": "13567",
@@ -246,9 +279,10 @@
 "nv": "Líder",
 "s": "A combinar",
 "a": "há 1 semana",
-"d": 7,
+"d": 8,
 "ap": "https://jcdecaux.gupy.io/job/eyJqb2JJZCI6MTI2ODQ5MDcsInNvdXJjZSI6InRhbGVudCJ9?jobBoardSource=share_link",
-"or": "https://lnkd.in/p/datQ2asV"
+"or": "https://lnkd.in/p/datQ2asV",
+"pl": "https://mentoradados.com/vagas/coordenador-de-bi-lider-3/"
 },
 {
 "id": "13563",
@@ -259,9 +293,10 @@
 "nv": "Sênior",
 "s": "A combinar",
 "a": "há 1 semana",
-"d": 7,
+"d": 8,
 "ap": "https://nitro.gupy.io/jobs/12693700?jobBoardSource=gupy_public_page",
-"or": "https://lnkd.in/p/dXVuPcaE"
+"or": "https://lnkd.in/p/dXVuPcaE",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-de-fpa-senior/"
 },
 {
 "id": "13540",
@@ -272,9 +307,10 @@
 "nv": "Estágio",
 "s": "A combinar",
 "a": "há 1 semana",
-"d": 7,
+"d": 9,
 "ap": "mailto:dho@castecnologia.com.br",
-"or": "https://lnkd.in/p/dykp7NY7"
+"or": "https://lnkd.in/p/dykp7NY7",
+"pl": "https://mentoradados.com/vagas/estagiario-de-ti-estagio/"
 },
 {
 "id": "13532",
@@ -285,9 +321,10 @@
 "nv": "Júnior",
 "s": "R$ 3.060,00",
 "a": "há 1 semana",
-"d": 7,
+"d": 9,
 "ap": "https://lnkd.in/p/dq8i9k-7",
-"or": ""
+"or": "",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-junior-79/"
 },
 {
 "id": "13526",
@@ -298,9 +335,10 @@
 "nv": "Sênior",
 "s": "A combinar",
 "a": "há 1 semana",
-"d": 7,
+"d": 9,
 "ap": "https://kstack.inhire.app/vagas/087e408f-0ab0-40a7-a848-3227ce8868f2/analista-de-dados-senior",
-"or": "https://lnkd.in/p/d55AzpBk"
+"or": "https://lnkd.in/p/d55AzpBk",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-senior-senior/"
 },
 {
 "id": "13522",
@@ -311,9 +349,10 @@
 "nv": "Sênior",
 "s": "A combinar",
 "a": "há 1 semana",
-"d": 7,
+"d": 9,
 "ap": "https://frameworkdigital.inhire.app/vagas/601d40cf-a89f-470e-95f2-bc13bbcd6339/analista-de-bi-senior",
-"or": "https://lnkd.in/p/dFD6cik5"
+"or": "https://lnkd.in/p/dFD6cik5",
+"pl": "https://mentoradados.com/vagas/analista-de-bi-senior-21/"
 },
 {
 "id": "13516",
@@ -324,9 +363,10 @@
 "nv": "Sênior",
 "s": "A combinar",
 "a": "há 1 semana",
-"d": 7,
+"d": 9,
 "ap": "https://job-boards.greenhouse.io/wppmedia/jobs/5449518008",
-"or": "https://lnkd.in/p/dq2XrCeg"
+"or": "https://lnkd.in/p/dq2XrCeg",
+"pl": "https://mentoradados.com/vagas/analista-de-bi-senior-20/"
 },
 {
 "id": "13508",
@@ -337,9 +377,10 @@
 "nv": "Pleno",
 "s": "A combinar",
 "a": "há 1 semana",
-"d": 7,
+"d": 9,
 "ap": "https://forms.cloud.microsoft/pages/responsepage.aspx?id=pboE5-DIu0ac6DfRywFAYB9al-srXYBAnYL41Hj7XZlUNlQ2S1hYVFdEQzFHQUI5VFNONlBTSUJKRi4u&route=shorturl",
-"or": "https://lnkd.in/p/dYefX-qh"
+"or": "https://lnkd.in/p/dYefX-qh",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-ops-pleno/"
 },
 {
 "id": "13482",
@@ -350,9 +391,10 @@
 "nv": "Pleno",
 "s": "A combinar",
 "a": "há 1 semana",
-"d": 7,
+"d": 10,
 "ap": "mailto:matheus.ferraz@daxx.com.br",
-"or": ""
+"or": "",
+"pl": "https://mentoradados.com/vagas/bi-performance-analytics-cro-pleno/"
 },
 {
 "id": "13450",
@@ -363,9 +405,10 @@
 "nv": "Pleno",
 "s": "A combinar",
 "a": "há 2 semanas",
-"d": 14,
+"d": 11,
 "ap": "https://wkf.ms/3U56SkG",
-"or": "https://lnkd.in/p/dzsNi-Rw"
+"or": "https://lnkd.in/p/dzsNi-Rw",
+"pl": "https://mentoradados.com/vagas/consultor-de-dados-pleno/"
 },
 {
 "id": "13448",
@@ -376,61 +419,10 @@
 "nv": "Júnior",
 "s": "A combinar",
 "a": "há 2 semanas",
-"d": 14,
+"d": 11,
 "ap": "https://almapbbdo.gupy.io/jobs/12620672?jobBoardSource=gupy_public_page",
-"or": "https://lnkd.in/p/dTGqrSDM"
-},
-{
-"id": "13432",
-"t": "Especialista de BI Nível I",
-"e": "Rede Brasil",
-"m": "Híbrido",
-"cidade": "São Paulo - SP (Híbrido)",
-"nv": "Especialista",
-"s": "A combinar",
-"a": "há 2 semanas",
-"d": 14,
-"ap": "mailto:david.cunha@redebrasil.com.br",
-"or": "https://lnkd.in/p/dCYugtmu"
-},
-{
-"id": "13430",
-"t": "Analista de Dados e BI Pleno",
-"e": "Looqbox",
-"m": "Remoto",
-"cidade": "",
-"nv": "Pleno",
-"s": "A combinar",
-"a": "há 2 semanas",
-"d": 14,
-"ap": "https://looqbox.gupy.io/jobs/12676866?jobBoardSource=gupy_public_page",
-"or": "https://www.linkedin.com/feed/update/urn:li:activity:7515759287529504769/"
-},
-{
-"id": "13391",
-"t": "Assistente de Engenharia Júnior",
-"e": "Confidencial",
-"m": "Presencial",
-"cidade": "Santo Amaro - SP (Presencial)",
-"nv": "Júnior",
-"s": "R$ 2.500,00",
-"a": "há 2 semanas",
-"d": 14,
-"ap": "https://wa.me/5511925469525",
-"or": "https://lnkd.in/p/gesknUCW"
-},
-{
-"id": "13387",
-"t": "Analista de BI Pleno",
-"e": "Cuattro (Logitech)",
-"m": "Híbrido",
-"cidade": "São Paulo - SP (Híbrido)",
-"nv": "Pleno",
-"s": "R$ 6.000,00",
-"a": "há 2 semanas",
-"d": 14,
-"ap": "https://cuattro.gupy.io/jobs/12647494",
-"or": "https://lnkd.in/p/g7P9xmyG"
+"or": "https://lnkd.in/p/dTGqrSDM",
+"pl": "https://mentoradados.com/vagas/pessoa-assistente-de-data-analytics-junior/"
 },
 {
 "id": "13446",
@@ -441,9 +433,66 @@
 "nv": "Estágio",
 "s": "R$ 3.300",
 "a": "há 2 semanas",
-"d": 14,
+"d": 11,
 "ap": "https://www.raizen.com/programas-de-talentos/estagio-acelerar",
-"or": "https://lnkd.in/p/dSYDeBYQ"
+"or": "https://lnkd.in/p/dSYDeBYQ",
+"pl": "https://mentoradados.com/vagas/estagio-acelerar-raizen/"
+},
+{
+"id": "13432",
+"t": "Especialista de BI Nível I",
+"e": "Rede Brasil",
+"m": "Híbrido",
+"cidade": "São Paulo - SP (Híbrido)",
+"nv": "Especialista",
+"s": "A combinar",
+"a": "há 2 semanas",
+"d": 11,
+"ap": "mailto:david.cunha@redebrasil.com.br",
+"or": "https://lnkd.in/p/dCYugtmu",
+"pl": "https://mentoradados.com/vagas/especialista-de-bi-nivel-i/"
+},
+{
+"id": "13430",
+"t": "Analista de Dados e BI Pleno",
+"e": "Looqbox",
+"m": "Remoto",
+"cidade": "",
+"nv": "Pleno",
+"s": "A combinar",
+"a": "há 2 semanas",
+"d": 11,
+"ap": "https://looqbox.gupy.io/jobs/12676866?jobBoardSource=gupy_public_page",
+"or": "https://www.linkedin.com/feed/update/urn:li:activity:7515759287529504769/",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-e-bi-pleno-6/"
+},
+{
+"id": "13391",
+"t": "Assistente de Engenharia Júnior",
+"e": "Confidencial",
+"m": "Presencial",
+"cidade": "Santo Amaro - SP (Presencial)",
+"nv": "Júnior",
+"s": "R$ 2.500,00",
+"a": "há 2 semanas",
+"d": 15,
+"ap": "https://wa.me/5511925469525",
+"or": "https://lnkd.in/p/gesknUCW",
+"pl": "https://mentoradados.com/vagas/assistente-de-engenharia-junior/"
+},
+{
+"id": "13387",
+"t": "Analista de BI Pleno",
+"e": "Cuattro (Logitech)",
+"m": "Híbrido",
+"cidade": "São Paulo - SP (Híbrido)",
+"nv": "Pleno",
+"s": "R$ 6.000,00",
+"a": "há 2 semanas",
+"d": 15,
+"ap": "https://cuattro.gupy.io/jobs/12647494",
+"or": "https://lnkd.in/p/g7P9xmyG",
+"pl": "https://mentoradados.com/vagas/analista-de-bi-pleno-75/"
 },
 {
 "id": "13378",
@@ -454,9 +503,10 @@
 "nv": "Pleno",
 "s": "A combinar",
 "a": "há 2 semanas",
-"d": 14,
+"d": 15,
 "ap": "https://vagasbyintera.inhire.app/vagas/4579b71b-ef66-4ad4-bae8-53c27a01f922/analista-financeiro-de-novos-negocios-ll",
-"or": "https://lnkd.in/p/dfXUhbSD"
+"or": "https://lnkd.in/p/dfXUhbSD",
+"pl": "https://mentoradados.com/vagas/analista-de-estrategia-e-inteligencia-de-mercado-pleno/"
 },
 {
 "id": "13374",
@@ -467,9 +517,10 @@
 "nv": "Pleno",
 "s": "A combinar",
 "a": "há 2 semanas",
-"d": 14,
+"d": 15,
 "ap": "mailto:careers@hydrogenpay.com",
-"or": "https://lnkd.in/p/d4cJ7ZcT"
+"or": "https://lnkd.in/p/d4cJ7ZcT",
+"pl": "https://mentoradados.com/vagas/data-business-intelligence-bi-analyst-pleno/"
 },
 {
 "id": "13372",
@@ -480,9 +531,10 @@
 "nv": "Pleno",
 "s": "A combinar",
 "a": "há 2 semanas",
-"d": 14,
+"d": 15,
 "ap": "https://loft.teamtailor.com/jobs/8441636-analista-de-dados-marketing-intelligence?promotion=2237239-trackable-share-link-post-linkedin",
-"or": "https://lnkd.in/p/dJsfDNQq"
+"or": "https://lnkd.in/p/dJsfDNQq",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-marketing-intelligence-pleno/"
 },
 {
 "id": "13316",
@@ -493,9 +545,10 @@
 "nv": "Estágio",
 "s": "R$ 2.500,00",
 "a": "há 2 semanas",
-"d": 14,
+"d": 16,
 "ap": "https://samsung.across.jobs/?utm_source=Empower&utm_medium=Empower&utm_campaign=Empower&utm_term=Empower&utm_content=Empower",
-"or": "https://lnkd.in/p/dZtTTgRu"
+"or": "https://lnkd.in/p/dZtTTgRu",
+"pl": "https://mentoradados.com/vagas/programa-de-estagio-samsung-2027-2/"
 },
 {
 "id": "13312",
@@ -506,9 +559,10 @@
 "nv": "Estágio",
 "s": "A combinar",
 "a": "há 2 semanas",
-"d": 14,
+"d": 16,
 "ap": "https://jobs.recrutei.com.br/recovery/vacancy/161080-estagio-em-dados-pricing-npl-afirmativa-para-pessoas-pretas-e-pardas?utm_source=linkedin-post-perfil&utm_medium=social&utm_campaign=vaga-161080",
-"or": "https://lnkd.in/p/dH8J-Yp8"
+"or": "https://lnkd.in/p/dH8J-Yp8",
+"pl": "https://mentoradados.com/vagas/estagio-em-dados-pricing-npl-vaga-afirmativa-para-pessoas-pretas-e-pardas/"
 },
 {
 "id": "13308",
@@ -519,9 +573,10 @@
 "nv": "Pleno",
 "s": "A combinar",
 "a": "há 2 semanas",
-"d": 14,
+"d": 16,
 "ap": "https://vagas.ilegra.com/vacancy/3IDBU",
-"or": "https://lnkd.in/p/dvwrWAHq"
+"or": "https://lnkd.in/p/dvwrWAHq",
+"pl": "https://mentoradados.com/vagas/pessoa-analista-de-bi-pleno/"
 },
 {
 "id": "13300",
@@ -532,9 +587,10 @@
 "nv": "Sênior",
 "s": "A combinar",
 "a": "há 2 semanas",
-"d": 14,
+"d": 16,
 "ap": "https://teclat.inhire.app/vagas/8956ae93-66a8-49ed-b90a-cfd4f5964f42/analista-de-bi-senior-aws-aurora-or-pj-or-hibrido-sao-paulosp",
-"or": "https://lnkd.in/p/db5UxgbB"
+"or": "https://lnkd.in/p/db5UxgbB",
+"pl": "https://mentoradados.com/vagas/analista-de-bi-senior-aws-aurora/"
 },
 {
 "id": "13298",
@@ -545,9 +601,10 @@
 "nv": "Sênior",
 "s": "A combinar",
 "a": "há 2 semanas",
-"d": 14,
+"d": 16,
 "ap": "https://origoenergia.gupy.io/jobs/12690472?jobBoardSource=gupy_public_page",
-"or": "https://lnkd.in/p/dKPsEN9z"
+"or": "https://lnkd.in/p/dKPsEN9z",
+"pl": "https://mentoradados.com/vagas/analista-senior-de-dados-e-inteligencia-de-receita/"
 },
 {
 "id": "13272",
@@ -558,9 +615,10 @@
 "nv": "Pleno",
 "s": "A combinar",
 "a": "há 2 semanas",
-"d": 14,
-"ap": "https://mentoradados.com/portal-de-vagas-v2/#",
-"or": "https://lnkd.in/p/dT77fYvt"
+"d": 17,
+"ap": "#",
+"or": "https://lnkd.in/p/dT77fYvt",
+"pl": "https://mentoradados.com/vagas/analista-de-inteligencia-comercial-analista-de-dados-bi-pleno/"
 },
 {
 "id": "13270",
@@ -571,9 +629,10 @@
 "nv": "Pleno",
 "s": "A combinar",
 "a": "há 2 semanas",
-"d": 14,
+"d": 17,
 "ap": "https://atracaodetalentos.totvs.app/vempratotvs/10663/dados-analista-de-bi-pleno",
-"or": "https://lnkd.in/p/d9JZxNt9"
+"or": "https://lnkd.in/p/d9JZxNt9",
+"pl": "https://mentoradados.com/vagas/analista-de-bi-pleno-74/"
 },
 {
 "id": "13248",
@@ -584,9 +643,10 @@
 "nv": "Júnior",
 "s": "R$ 4.500,00",
 "a": "há 2 semanas",
-"d": 14,
+"d": 17,
 "ap": "mailto:luciana.kataoka@animaeducacao.com.br",
-"or": "https://lnkd.in/p/e5yS9fng"
+"or": "https://lnkd.in/p/e5yS9fng",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-junior-76/"
 },
 {
 "id": "13221",
@@ -597,9 +657,10 @@
 "nv": "Sênior",
 "s": "A combinar",
 "a": "há 3 semanas",
-"d": 21,
+"d": 18,
 "ap": "https://jobs.quickin.io/evtit/jobs/6ac4f269c81d250013eaf79d?src=Linkedin",
-"or": "https://lnkd.in/p/db7r94Zv"
+"or": "https://lnkd.in/p/db7r94Zv",
+"pl": "https://mentoradados.com/vagas/analista-power-bi-pleno-senior-2/"
 },
 {
 "id": "13213",
@@ -610,9 +671,10 @@
 "nv": "Sênior",
 "s": "A combinar",
 "a": "há 3 semanas",
-"d": 21,
+"d": 18,
 "ap": "https://wa.me/5511976621509",
-"or": "https://lnkd.in/p/dKng2nzC"
+"or": "https://lnkd.in/p/dKng2nzC",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-senior-pricing-senior/"
 },
 {
 "id": "13199",
@@ -623,9 +685,10 @@
 "nv": "Pleno",
 "s": "A combinar",
 "a": "há 3 semanas",
-"d": 21,
+"d": 18,
 "ap": "https://unicredbr.gupy.io/jobs/12656718",
-"or": "https://lnkd.in/p/dG_n7U9m"
+"or": "https://lnkd.in/p/dG_n7U9m",
+"pl": "https://mentoradados.com/vagas/analista-de-bi-pleno-foco-em-midia/"
 },
 {
 "id": "13189",
@@ -636,9 +699,10 @@
 "nv": "Pleno",
 "s": "A combinar",
 "a": "há 3 semanas",
-"d": 21,
+"d": 18,
 "ap": "mailto:gabriela.prado@tecmaster.inf.br",
-"or": "https://lnkd.in/p/dm2NDvev"
+"or": "https://lnkd.in/p/dm2NDvev",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-pleno-180/"
 },
 {
 "id": "13183",
@@ -649,9 +713,10 @@
 "nv": "Júnior",
 "s": "A combinar",
 "a": "há 3 semanas",
-"d": 21,
+"d": 18,
 "ap": "mailto:juliete.bezerra@mbrti.com",
-"or": "https://lnkd.in/p/dJnGVFhG"
+"or": "https://lnkd.in/p/dJnGVFhG",
+"pl": "https://mentoradados.com/vagas/analista-de-bi-junior-37/"
 },
 {
 "id": "13145",
@@ -662,9 +727,10 @@
 "nv": "Sênior",
 "s": "A combinar",
 "a": "há 3 semanas",
-"d": 21,
+"d": 19,
 "ap": "https://brq.inhire.app/vagas/c479ffd8-6786-4f18-a0d3-bff3b8fbc4f3/analista-de-dados-senior-hibrido-sp",
-"or": "https://lnkd.in/p/d_meJhRr"
+"or": "https://lnkd.in/p/d_meJhRr",
+"pl": "https://mentoradados.com/vagas/analista-funcional-de-dados-senior/"
 },
 {
 "id": "13129",
@@ -675,9 +741,10 @@
 "nv": "Júnior",
 "s": "A combinar",
 "a": "há 3 semanas",
-"d": 21,
+"d": 19,
 "ap": "mailto:m.rodrigues@ultracon.com.br",
-"or": "https://lnkd.in/p/dgVS_eg9"
+"or": "https://lnkd.in/p/dgVS_eg9",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-junior-74/"
 },
 {
 "id": "13091",
@@ -688,9 +755,10 @@
 "nv": "Pleno",
 "s": "A combinar",
 "a": "há 3 semanas",
-"d": 21,
+"d": 22,
 "ap": "mailto:larissa.borges@techandsoul.com.br",
-"or": "https://lnkd.in/p/daebVK5M"
+"or": "https://lnkd.in/p/daebVK5M",
+"pl": "https://mentoradados.com/vagas/analista-de-bi-social-listening-pleno/"
 },
 {
 "id": "13089",
@@ -701,9 +769,10 @@
 "nv": "Sênior",
 "s": "A combinar",
 "a": "há 3 semanas",
-"d": 21,
+"d": 22,
 "ap": "https://nation.proxet.com/careers/senior-power-bi-engineer",
-"or": "https://lnkd.in/p/dGQxk53y"
+"or": "https://lnkd.in/p/dGQxk53y",
+"pl": "https://mentoradados.com/vagas/bi-developer-senior-2/"
 },
 {
 "id": "13083",
@@ -714,9 +783,10 @@
 "nv": "Júnior",
 "s": "A combinar",
 "a": "há 3 semanas",
-"d": 21,
+"d": 22,
 "ap": "https://porto.gupy.io/jobs/12139659?jobBoardSource=linkedin",
-"or": "https://lnkd.in/p/dwTVX7y6"
+"or": "https://lnkd.in/p/dwTVX7y6",
+"pl": "https://mentoradados.com/vagas/auditor-de-dados-junior/"
 },
 {
 "id": "13075",
@@ -727,9 +797,10 @@
 "nv": "Sênior",
 "s": "A combinar",
 "a": "há 3 semanas",
-"d": 21,
+"d": 22,
 "ap": "mailto:luander.victor@decisionbr.com.br",
-"or": "https://lnkd.in/p/dXAp2VUH"
+"or": "https://lnkd.in/p/dXAp2VUH",
+"pl": "https://mentoradados.com/vagas/engenheiroa-arquitetoa-de-bi-senior/"
 },
 {
 "id": "13048",
@@ -740,9 +811,10 @@
 "nv": "Sênior",
 "s": "A combinar",
 "a": "há 3 semanas",
-"d": 21,
+"d": 23,
 "ap": "https://insi.jobs.recrut.ai/vagas/job/BZJNF2",
-"or": "https://lnkd.in/p/d7xf75nK"
+"or": "https://lnkd.in/p/d7xf75nK",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-iii-senior-2/"
 },
 {
 "id": "13042",
@@ -753,9 +825,10 @@
 "nv": "Sênior",
 "s": "A combinar",
 "a": "há 3 semanas",
-"d": 21,
+"d": 23,
 "ap": "https://job-boards.greenhouse.io/c6bank/jobs/4739497005?gh_src=0107s6755us",
-"or": "https://lnkd.in/p/dkS3zfba"
+"or": "https://lnkd.in/p/dkS3zfba",
+"pl": "https://mentoradados.com/vagas/analista-senior-de-business-intelligence-investimentos/"
 },
 {
 "id": "13010",
@@ -766,9 +839,10 @@
 "nv": "Pleno",
 "s": "A combinar",
 "a": "há 3 semanas",
-"d": 21,
+"d": 24,
 "ap": "mailto:diana@tiviati.com.br",
-"or": "https://lnkd.in/p/dy-nVGQa"
+"or": "https://lnkd.in/p/dy-nVGQa",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-e-monitoramento-pleno/"
 },
 {
 "id": "13004",
@@ -779,9 +853,10 @@
 "nv": "Pleno",
 "s": "A combinar",
 "a": "há 3 semanas",
-"d": 21,
+"d": 24,
 "ap": "https://lnkd.in/p/dehKeWez",
-"or": "https://lnkd.in/p/dehKeWez"
+"or": "https://lnkd.in/p/dehKeWez",
+"pl": "https://mentoradados.com/vagas/business-analyst-ii-mis-pleno-senior/"
 },
 {
 "id": "12980",
@@ -792,9 +867,10 @@
 "nv": "Estágio",
 "s": "R$ 2.293,20",
 "a": "há 3 semanas",
-"d": 21,
+"d": 24,
 "ap": "https://www.jobbol.com.br/vaga/29386931620?utm_source=Indeed&utm_medium=organic&utm_campaign=Indeed",
-"or": "https://lnkd.in/p/dj-4x-Jf"
+"or": "https://lnkd.in/p/dj-4x-Jf",
+"pl": "https://mentoradados.com/vagas/estagiario-na-area-de-ti-estagio/"
 },
 {
 "id": "12978",
@@ -805,9 +881,10 @@
 "nv": "Sênior",
 "s": "A combinar",
 "a": "há 3 semanas",
-"d": 21,
+"d": 24,
 "ap": "https://deal.inhire.app/vagas/d866fbd2-aaa0-49b3-aae5-be5bd39b2e8c/analista-de-power-bi-senior",
-"or": "https://lnkd.in/p/ddaH8WQS"
+"or": "https://lnkd.in/p/ddaH8WQS",
+"pl": "https://mentoradados.com/vagas/analista-de-power-bi-senior-4/"
 },
 {
 "id": "12928",
@@ -818,9 +895,10 @@
 "nv": "Especialista",
 "s": "A combinar",
 "a": "há 4 semanas",
-"d": 28,
+"d": 25,
 "ap": "https://job-boards.greenhouse.io/quintoandar/jobs/4362525009",
-"or": "https://lnkd.in/p/dbKemBQH"
+"or": "https://lnkd.in/p/dbKemBQH",
+"pl": "https://mentoradados.com/vagas/especialista-em-dados-e-estrategia/"
 },
 {
 "id": "12887",
@@ -831,9 +909,10 @@
 "nv": "Pleno",
 "s": "A combinar",
 "a": "há 4 semanas",
-"d": 28,
+"d": 26,
 "ap": "mailto:fernanda.graciela@pppro.com.br",
-"or": "https://lnkd.in/p/davApsJx"
+"or": "https://lnkd.in/p/davApsJx",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-data-ia-pleno/"
 },
 {
 "id": "12871",
@@ -844,9 +923,10 @@
 "nv": "Especialista",
 "s": "A combinar",
 "a": "há 4 semanas",
-"d": 28,
+"d": 26,
 "ap": "https://lnkd.in/p/dnDmwaCK",
-"or": ""
+"or": "",
+"pl": "https://mentoradados.com/vagas/especialista-em-power-bi-freelancer/"
 },
 {
 "id": "12823",
@@ -857,9 +937,10 @@
 "nv": "Júnior",
 "s": "A combinar",
 "a": "há 4 semanas",
-"d": 28,
+"d": 29,
 "ap": "https://docs.google.com/forms/d/e/1FAIpQLScv3eGP54M3wuczcD63qQKPtPcqFCW4f_sDuUlc2eFt4lRd2g/viewform",
-"or": "https://lnkd.in/p/dApyKuSZ"
+"or": "https://lnkd.in/p/dApyKuSZ",
+"pl": "https://mentoradados.com/vagas/analista-jr-de-dados-de-marketing-junior/"
 },
 {
 "id": "12818",
@@ -870,9 +951,10 @@
 "nv": "Pleno",
 "s": "A combinar",
 "a": "há 4 semanas",
-"d": 28,
+"d": 29,
 "ap": "https://99jobs.com/peopleware-tecnologia/jobs/509799-analista-de-dados",
-"or": "https://lnkd.in/p/d5kXUSPz"
+"or": "https://lnkd.in/p/d5kXUSPz",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-pleno-176/"
 },
 {
 "id": "12814",
@@ -883,9 +965,10 @@
 "nv": "Júnior",
 "s": "A combinar",
 "a": "há 4 semanas",
-"d": 28,
+"d": 29,
 "ap": "https://atracaodetalentos.totvs.app/vempratotvs/12364/dados-analista-de-dados-junior-afirmativa-para-pessoas-com-deficiencia-hibrido",
-"or": "https://lnkd.in/p/dERf-b3w"
+"or": "https://lnkd.in/p/dERf-b3w",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-junior-afirmativa-pcd/"
 },
 {
 "id": "12812",
@@ -896,9 +979,10 @@
 "nv": "Líder",
 "s": "R$ 13.000,00",
 "a": "há 4 semanas",
-"d": 28,
+"d": 29,
 "ap": "https://traineevivo.ciadetalentos.com.br/",
-"or": ""
+"or": "",
+"pl": "https://mentoradados.com/vagas/trainee-vivo-trilha-liderar/"
 },
 {
 "id": "12810",
@@ -909,9 +993,10 @@
 "nv": "Pleno",
 "s": "A combinar",
 "a": "há 4 semanas",
-"d": 28,
+"d": 29,
 "ap": "https://www.innolevels.com.br/vagas-innolevels/desenvolvedor-bi-qlik-sense/",
-"or": "https://lnkd.in/p/dWgE9DWh"
+"or": "https://lnkd.in/p/dWgE9DWh",
+"pl": "https://mentoradados.com/vagas/desenvolvedor-bi-qlik-sense-pleno/"
 },
 {
 "id": "12806",
@@ -922,9 +1007,10 @@
 "nv": "Estágio",
 "s": "R$ 2.500,00",
 "a": "há 4 semanas",
-"d": 28,
+"d": 29,
 "ap": "https://across.kolab.ee/search/k-acr-9qrw/3209-programa-de-estagio-samsung-2027",
-"or": "https://lnkd.in/p/dN8Z6AeB"
+"or": "https://lnkd.in/p/dN8Z6AeB",
+"pl": "https://mentoradados.com/vagas/programa-de-estagio-samsung-2027/"
 },
 {
 "id": "12796",
@@ -935,9 +1021,10 @@
 "nv": "Sênior",
 "s": "A combinar",
 "a": "há 4 semanas",
-"d": 28,
+"d": 29,
 "ap": "mailto:fbenetti@k2partnering.com",
-"or": "https://lnkd.in/p/d9sgTkJK"
+"or": "https://lnkd.in/p/d9sgTkJK",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-senior-68/"
 },
 {
 "id": "12732",
@@ -950,7 +1037,8 @@
 "a": "há 1 mês",
 "d": 30,
 "ap": "https://lnkd.in/p/d4cms6P5",
-"or": ""
+"or": "",
+"pl": "https://mentoradados.com/vagas/power-bi-senior-foco-em-microsoft-fabric/"
 },
 {
 "id": "12730",
@@ -963,7 +1051,8 @@
 "a": "há 1 mês",
 "d": 30,
 "ap": "https://job-boards.greenhouse.io/xpinc/jobs/8839562002?gh_src=j5y1919e2us",
-"or": "https://lnkd.in/p/dtHSeWec"
+"or": "https://lnkd.in/p/dtHSeWec",
+"pl": "https://mentoradados.com/vagas/business-intelligence-junior/"
 },
 {
 "id": "12728",
@@ -976,7 +1065,8 @@
 "a": "há 1 mês",
 "d": 30,
 "ap": "https://aggrandize.vagas.solides.com.br/vaga/926205",
-"or": "https://lnkd.in/p/dYxXGeAj"
+"or": "https://lnkd.in/p/dYxXGeAj",
+"pl": "https://mentoradados.com/vagas/analista-power-bi-junior-sustentacao/"
 },
 {
 "id": "12668",
@@ -987,9 +1077,10 @@
 "nv": "Sênior",
 "s": "A combinar",
 "a": "há 1 mês",
-"d": 30,
+"d": 32,
 "ap": "mailto:ingrid.hidalgo@decisionbr.com.br",
-"or": "https://lnkd.in/p/dChdT3sR"
+"or": "https://lnkd.in/p/dChdT3sR",
+"pl": "https://mentoradados.com/vagas/senior-bi-reporting-analyst-thoughtspot-senior/"
 },
 {
 "id": "12638",
@@ -1000,9 +1091,10 @@
 "nv": "Pleno",
 "s": "A combinar",
 "a": "há 1 mês",
-"d": 30,
+"d": 33,
 "ap": "https://www.michaelpage.com.br/job-detail/analista-de-dados-h%C3%ADbrido/ref/jn-092026-7108462",
-"or": "https://lnkd.in/p/dcrsEJ4C"
+"or": "https://lnkd.in/p/dcrsEJ4C",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-pleno-175/"
 },
 {
 "id": "12634",
@@ -1013,9 +1105,10 @@
 "nv": "Pleno",
 "s": "A combinar",
 "a": "há 1 mês",
-"d": 30,
+"d": 33,
 "ap": "mailto:miriam.jales@tiviati.com.br",
-"or": "https://lnkd.in/p/dz9SF7rs"
+"or": "https://lnkd.in/p/dz9SF7rs",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-bps-pleno/"
 },
 {
 "id": "12630",
@@ -1026,9 +1119,10 @@
 "nv": "Júnior",
 "s": "A combinar",
 "a": "há 1 mês",
-"d": 30,
+"d": 33,
 "ap": "mailto:vinicius.barcelos@caacompany.com.br",
-"or": "https://lnkd.in/p/dEW4YFbQ"
+"or": "https://lnkd.in/p/dEW4YFbQ",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-junior-70/"
 },
 {
 "id": "12580",
@@ -1039,9 +1133,10 @@
 "nv": "Pleno",
 "s": "A combinar",
 "a": "há 1 mês",
-"d": 30,
-"ap": "http://11%2094733-6018/",
-"or": "https://lnkd.in/p/d7Dhb5UX"
+"d": 33,
+"ap": "http://11%2094733-6018",
+"or": "https://lnkd.in/p/d7Dhb5UX",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-pleno-173/"
 },
 {
 "id": "12578",
@@ -1052,9 +1147,10 @@
 "nv": "Sênior",
 "s": "A combinar (PJ)",
 "a": "há 1 mês",
-"d": 30,
+"d": 33,
 "ap": "mailto:cassia@lisait.com",
-"or": "https://lnkd.in/p/d-d7dCCA"
+"or": "https://lnkd.in/p/d-d7dCCA",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-senior-66/"
 },
 {
 "id": "12026",
@@ -1065,9 +1161,10 @@
 "nv": "Pleno",
 "s": "A combinar",
 "a": "há 1 mês",
-"d": 30,
+"d": 36,
 "ap": "https://jobs.recrutei.com.br/singularis-rh/vacancy/149258-analista-de-dados-ii-hibrido",
-"or": "https://lnkd.in/p/d3UbjUX5"
+"or": "https://lnkd.in/p/d3UbjUX5",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-ii-pleno-6/"
 },
 {
 "id": "12022",
@@ -1078,9 +1175,10 @@
 "nv": "Pleno",
 "s": "A combinar",
 "a": "há 1 mês",
-"d": 30,
+"d": 36,
 "ap": "https://gradus.gupy.io/jobs/12528931?jobBoardSource=gupy_public_page",
-"or": "https://lnkd.in/p/dwiz_Tsw"
+"or": "https://lnkd.in/p/dwiz_Tsw",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-pleno-172/"
 },
 {
 "id": "11893",
@@ -1091,9 +1189,10 @@
 "nv": "Sênior",
 "s": "A combinar",
 "a": "há 1 mês",
-"d": 30,
+"d": 37,
 "ap": "https://redeamericas.gupy.io/jobs/12412627?jobBoardSource=gupy_public_page",
-"or": "https://lnkd.in/p/dPtYMyXC"
+"or": "https://lnkd.in/p/dPtYMyXC",
+"pl": "https://mentoradados.com/vagas/analista-de-bi-senior-19/"
 },
 {
 "id": "11883",
@@ -1104,9 +1203,10 @@
 "nv": "Pleno",
 "s": "A combinar",
 "a": "há 1 mês",
-"d": 30,
+"d": 37,
 "ap": "https://positivosmais.pandape.infojobs.com.br/Detail?id=3725695",
-"or": "https://lnkd.in/p/d-6h33sN"
+"or": "https://lnkd.in/p/d-6h33sN",
+"pl": "https://mentoradados.com/vagas/analista-de-bi-e-comunicacao-executiva-temporaria/"
 },
 {
 "id": "11863",
@@ -1117,9 +1217,10 @@
 "nv": "Pleno",
 "s": "A combinar",
 "a": "há 1 mês",
-"d": 30,
+"d": 37,
 "ap": "https://career8.successfactors.com/sfcareer/jobreqcareer?jobId=1316607&company=C0001240283P",
-"or": ""
+"or": "",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-operacoes-centro-multiomics-pleno/"
 },
 {
 "id": "11773",
@@ -1130,9 +1231,10 @@
 "nv": "Pleno",
 "s": "A combinar",
 "a": "há 1 mês",
-"d": 30,
+"d": 38,
 "ap": "https://lnkd.in/p/dfyd26am",
-"or": "https://lnkd.in/p/dfyd26am"
+"or": "https://lnkd.in/p/dfyd26am",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-recuperacao-de-credito-pleno-2/"
 },
 {
 "id": "11766",
@@ -1143,9 +1245,10 @@
 "nv": "Sênior",
 "s": "A combinar",
 "a": "há 1 mês",
-"d": 30,
+"d": 38,
 "ap": "mailto:joyce.costa@mjv.com.br",
-"or": "https://lnkd.in/p/dP3vZEXS"
+"or": "https://lnkd.in/p/dP3vZEXS",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-senior-65/"
 },
 {
 "id": "11757",
@@ -1156,9 +1259,10 @@
 "nv": "Estágio",
 "s": "A combinar",
 "a": "há 1 mês",
-"d": 30,
+"d": 38,
 "ap": "https://job-boards.greenhouse.io/candidaturasdirecionadasxpinc/jobs/8805413002?gh_src=m6xz29sl2us",
-"or": "https://lnkd.in/p/d_GSjj3U"
+"or": "https://lnkd.in/p/d_GSjj3U",
+"pl": "https://mentoradados.com/vagas/programa-de-estagio-xtag-2027-1/"
 },
 {
 "id": "11747",
@@ -1169,9 +1273,10 @@
 "nv": "Sênior",
 "s": "A combinar",
 "a": "há 1 mês",
-"d": 30,
+"d": 38,
 "ap": "mailto:Moataz.fahmy@topbusiness-hr.com",
-"or": "https://lnkd.in/p/dUFP_-bj"
+"or": "https://lnkd.in/p/dUFP_-bj",
+"pl": "https://mentoradados.com/vagas/power-bi-developer-senior/"
 },
 {
 "id": "11745",
@@ -1182,9 +1287,10 @@
 "nv": "Júnior",
 "s": "A combinar",
 "a": "há 1 mês",
-"d": 30,
+"d": 38,
 "ap": "https://job-boards.greenhouse.io/xpinc/jobs/8810191002",
-"or": "https://lnkd.in/p/d6pDEN6g"
+"or": "https://lnkd.in/p/d6pDEN6g",
+"pl": "https://mentoradados.com/vagas/analista-junior-de-dados-e-estrategia-de-campanhas/"
 },
 {
 "id": "11733",
@@ -1195,9 +1301,10 @@
 "nv": "Júnior",
 "s": "A combinar",
 "a": "há 1 mês",
-"d": 30,
+"d": 38,
 "ap": "mailto:jennyfer.ferreti@grupoeasy.com.br",
-"or": "https://lnkd.in/p/dj4wj97B"
+"or": "https://lnkd.in/p/dj4wj97B",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-planejamento-de-materiais-junior/"
 },
 {
 "id": "11604",
@@ -1208,9 +1315,10 @@
 "nv": "Pleno",
 "s": "A combinar",
 "a": "há 1 mês",
-"d": 30,
+"d": 39,
 "ap": "mailto:jennyfer.ferreti@grupoeasy.com.br",
-"or": "https://lnkd.in/p/drxbSAWS"
+"or": "https://lnkd.in/p/drxbSAWS",
+"pl": "https://mentoradados.com/vagas/analista-de-bi-pleno-69/"
 },
 {
 "id": "11602",
@@ -1221,9 +1329,10 @@
 "nv": "Sênior",
 "s": "A combinar",
 "a": "há 1 mês",
-"d": 30,
+"d": 39,
 "ap": "https://jobs.compleo.app/wayon/jobdetail/NT01951H",
-"or": "https://lnkd.in/p/dVfSmAkt"
+"or": "https://lnkd.in/p/dVfSmAkt",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-senior-64/"
 },
 {
 "id": "11536",
@@ -1234,9 +1343,10 @@
 "nv": "Pleno",
 "s": "A combinar",
 "a": "há 1 mês",
-"d": 30,
+"d": 40,
 "ap": "https://soultrade.gupy.io/jobs/12478381?jobBoardSource=gupy_public_page",
-"or": "https://lnkd.in/p/d4JY8UYu"
+"or": "https://lnkd.in/p/d4JY8UYu",
+"pl": "https://mentoradados.com/vagas/analista-de-bi-pleno-68/"
 },
 {
 "id": "11500",
@@ -1247,9 +1357,10 @@
 "nv": "Pleno",
 "s": "A combinar",
 "a": "há 1 mês",
-"d": 30,
-"ap": "http://11%2096061-0233/",
-"or": "https://lnkd.in/p/dRase7-t"
+"d": 40,
+"ap": "http://11%2096061-0233",
+"or": "https://lnkd.in/p/dRase7-t",
+"pl": "https://mentoradados.com/vagas/bi-engineer-pleno-3/"
 },
 {
 "id": "11492",
@@ -1260,9 +1371,10 @@
 "nv": "Pleno",
 "s": "A combinar",
 "a": "há 1 mês",
-"d": 30,
+"d": 40,
 "ap": "mailto:paloma.rodrigues@cbyk.com.br",
-"or": "https://lnkd.in/p/dnBwdDvB"
+"or": "https://lnkd.in/p/dnBwdDvB",
+"pl": "https://mentoradados.com/vagas/analista-de-data-visualization-pleno-2/"
 },
 {
 "id": "11490",
@@ -1273,9 +1385,10 @@
 "nv": "Líder",
 "s": "R$ 21.979,81",
 "a": "há 1 mês",
-"d": 30,
+"d": 40,
 "ap": "https://defensoriasp.enlizt.me/vagas/diretor-a_do_departamento_de_desenvolvimento_de_sistemas_-dds-__-__coordenadoria_de_tecnologia_da_informacao_-cti--110926",
-"or": "https://lnkd.in/p/dT7pbYG9"
+"or": "https://lnkd.in/p/dT7pbYG9",
+"pl": "https://mentoradados.com/vagas/diretor-do-departamento-de-desenvolvimento-de-sistemas-dds-lider/"
 },
 {
 "id": "11446",
@@ -1286,9 +1399,10 @@
 "nv": "Júnior",
 "s": "A combinar",
 "a": "há 1 mês",
-"d": 30,
+"d": 40,
 "ap": "https://wa.me/5511971538400",
-"or": "https://lnkd.in/p/drwXzu5K"
+"or": "https://lnkd.in/p/drwXzu5K",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-e-power-bi-junior/"
 },
 {
 "id": "11444",
@@ -1299,9 +1413,10 @@
 "nv": "Sênior",
 "s": "A combinar",
 "a": "há 1 mês",
-"d": 30,
+"d": 40,
 "ap": "https://jobs.quickin.io/evtit/jobs/6aa7e8fd1150ed0013a7e798?src=LinkedIn",
-"or": "https://lnkd.in/p/djUeTxv4"
+"or": "https://lnkd.in/p/djUeTxv4",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-senior-62/"
 },
 {
 "id": "11440",
@@ -1312,9 +1427,10 @@
 "nv": "Júnior",
 "s": "A combinar",
 "a": "há 1 mês",
-"d": 30,
+"d": 40,
 "ap": "https://luandreservicostemporariosltdac-i.pandape.infojobs.com.br/Detail?id=3703660",
-"or": "https://lnkd.in/p/djMPabyg"
+"or": "https://lnkd.in/p/djMPabyg",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-logistica-junior/"
 },
 {
 "id": "11435",
@@ -1325,9 +1441,10 @@
 "nv": "Pleno",
 "s": "A combinar",
 "a": "há 1 mês",
-"d": 30,
+"d": 40,
 "ap": "mailto:karina.bejgler@tecmaster.inf.br",
-"or": "https://lnkd.in/p/dH_qf4Yw"
+"or": "https://lnkd.in/p/dH_qf4Yw",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-pleno-senior-6/"
 },
 {
 "id": "11424",
@@ -1338,9 +1455,10 @@
 "nv": "Sênior",
 "s": "A combinar",
 "a": "há 1 mês",
-"d": 30,
+"d": 40,
 "ap": "mailto:Amanda.estevam@estacio.br",
-"or": "https://lnkd.in/p/dkPc386h"
+"or": "https://lnkd.in/p/dkPc386h",
+"pl": "https://mentoradados.com/vagas/analista-senior-dados-ia/"
 },
 {
 "id": "11422",
@@ -1351,9 +1469,10 @@
 "nv": "Sênior",
 "s": "A combinar",
 "a": "há 1 mês",
-"d": 30,
+"d": 40,
 "ap": "mailto:kmarcel@k-labdigital.com",
-"or": "https://lnkd.in/p/dxw7PvG3"
+"or": "https://lnkd.in/p/dxw7PvG3",
+"pl": "https://mentoradados.com/vagas/analista-de-bi-senior-18/"
 },
 {
 "id": "11025",
@@ -1364,9 +1483,10 @@
 "nv": "Sênior",
 "s": "A combinar",
 "a": "há 1 mês",
-"d": 30,
+"d": 43,
 "ap": "https://caju.gupy.io/jobs/12414406?jobBoardSource=share_link",
-"or": "https://lnkd.in/p/deQYZhMu"
+"or": "https://lnkd.in/p/deQYZhMu",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-senior-prevencao-a-lavagem-de-dinheiro-pld/"
 },
 {
 "id": "11021",
@@ -1377,9 +1497,10 @@
 "nv": "Pleno",
 "s": "A combinar",
 "a": "há 1 mês",
-"d": 30,
+"d": 43,
 "ap": "mailto:barbara.santana@actdigital.com",
-"or": "https://lnkd.in/p/di4jHZ9u"
+"or": "https://lnkd.in/p/di4jHZ9u",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-pleno-170/"
 },
 {
 "id": "11009",
@@ -1390,9 +1511,10 @@
 "nv": "Estágio",
 "s": "A combinar",
 "a": "há 1 mês",
-"d": 30,
+"d": 43,
 "ap": "https://petlove.jobs.recrut.ai/job/DA2214?source=linkedin",
-"or": "https://lnkd.in/p/djEVini7"
+"or": "https://lnkd.in/p/djEVini7",
+"pl": "https://mentoradados.com/vagas/estagio-em-dados-2/"
 },
 {
 "id": "11005",
@@ -1403,9 +1525,10 @@
 "nv": "Sênior",
 "s": "R$ 10.000,00 bruto",
 "a": "há 1 mês",
-"d": 30,
+"d": 43,
 "ap": "https://kingoflanguages.pandape.infojobs.com.br/Detail/3695678",
-"or": "https://lnkd.in/p/d7_he_sp"
+"or": "https://lnkd.in/p/d7_he_sp",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-senior-61/"
 },
 {
 "id": "11001",
@@ -1416,9 +1539,10 @@
 "nv": "Pleno",
 "s": "A combinar",
 "a": "há 1 mês",
-"d": 30,
+"d": 43,
 "ap": "https://vemsergrupoolx.gupy.io/jobs/12414710",
-"or": "https://lnkd.in/p/dxu8bhxv"
+"or": "https://lnkd.in/p/dxu8bhxv",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-pleno-afirmativa-pcd/"
 },
 {
 "id": "10969",
@@ -1429,9 +1553,10 @@
 "nv": "Júnior",
 "s": "A combinar (PJ)",
 "a": "há 1 mês",
-"d": 30,
+"d": 44,
 "ap": "https://globalsystem.inhire.app/vagas/33b7b441-6f87-4fbe-862d-5b976316e4f9/analista-de-dados-junior-pleno",
-"or": "https://lnkd.in/p/dtmeGVjT"
+"or": "https://lnkd.in/p/dtmeGVjT",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-junior-pleno-2/"
 },
 {
 "id": "10967",
@@ -1442,9 +1567,10 @@
 "nv": "Júnior",
 "s": "€800 – €1.000/mês",
 "a": "há 1 mês",
-"d": 30,
+"d": 44,
 "ap": "mailto:ramim@amazinapps.com",
-"or": "https://lnkd.in/p/dtXFDQXs"
+"or": "https://lnkd.in/p/dtXFDQXs",
+"pl": "https://mentoradados.com/vagas/data-analyst-bi-developer-junior/"
 },
 {
 "id": "10951",
@@ -1455,9 +1581,10 @@
 "nv": "Estágio",
 "s": "A combinar",
 "a": "há 1 mês",
-"d": 30,
-"ap": "https://mentoradados.com/portal-de-vagas-v2/#",
-"or": "https://lnkd.in/p/duk_DCXr"
+"d": 44,
+"ap": "#",
+"or": "https://lnkd.in/p/duk_DCXr",
+"pl": "https://mentoradados.com/vagas/estagiarioa-power-bi/"
 },
 {
 "id": "10929",
@@ -1468,9 +1595,10 @@
 "nv": "Sênior",
 "s": "R$ 5.000,00 a R$ 6.000,00",
 "a": "há 1 mês",
-"d": 30,
+"d": 44,
 "ap": "https://almaviva.pandape.infojobs.com.br/Detail/3118396",
-"or": "https://lnkd.in/p/dXpdnzft"
+"or": "https://lnkd.in/p/dXpdnzft",
+"pl": "https://mentoradados.com/vagas/analista-bi-financeiro-senior/"
 },
 {
 "id": "10921",
@@ -1481,9 +1609,10 @@
 "nv": "Líder",
 "s": "A combinar",
 "a": "há 1 mês",
-"d": 30,
+"d": 44,
 "ap": "https://lnkd.in/p/d3x-EXWM",
-"or": ""
+"or": "",
+"pl": "https://mentoradados.com/vagas/supervisor-de-bi-lider/"
 },
 {
 "id": "10917",
@@ -1494,9 +1623,10 @@
 "nv": "Especialista",
 "s": "A combinar",
 "a": "há 1 mês",
-"d": 30,
+"d": 44,
 "ap": "mailto:krodrigues@evertrade.com.br",
-"or": "https://lnkd.in/p/dri-tpYn"
+"or": "https://lnkd.in/p/dri-tpYn",
+"pl": "https://mentoradados.com/vagas/especialista-de-bi/"
 },
 {
 "id": "10915",
@@ -1507,9 +1637,10 @@
 "nv": "Sênior",
 "s": "A combinar",
 "a": "há 1 mês",
-"d": 30,
+"d": 44,
 "ap": "https://kenvue.wd5.myworkdayjobs.com/pt-BR/kenvue/job/Latin-America-Brazil-Sao-Paulo-Sao-Paulo/Analista-de-Inteligncia-de-Dados-Senior_2607048391W/apply?source=LinkedIn",
-"or": "https://lnkd.in/p/dicvGBwi"
+"or": "https://lnkd.in/p/dicvGBwi",
+"pl": "https://mentoradados.com/vagas/analista-de-inteligencia-de-dados-senior-2/"
 },
 {
 "id": "10892",
@@ -1520,9 +1651,10 @@
 "nv": "Sênior",
 "s": "A combinar",
 "a": "há 1 mês",
-"d": 30,
+"d": 45,
 "ap": "mailto:bruno.martins@aurionfirst.ai",
-"or": "https://lnkd.in/p/dzTuXcAg"
+"or": "https://lnkd.in/p/dzTuXcAg",
+"pl": "https://mentoradados.com/vagas/power-bi-developer-pleno-senior/"
 },
 {
 "id": "10878",
@@ -1533,9 +1665,10 @@
 "nv": "Júnior",
 "s": "R$ 6.500,00 (PJ)",
 "a": "há 1 mês",
-"d": 30,
+"d": 45,
 "ap": "https://jobs.quickin.io/remopt/jobs/6aa15b3d748b3300135b606d?src",
-"or": "https://lnkd.in/p/d3JWnqsR"
+"or": "https://lnkd.in/p/d3JWnqsR",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-junior-63/"
 },
 {
 "id": "10876",
@@ -1546,9 +1679,682 @@
 "nv": "Sênior",
 "s": "A combinar",
 "a": "há 1 mês",
-"d": 30,
+"d": 45,
 "ap": "mailto:Arine.duran@runtalent.it",
-"or": "https://lnkd.in/p/d7rQvbys"
+"or": "https://lnkd.in/p/d7rQvbys",
+"pl": "https://mentoradados.com/vagas/consultor-senior-bi-full-stack/"
+},
+{
+"id": "10866",
+"t": "Analista de Inteligência de Mercado Pleno",
+"e": "Icon (Confidencial)",
+"m": "Híbrido",
+"cidade": "São Paulo - SP (Híbrido)",
+"nv": "Pleno",
+"s": "A combinar",
+"a": "há 2 meses",
+"d": 45,
+"ap": "https://iconit.inhire.app/vagas/05f215cb-ff3a-4ee8-abda-6cb407fafbba/analista-de-inteligencia-de-mercado-pleno-pleno-hibrido",
+"or": "https://lnkd.in/p/d-FRC3ux",
+"pl": "https://mentoradados.com/vagas/analista-de-inteligencia-de-mercado-pleno-10/"
+},
+{
+"id": "10864",
+"t": "Analista de Inteligência de Negócios Júnior",
+"e": "Caloi",
+"m": "Híbrido",
+"cidade": "São Paulo - SP (Híbrido)",
+"nv": "Júnior",
+"s": "A combinar",
+"a": "há 2 meses",
+"d": 45,
+"ap": "https://caloi.gupy.io/job/eyJqb2JJZCI6MTI0MTc3MDMsInNvdXJjZSI6ImxpbmtlZGluIn0=?jobBoardSource=linkedin",
+"or": "https://lnkd.in/p/dUiEMuQe",
+"pl": "https://mentoradados.com/vagas/analista-de-inteligencia-de-negocios-junior/"
+},
+{
+"id": "10822",
+"t": "Business Intelligence Specialist Especialista",
+"e": "Confidencial",
+"m": "Remoto",
+"cidade": "",
+"nv": "Especialista",
+"s": "A combinar",
+"a": "há 2 meses",
+"d": 46,
+"ap": "https://manager-f33.weeke.app//cuiaba004/token/b629a2023ad00fd8f210ef04a0c7e004&op=cadastrar&sem_acompanhamento",
+"or": "https://lnkd.in/p/d76EWf_K",
+"pl": "https://mentoradados.com/vagas/business-intelligence-specialist-especialista/"
+},
+{
+"id": "10818",
+"t": "Analista de BI (Inglês Fluente) Pleno",
+"e": "Best2Bee",
+"m": "Remoto",
+"cidade": "",
+"nv": "Pleno",
+"s": "A combinar",
+"a": "há 2 meses",
+"d": 46,
+"ap": "mailto:Thiago.prado@best2bee.com.br",
+"or": "https://lnkd.in/p/dBndkRpx",
+"pl": "https://mentoradados.com/vagas/analista-de-bi-ingles-fluente-pleno/"
+},
+{
+"id": "10810",
+"t": "Analista de Dados & UX (Pleno ou Sênior)",
+"e": "MJV",
+"m": "Híbrido",
+"cidade": "São Paulo - SP (Híbrido)",
+"nv": "Pleno",
+"s": "A combinar",
+"a": "há 2 meses",
+"d": 46,
+"ap": "mailto:joyce.costa@mjv.com.br",
+"or": "https://lnkd.in/p/defD-XqU",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-ux-pleno-ou-senior/"
+},
+{
+"id": "10808",
+"t": "Business Analyst Pleno – Salesforce / Telecom & AI",
+"e": "Decision",
+"m": "Híbrido",
+"cidade": "São Paulo - SP (Híbrido)",
+"nv": "Pleno",
+"s": "A combinar",
+"a": "há 2 meses",
+"d": 46,
+"ap": "mailto:daniela.lima@decisionbr.com.br",
+"or": "https://lnkd.in/p/dYHzv5Wh",
+"pl": "https://mentoradados.com/vagas/business-analyst-pleno-salesforce-telecom-ai/"
+},
+{
+"id": "10790",
+"t": "Data Analyst",
+"e": "X-Team",
+"m": "Remoto",
+"cidade": "",
+"nv": "Pleno",
+"s": "A combinar",
+"a": "há 2 meses",
+"d": 46,
+"ap": "mailto:kira.soria@x-team.com",
+"or": "https://lnkd.in/p/dZh_ya5C",
+"pl": "https://mentoradados.com/vagas/data-analyst/"
+},
+{
+"id": "10782",
+"t": "Analista Sênior de BI – Data & Analytics",
+"e": "Agência de Publicidade",
+"m": "Híbrido",
+"cidade": "São Paulo - SP (Híbrido)",
+"nv": "Sênior",
+"s": "R$ 12.000,00",
+"a": "há 2 meses",
+"d": 46,
+"ap": "mailto:selecaorh@consultoriafulltime.com.br",
+"or": "https://lnkd.in/p/dCU8E3Wi",
+"pl": "https://mentoradados.com/vagas/analista-senior-de-bi-data-analytics/"
+},
+{
+"id": "10706",
+"t": "Analista de Business Intelligence B2B Pleno (E-commerce)",
+"e": "Hypera Pharma",
+"m": "Presencial",
+"cidade": "São Paulo - SP (Presencial)",
+"nv": "Pleno",
+"s": "A combinar",
+"a": "há 2 meses",
+"d": 50,
+"ap": "https://hyperapharma.gupy.io/jobs/12303066",
+"or": "https://www.linkedin.com/posts/priscilatamashiro_analista-de-business-intelligence-b2b-pleno-activity-7501613506778271744-Yej3?utm_source=share&utm_medium=member_desktop&rcm=ACoAABECjW0BRW1WGsrmhQAYjzs7o10ZVGuVWYA",
+"pl": "https://mentoradados.com/vagas/analista-de-business-intelligence-b2b-pleno-e-commerce/"
+},
+{
+"id": "10699",
+"t": "Analista de Dados com SQL Pleno",
+"e": "Mindshaker Talent",
+"m": "Remoto",
+"cidade": "",
+"nv": "Pleno",
+"s": "A combinar",
+"a": "há 2 meses",
+"d": 50,
+"ap": "mailto:leonardo.viana@mindshaker-talent.com",
+"or": "https://lnkd.in/p/d9MY87MQ",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-com-sql-pleno/"
+},
+{
+"id": "10697",
+"t": "Analista de BI com Power BI Pleno",
+"e": "Mindshaker Talent",
+"m": "Remoto",
+"cidade": "",
+"nv": "Pleno",
+"s": "A combinar",
+"a": "há 2 meses",
+"d": 50,
+"ap": "mailto:leonardo.viana@mindshaker-talent.com",
+"or": "https://lnkd.in/p/dXzD4VQS",
+"pl": "https://mentoradados.com/vagas/analista-de-bi-com-power-bi-pleno/"
+},
+{
+"id": "10689",
+"t": "Analista de BI Pleno (Web Analytics & Tracking)",
+"e": "Tech&Soul",
+"m": "Híbrido",
+"cidade": "São Paulo - SP (Híbrido)",
+"nv": "Pleno",
+"s": "A combinar",
+"a": "há 2 meses",
+"d": 50,
+"ap": "mailto:felipe.costa@techandsoul.com.br",
+"or": "https://lnkd.in/p/dkktVxwr",
+"pl": "https://mentoradados.com/vagas/analista-de-bi-pleno-web-analytics-tracking/"
+},
+{
+"id": "10687",
+"t": "Analista de Dados Júnior",
+"e": "Amil",
+"m": "Presencial",
+"cidade": "Rio de Janeiro - RJ, São Paulo - SP e Curitiba - PR (Presencial)",
+"nv": "Júnior",
+"s": "A combinar",
+"a": "há 2 meses",
+"d": 50,
+"ap": "https://carreirasgrupo.amil.com.br/job/CURITIBA-Analista-de-Dados-Jr-Centro%2CRJ-Morumbi%2CSP-Curitiba%2CPR-PARA/1336206162/",
+"or": "https://lnkd.in/p/dchUGtGm",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-junior-61/"
+},
+{
+"id": "10684",
+"t": "Analista de Dados Pleno/Sênior",
+"e": "Locus",
+"m": "Remoto",
+"cidade": "",
+"nv": "Pleno",
+"s": "A combinar",
+"a": "há 2 meses",
+"d": 50,
+"ap": "mailto:vagas@locus.software",
+"or": "https://lnkd.in/p/dmZ74g7m",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-pleno-senior-5/"
+},
+{
+"id": "10682",
+"t": "Analista de Business Analytics Sênior",
+"e": "Grupo Orangefox",
+"m": "Presencial",
+"cidade": "São Paulo - SP (Presencial)",
+"nv": "Sênior",
+"s": "R$ 10.000 a R$ 12.000/mês",
+"a": "há 2 meses",
+"d": 50,
+"ap": "mailto:grf@orangefox.com.br",
+"or": "https://lnkd.in/p/dscvdfc9",
+"pl": "https://mentoradados.com/vagas/analista-de-business-analytics-senior/"
+},
+{
+"id": "10680",
+"t": "Analista de Dados Pleno",
+"e": "DECISION",
+"m": "Remoto",
+"cidade": "",
+"nv": "Pleno",
+"s": "A combinar",
+"a": "há 2 meses",
+"d": 50,
+"ap": "mailto:milena.mariano@decisionbr.com.br",
+"or": "https://lnkd.in/p/dNKt7nsA",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-pleno-163/"
+},
+{
+"id": "10676",
+"t": "Analista de Informações em Saúde",
+"e": "Decision",
+"m": "Remoto",
+"cidade": "",
+"nv": "Pleno",
+"s": "A combinar",
+"a": "há 2 meses",
+"d": 50,
+"ap": "mailto:andrea.lima@decisionbr.com.br",
+"or": "https://lnkd.in/p/dDB6YZGz",
+"pl": "https://mentoradados.com/vagas/analista-de-informacoes-em-saude/"
+},
+{
+"id": "10651",
+"t": "Tableau Developer Sênior",
+"e": "Confidencial",
+"m": "Remoto",
+"cidade": "",
+"nv": "Sênior",
+"s": "A combinar",
+"a": "há 2 meses",
+"d": 51,
+"ap": "https://lnkd.in/p/dmTuEVfN",
+"or": "",
+"pl": "https://mentoradados.com/vagas/tableau-developer-senior/"
+},
+{
+"id": "10636",
+"t": "Analista de BI Pleno",
+"e": "Demarco",
+"m": "Remoto",
+"cidade": "",
+"nv": "Pleno",
+"s": "A combinar",
+"a": "há 2 meses",
+"d": 51,
+"ap": "https://app.demarco.com.br/rh-demarco-dmpeople-modelo-analista-de-bi-pleno",
+"or": "https://lnkd.in/p/dmPmNqxp",
+"pl": "https://mentoradados.com/vagas/analista-de-bi-pleno-67/"
+},
+{
+"id": "10634",
+"t": "Analista de BI Pleno",
+"e": "SONDA",
+"m": "Presencial",
+"cidade": "São Paulo - SP (Presencial)",
+"nv": "Pleno",
+"s": "A combinar",
+"a": "há 2 meses",
+"d": 51,
+"ap": "https://carrera.sonda.com/job/Sitio-Pau-Brasil-Analista-de-BI-Pleno-S%C3%A3o/1422678000/",
+"or": "https://lnkd.in/p/dW9bFJPW",
+"pl": "https://mentoradados.com/vagas/analista-de-bi-pleno-66/"
+},
+{
+"id": "10630",
+"t": "Analista Estratégico de Dados (Informações Gerenciais) Pleno",
+"e": "Hospital Santa Virgínia",
+"m": "Presencial",
+"cidade": "São Paulo - SP (Presencial)",
+"nv": "Pleno",
+"s": "A combinar",
+"a": "há 2 meses",
+"d": 51,
+"ap": "mailto:recrutamento@hsv.org.br",
+"or": "https://lnkd.in/p/dS5jPVS6",
+"pl": "https://mentoradados.com/vagas/analista-estrategico-de-dados-informacoes-gerenciais-pleno/"
+},
+{
+"id": "10621",
+"t": "Analista de BI – Call Center Pleno",
+"e": "Alares",
+"m": "Híbrido",
+"cidade": "São Paulo - SP (Híbrido)",
+"nv": "Pleno",
+"s": "A combinar",
+"a": "há 2 meses",
+"d": 51,
+"ap": "https://alaresinternet.gupy.io/jobs/12331049?jobBoardSource=gupy_public_page",
+"or": "https://lnkd.in/p/dRATZ6v4",
+"pl": "https://mentoradados.com/vagas/analista-de-bi-call-center-pleno/"
+},
+{
+"id": "10617",
+"t": "Analista de Dados/BI Sênior",
+"e": "Linhas Corrente",
+"m": "Presencial",
+"cidade": "São Paulo - SP (Presencial)",
+"nv": "Sênior",
+"s": "A combinar",
+"a": "há 2 meses",
+"d": 51,
+"ap": "https://linhascorrente.gupy.io/jobs/12412589",
+"or": "https://lnkd.in/p/dTXUbxwu",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-bi-senior-8/"
+},
+{
+"id": "10613",
+"t": "Analista Sênior de BI – Data & Analytics Sênior",
+"e": "Agência de Publicidade",
+"m": "Híbrido",
+"cidade": "São Paulo - SP (Híbrido)",
+"nv": "Sênior",
+"s": "R$ 10.000,00",
+"a": "há 2 meses",
+"d": 51,
+"ap": "mailto:selecaorh@consultoriafulltime.com.br",
+"or": "https://www.linkedin.com/posts/aline-ferreira-11b8a4280_oportunidade-analista-s%C3%AAnior-de-bi-data-activity-7500987158296420352-lGFJ?utm_source=share&utm_medium=member_desktop&rcm=ACoAABECjW0BRW1WGsrmhQAYjzs7o10ZVGuVWYA",
+"pl": "https://mentoradados.com/vagas/analista-senior-de-bi-data-analytics-senior/"
+},
+{
+"id": "10595",
+"t": "Analista de BI | Sistemas Júnior – Friboi",
+"e": "Friboi",
+"m": "Presencial",
+"cidade": "São Paulo - SP (Presencial)",
+"nv": "Júnior",
+"s": "A combinar",
+"a": "há 2 meses",
+"d": 52,
+"ap": "https://grupojbs.gupy.io/jobs/12406773?jobBoardSource=gupy_public_page",
+"or": "https://lnkd.in/p/dArHGT7h",
+"pl": "https://mentoradados.com/vagas/analista-de-bi-sistemas-junior-friboi/"
+},
+{
+"id": "10593",
+"t": "Desenvolvedor de BI Pleno",
+"e": "Confidencial",
+"m": "Presencial",
+"cidade": "São Paulo - SP (Presencial)",
+"nv": "Pleno",
+"s": "A combinar",
+"a": "há 2 meses",
+"d": 52,
+"ap": "https://mentoradados.com/vagas/desenvolvedor-de-bi-pleno/",
+"or": "https://lnkd.in/p/dr4zZFEA",
+"pl": "https://mentoradados.com/vagas/desenvolvedor-de-bi-pleno/"
+},
+{
+"id": "10576",
+"t": "Analista de Dados Sênior",
+"e": "Datum",
+"m": "Remoto",
+"cidade": "",
+"nv": "Sênior",
+"s": "A combinar",
+"a": "há 2 meses",
+"d": 52,
+"ap": "https://datum.jobs.recrut.ai/job/XC4VM4",
+"or": "https://lnkd.in/p/dUuJqg2j",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-senior-60/"
+},
+{
+"id": "10563",
+"t": "Analista de Inteligência de Mercado Júnior",
+"e": "Biolab",
+"m": "Presencial",
+"cidade": "São Paulo - SP (Presencial)",
+"nv": "Júnior",
+"s": "A combinar",
+"a": "há 2 meses",
+"d": 52,
+"ap": "https://oportunidades.mindsight.com.br/biolab/322",
+"or": "https://lnkd.in/p/dQE7ZWD9",
+"pl": "https://mentoradados.com/vagas/analista-de-inteligencia-de-mercado-junior-6/"
+},
+{
+"id": "10557",
+"t": "Business Intelligence Sr Analyst – AS&O Sênior",
+"e": "ADM",
+"m": "Híbrido",
+"cidade": "São Paulo - SP (Híbrido)",
+"nv": "Sênior",
+"s": "A combinar",
+"a": "há 2 meses",
+"d": 52,
+"ap": "https://sjobs.brassring.com/TGnewUI/Search/home/HomeWithPreLoad?PageType=JobDetails&partnerid=25416&siteid=5764&jobId=3384839#jobDetails=3384839_5764",
+"or": "https://lnkd.in/p/dK2Z3TcM",
+"pl": "https://mentoradados.com/vagas/business-intelligence-sr-analyst-aso-senior/"
+},
+{
+"id": "10555",
+"t": "Data Analyst (BI e Negócios) Pleno",
+"e": "Michael Page (Cliente Global)",
+"m": "Remoto",
+"cidade": "",
+"nv": "Pleno",
+"s": "A combinar",
+"a": "há 2 meses",
+"d": 52,
+"ap": "https://www.michaelpage.com.br/job-detail/data-analyst-bi-e-neg%C3%B3cios/ref/jn-092026-7094401",
+"or": "https://lnkd.in/p/dkiMW3nb",
+"pl": "https://mentoradados.com/vagas/data-analyst-bi-e-negocios-pleno/"
+},
+{
+"id": "10549",
+"t": "Analista de Dados Pleno – TI",
+"e": "Grupo CVLB",
+"m": "Remoto",
+"cidade": "",
+"nv": "Pleno",
+"s": "A combinar",
+"a": "há 2 meses",
+"d": 52,
+"ap": "https://grupocvlb.gupy.io/jobs/12027783",
+"or": "https://lnkd.in/p/dEr3ZEtF",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-pleno-ti/"
+},
+{
+"id": "10525",
+"t": "Estagiário de Fluxo PJ – PIX Recebimentos",
+"e": "Itaú Unibanco",
+"m": "Híbrido",
+"cidade": "São Paulo - SP (Híbrido)",
+"nv": "Estágio",
+"s": "A combinar",
+"a": "há 2 meses",
+"d": 53,
+"ap": "https://vemproitau.gupy.io/jobs/12212379?jobBoardSource=gupy_public_page",
+"or": "https://lnkd.in/p/dHHWfXD5",
+"pl": "https://mentoradados.com/vagas/estagiario-de-fluxo-pj-pix-recebimentos/"
+},
+{
+"id": "10507",
+"t": "Analista de Dados Júnior",
+"e": "John",
+"m": "Remoto",
+"cidade": "",
+"nv": "Júnior",
+"s": "A combinar",
+"a": "há 2 meses",
+"d": 54,
+"ap": "https://lnkd.in/p/d-6w47_6",
+"or": "",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-junior-58/"
+},
+{
+"id": "10495",
+"t": "Analista de Dados Pleno",
+"e": "TEM Saúde",
+"m": "Híbrido",
+"cidade": "São Paulo - SP (Híbrido)",
+"nv": "Pleno",
+"s": "R$ 10.000,00",
+"a": "há 2 meses",
+"d": 54,
+"ap": "https://temsaude.gupy.io/jobs/12304308?jobBoardSource=share_link",
+"or": "https://lnkd.in/p/dpDnTeVa",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-pleno-161/"
+},
+{
+"id": "10481",
+"t": "Analista de Dados / Power BI – Data Storytelling & UX Sênior",
+"e": "Icon",
+"m": "Presencial",
+"cidade": "São Paulo - SP (Presencial)",
+"nv": "Sênior",
+"s": "A combinar",
+"a": "há 2 meses",
+"d": 54,
+"ap": "https://iconit.inhire.app/vagas/2e9290aa-0a4d-4e71-900e-ab48171e88d1/analista-de-dados-power-bi-data-storytelling-and-ux-senior",
+"or": "https://lnkd.in/p/dgtUei9D",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-power-bi-data-storytelling-ux-senior-2/"
+},
+{
+"id": "10479",
+"t": "Analista de Dados/Power BI – Banco de Talentos",
+"e": "MOGAI TECNOLOGIA DE INFORMACAO S.A.",
+"m": "Remoto",
+"cidade": "",
+"nv": "Pleno",
+"s": "A combinar",
+"a": "há 2 meses",
+"d": 54,
+"ap": "https://mogai.vagas.solides.com.br/vaga/913003",
+"or": "https://lnkd.in/p/db3KCpQc",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-power-bi-banco-de-talentos/"
+},
+{
+"id": "10431",
+"t": "Analista de Cadastro Sênior",
+"e": "APM",
+"m": "Presencial",
+"cidade": "São Paulo - SP (Presencial)",
+"nv": "Sênior",
+"s": "A combinar",
+"a": "há 2 meses",
+"d": 54,
+"ap": "mailto:rh@apm.org.br",
+"or": "https://lnkd.in/p/dK7vVxP7",
+"pl": "https://mentoradados.com/vagas/analista-de-cadastro-senior/"
+},
+{
+"id": "10426",
+"t": "Data Translator Sênior",
+"e": "Confidencial",
+"m": "Remoto",
+"cidade": "",
+"nv": "Sênior",
+"s": "A combinar (PJ)",
+"a": "há 2 meses",
+"d": 54,
+"ap": "#",
+"or": "https://lnkd.in/p/dfNfsg5Z",
+"pl": "https://mentoradados.com/vagas/data-translator-senior/"
+},
+{
+"id": "10314",
+"t": "Especialista Sênior em Dados e BI",
+"e": "Cimed",
+"m": "Híbrido",
+"cidade": "São Paulo - SP (Híbrido)",
+"nv": "Sênior",
+"s": "A combinar",
+"a": "há 2 meses",
+"d": 57,
+"ap": "https://cimed.gupy.io/jobs/11559403?jobBoardSource=gupy_public_page",
+"or": "https://lnkd.in/p/gtYMAqgs",
+"pl": "https://mentoradados.com/vagas/especialista-senior-em-dados-e-bi/"
+},
+{
+"id": "10241",
+"t": "Analista de Inteligência de Dados Sênior",
+"e": "Raízen",
+"m": "Presencial",
+"cidade": "São Paulo - SP (Presencial)",
+"nv": "Sênior",
+"s": "A combinar",
+"a": "há 2 meses",
+"d": 58,
+"ap": "https://genteraizen.gupy.io/jobs/11728001",
+"or": "https://lnkd.in/p/dtYDmuNK",
+"pl": "https://mentoradados.com/vagas/analista-de-inteligencia-de-dados-senior/"
+},
+{
+"id": "10193",
+"t": "Engenheiro de Power BI – Especialista em Modelo Semântico",
+"e": "Confidencial",
+"m": "Remoto",
+"cidade": "",
+"nv": "Especialista",
+"s": "A combinar",
+"a": "há 2 meses",
+"d": 58,
+"ap": "https://www2.jobdiva.com/portal/?a=mujdnwexqgakax2o3w0m9hpsqirx1t0ac6yp2or674eqkjo4siunulbjw56s04rz&jobid=29168192#/jobs/29168192?compid=0&id=29168192&jobid=29168192&SearchString=&t=1787762091704&fromLinkedin=true&source=Linkedin",
+"or": "https://lnkd.in/p/dxH29GZF",
+"pl": "https://mentoradados.com/vagas/engenheiro-de-power-bi-especialista-em-modelo-semantico/"
+},
+{
+"id": "10138",
+"t": "Desenvolvedor(a) Low-Code Power Apps Pleno",
+"e": "Gateware",
+"m": "Remoto",
+"cidade": "",
+"nv": "Pleno",
+"s": "A combinar",
+"a": "há 2 meses",
+"d": 59,
+"ap": "https://lnkd.in/dG4BeyNd",
+"or": "https://lnkd.in/p/dNGyhznM",
+"pl": "https://mentoradados.com/vagas/desenvolvedora-low-code-power-apps-pleno/"
+},
+{
+"id": "10134",
+"t": "Analista de Dados/Power BI Sênior",
+"e": "BlueSix",
+"m": "Remoto",
+"cidade": "",
+"nv": "Sênior",
+"s": "A combinar",
+"a": "há 2 meses",
+"d": 59,
+"ap": "mailto:rh@bluesix.com.br",
+"or": "https://lnkd.in/p/dQGBiACj",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-power-bi-senior/"
+},
+{
+"id": "10130",
+"t": "Analista de MIS Júnior",
+"e": "Anova Serv",
+"m": "Presencial",
+"cidade": "São Paulo - SP (Presencial)",
+"nv": "Júnior",
+"s": "R$ 3.500,00",
+"a": "há 2 meses",
+"d": 59,
+"ap": "mailto:recrutamento@anovaserv.com.br",
+"or": "https://lnkd.in/p/djuQni_u",
+"pl": "https://mentoradados.com/vagas/analista-de-mis-junior/"
+},
+{
+"id": "10125",
+"t": "Analista de BI Sênior",
+"e": "Mantris",
+"m": "Híbrido",
+"cidade": "São Paulo - SP (Híbrido)",
+"nv": "Sênior",
+"s": "A combinar",
+"a": "há 2 meses",
+"d": 59,
+"ap": "mailto:recrutamento@mantris.com.br",
+"or": "https://lnkd.in/p/d47A7h64",
+"pl": "https://mentoradados.com/vagas/analista-de-bi-senior-16/"
+},
+{
+"id": "10123",
+"t": "Analista de Dados / Integração Pleno",
+"e": "Confidencial",
+"m": "Remoto",
+"cidade": "",
+"nv": "Pleno",
+"s": "A combinar",
+"a": "há 2 meses",
+"d": 59,
+"ap": "https://wa.me/5511933435647",
+"or": "https://lnkd.in/p/dPskcFYt",
+"pl": "https://mentoradados.com/vagas/analista-de-dados-integracao-pleno-2/"
+},
+{
+"id": "10086",
+"t": "BI Developer Sênior",
+"e": "Empresa Americana de Seguros",
+"m": "Remoto",
+"cidade": "",
+"nv": "Sênior",
+"s": "A combinar",
+"a": "há 2 meses",
+"d": 59,
+"ap": "mailto:rcampolina@infotreeglobal.com",
+"or": "https://lnkd.in/p/dK9Z9y2Q",
+"pl": "https://mentoradados.com/vagas/bi-developer-senior/"
+},
+{
+"id": "10082",
+"t": "Analista de Business Intelligence Pleno",
+"e": "SENAI/SC (FIESC)",
+"m": "Remoto",
+"cidade": "",
+"nv": "Pleno",
+"s": "R$ 7.919,14",
+"a": "há 2 meses",
+"d": 59,
+"ap": "https://fiesc.pandape.infojobs.com.br/Detail?id=3648009",
+"or": "https://lnkd.in/p/dYqs9c2c",
+"pl": "https://mentoradados.com/vagas/analista-de-business-intelligence-pleno-11/"
 }
 ]
 }

@@ -1,4 +1,5 @@
-# Atualiza vagas.json todo dia às 7h (Brasília) com as vagas de Análise de Dados e BI do portal Mentora Dados.
+# Todo dia às 7h (Brasília): atualiza vagas.json com as vagas de Análise de Dados e BI do portal Mentora Dados
+# e dá um "oi" no banco do controle de mercado, para o Supabase gratuito não pausar o projeto.
 name: Atualizar vagas
 
 on:
@@ -23,6 +24,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
+      - name: Manter o banco do controle de mercado acordado
+        continue-on-error: true
+        run: |
+          curl -fsS -X POST "https://hofnhbxnfebfnncwxrds.supabase.co/rest/v1/rpc/ping"             -H "apikey: sb_publishable_kpEqdxunDeIbStJrgxrngg_tNPv6VTL"             -H "Content-Type: application/json" -d '{}' && echo " (banco respondeu)"
 
       - name: Buscar vagas no portal
         run: python scripts/atualizar_vagas.py

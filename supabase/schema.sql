@@ -104,3 +104,9 @@ left join public.produtos p on p.id = i.produto_id;
 
 grant select on public.compras to authenticated;
 revoke all on public.compras from anon;
+
+-- "Oi" diário do robô do GitHub (vagas.yml) para o projeto gratuito não ser pausado por inatividade.
+-- Não lê nem devolve dado nenhum: só responde 1.
+create or replace function public.ping() returns int language sql stable as 'select 1';
+revoke all on function public.ping() from public;
+grant execute on function public.ping() to anon, authenticated;

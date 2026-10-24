@@ -32,7 +32,7 @@
   --good:#1E7A4C; --warn:#A5610B; --bad:#C8102E; --live:#E4002B;
   --on-img:#FFFFFF; --scrim:rgba(2,14,32,.82); --chip-bg:rgba(2,14,32,.66); --img-ground:#0E2240;
   --shadow:0 1px 2px rgba(0,30,70,.08),0 8px 24px rgba(0,30,70,.12);
-  --c-esportes:#005A9C; --c-vagas:#2E8BD8; --c-aniversarios:#D6283B; --c-embreve:#7B8CA3; --c-x:#1F2328;
+  --c-esportes:#005A9C; --c-vagas:#2E8BD8; --c-aniversarios:#D6283B; --c-embreve:#7B8CA3; --c-x:#1F2328; --c-mercado:#0E8A6A;
   --f-ui:"Outfit","Hanken Grotesk",system-ui,sans-serif;
   --f-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
   --f-body:"Hanken Grotesk",system-ui,sans-serif;
@@ -43,20 +43,21 @@
   --side:#0D1A2C; --hover:#16263D; --glass:rgba(12,24,42,.78); --veil:linear-gradient(180deg,rgba(2,8,18,.45),rgba(2,8,18,.62));
   --accent:#6CB4F0; --accent-ink:#04182E; --brand:#005A9C; --brand-ink:#FFFFFF;
   --good:#55C08A; --warn:#E0A252; --bad:#FF7A85; --live:#FF5A5F;
-  --c-esportes:#6CB4F0; --c-vagas:#8CCBFF; --c-aniversarios:#FF7A85; --c-embreve:#B4C0D0; --c-x:#E7E9EA;
+  --c-esportes:#6CB4F0; --c-vagas:#8CCBFF; --c-aniversarios:#FF7A85; --c-embreve:#B4C0D0; --c-x:#E7E9EA; --c-mercado:#4FD1A5;
   --shadow:0 0 0 1px rgba(255,255,255,.06),0 8px 24px rgba(0,0,0,.3); color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#08111D; --surface:rgba(12,24,42,.86); --ink:#E7EEF7; --muted:#9AAAC0; --line:#22324A;
   --side:#0D1A2C; --hover:#16263D; --glass:rgba(12,24,42,.78); --veil:linear-gradient(180deg,rgba(2,8,18,.45),rgba(2,8,18,.62));
   --accent:#6CB4F0; --accent-ink:#04182E; --brand:#005A9C; --brand-ink:#FFFFFF;
   --good:#55C08A; --warn:#E0A252; --bad:#FF7A85; --live:#FF5A5F;
-  --c-esportes:#6CB4F0; --c-vagas:#8CCBFF; --c-aniversarios:#FF7A85; --c-embreve:#B4C0D0; --c-x:#E7E9EA;
+  --c-esportes:#6CB4F0; --c-vagas:#8CCBFF; --c-aniversarios:#FF7A85; --c-embreve:#B4C0D0; --c-x:#E7E9EA; --c-mercado:#4FD1A5;
   --shadow:0 0 0 1px rgba(255,255,255,.06),0 8px 24px rgba(0,0,0,.3); color-scheme:dark}
 /* A seção aberta empresta a sua cor para links, títulos e botões */
 :root[data-sec="vagas"]{--accent:var(--c-vagas)}
 :root[data-sec="aniversarios"]{--accent:var(--c-aniversarios)}
 :root[data-sec="em-breve"]{--accent:var(--c-embreve)}
 :root[data-sec="x"]{--accent:var(--c-x);--accent-ink:var(--side)}
+:root[data-sec="mercado"]{--accent:var(--c-mercado)}
 
 *{box-sizing:border-box}
 [hidden]{display:none!important}
@@ -141,6 +142,60 @@ a.link{color:var(--accent);font-weight:600;text-underline-offset:3px}
 .pill{font:500 11px var(--f-mono);padding:2px 7px;border-radius:99px;background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--accent)}
 .pill.warn{background:color-mix(in srgb,var(--warn) 16%,transparent);color:var(--warn)}
 form.add{display:grid;grid-template-columns:1fr 70px 130px auto;gap:8px;margin:14px 0 16px}
+/* Mercado */
+.lockic.mk{background:var(--c-mercado)}
+.mkbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px}
+.mkbar .pills{margin:0;flex:1 1 360px}
+.mkuser{display:flex;align-items:center;gap:10px;margin-left:auto}
+.mkuser .sub{color:#fff;text-shadow:0 1px 6px rgba(0,0,0,.5)}
+.mkmeses{background:var(--glass);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-radius:12px;padding:4px;overflow-x:auto}
+.mkmeses button{font-size:13px;padding:7px 10px;white-space:nowrap}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:14px}
+.kpi{display:flex;flex-direction:column;gap:4px}
+.kpi .kl{font:600 13px var(--f-ui);color:var(--muted)}
+.kpi .kv{font:700 28px/1.1 var(--f-ui);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.kpi .kn{font-size:13px;color:var(--muted)}
+.kpi .kn.up{color:var(--bad)}
+.kpi .kn.down{color:var(--good)}
+.mkgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
+@media(max-width:1000px){.mkgrid{grid-template-columns:minmax(0,1fr)}}
+.hbars{display:grid;gap:8px}
+.hb{display:grid;grid-template-columns:minmax(0,130px) minmax(0,1fr) auto;gap:10px;align-items:center;font-size:14px}
+.hbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hbt{height:14px;background:var(--hover);border-radius:4px;overflow:hidden}
+.hbf{display:block;height:100%;background:var(--accent);border-radius:0 4px 4px 0}
+.hbv{font:600 13px var(--f-ui);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.hbv small{font-weight:500;color:var(--muted)}
+.vbars{display:flex;align-items:flex-end;gap:8px;height:200px}
+.vb{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;background:none;padding:0;color:var(--ink)}
+.vbv{font:600 11px var(--f-ui);color:var(--muted);font-variant-numeric:tabular-nums}
+.vbt{flex:1;width:100%;max-width:48px;display:flex;align-items:flex-end}
+.vbf{display:block;width:100%;background:color-mix(in srgb,var(--accent) 45%,transparent);border-radius:4px 4px 0 0}
+.vb.on .vbf{background:var(--accent)}
+.vb.on .vbv,.vb.on .vbl{color:var(--ink);font-weight:700}
+.vbl{font:600 12px var(--f-ui);color:var(--muted)}
+.vb:hover .vbf{background:var(--accent)}
+.mkprod{background:none;color:var(--ink);padding:0;font:600 14px var(--f-body);text-align:left;text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
+.mkprod:hover{color:var(--accent)}
+.vt{font:600 13px var(--f-ui)}
+.vt.up{color:var(--bad)} .vt.down{color:var(--good)} .vt.flat{color:var(--muted)}
+.lwrap{overflow-x:auto}
+.lchart{width:100%;min-width:420px;height:auto;display:block}
+.lgrid{stroke:var(--line);stroke-width:1}
+.lax{fill:var(--muted);font:500 11px var(--f-ui)}
+.lline{fill:none;stroke:var(--accent);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.lpt{fill:var(--accent);stroke:var(--side);stroke-width:2}
+.lpt:hover{r:7}
+.llab{fill:var(--ink);font:700 12px var(--f-ui)}
+.mknota{border-top:1px solid var(--line);padding:8px 0}
+.mknota:first-of-type{border-top:0}
+.mknota summary{display:flex;align-items:center;gap:12px;cursor:pointer;list-style:none}
+.mknota summary::-webkit-details-marker{display:none}
+.mknota summary .mkn{flex:1;min-width:0}
+.mknota[open] summary{margin-bottom:8px}
+.mkt{font:700 15px var(--f-ui);font-variant-numeric:tabular-nums}
+.mkimp{margin-top:14px;display:grid;gap:10px;justify-items:start}
+
 /* Vagas */
 .vhead{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:10px 16px}
 .vhead h2{margin:0 0 2px}
@@ -432,6 +487,7 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
       <h4>Painel</h4>
       <a class="it" href="#esportes" data-k="esportes"><span class="ico" style="--ic:var(--c-esportes)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M7.2 5.6c2 3.6 2 9.2 0 12.8M16.8 5.6c-2 3.6-2 9.2 0 12.8"/></svg></span><span class="t">Esportes</span><span class="cnt" id="cnt-esportes"></span></a>
       <a class="it" href="#vagas" data-k="vagas"><span class="ico" style="--ic:var(--c-vagas)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V4.5h6V7M3 13h18"/></svg></span><span class="t">Vagas</span><span class="cnt" id="cnt-vagas"></span></a>
+      <a class="it" href="#mercado" data-k="mercado"><span class="ico" style="--ic:var(--c-mercado)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L21 8H6"/><circle cx="10" cy="20" r="1.2" fill="currentColor"/><circle cx="17" cy="20" r="1.2" fill="currentColor"/></svg></span><span class="t">Mercado</span></a>
       <a class="it" href="#aniversarios" data-k="aniversarios"><span class="ico" style="--ic:var(--c-aniversarios)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21h16v-8H4zM4 16.5c2.6 1.6 5.4 1.6 8 0 2.6 1.6 5.4 1.6 8 0M12 13V9.5"/><path d="M12 7a1.6 1.6 0 0 0 1.6-1.6C13.6 4.3 12 3 12 3s-1.6 1.3-1.6 2.4A1.6 1.6 0 0 0 12 7z" fill="currentColor"/></svg></span><span class="t">Aniversários</span><span class="cnt" id="cnt-aniv"></span></a>
       <a class="it" href="#x" data-k="x"><span class="ico" style="--ic:var(--c-x);color:var(--side)"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></span><span class="t">Perfis no X</span><span class="cnt" id="cnt-x"></span></a>
       <a class="it" href="#em-breve" data-k="em-breve"><span class="ico" style="--ic:var(--c-embreve)"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3l2.7 5.6 6.2.9-4.5 4.4 1 6.1L12 17.1 6.6 20l1-6.1L3.1 9.5l6.2-.9z"/></svg></span><span class="t">Em breve</span><span class="cnt" id="cnt-breve"></span></a>
@@ -556,6 +612,8 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
     </div>
   </section>
 
+  <section id="mercado" hidden><div id="mercado-view" class="stack"></div></section>
+
   <section id="em-breve" hidden>
     <div class="soonlist">
       <div class="panel"><h3>Alertas no Telegram</h3><p>Notícias novas em tempo real. Precisa de um bot seu, e eu guio a criação.</p></div>
@@ -569,6 +627,7 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
   </main>
 </div>
 
+<script src="mercado.js"></script>
 <script>
 (function(){
   var MESES=["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
@@ -578,7 +637,7 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
 
   /* Rotas por hash: #esportes/beisebol/liga, #esportes/beisebol/time-119, #esportes/beisebol/jogo-849805,
      #esportes/basquete/jogo-401909092, #x/jornalistas, #vagas ... */
-  var tabs=["esportes","vagas","aniversarios","em-breve","x"];
+  var tabs=["esportes","vagas","mercado","aniversarios","em-breve","x"];
   var sports=["beisebol","basquete","futebol-americano"];
   function mark(sel,attr,val){document.querySelectorAll(sel).forEach(function(a){
     if(a.dataset[attr]===val)a.setAttribute("aria-current","page");else a.removeAttribute("aria-current")})}
@@ -599,6 +658,7 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
     setSide(false);
     window.scrollTo(0,0);
     if(top==="x"){var cat=XCATS.some(function(c){return c.k===parts[1]})?parts[1]:"";sideMark(cat?"x/"+cat:"x","x");renderX(cat);return}
+    if(top==="mercado"){sideMark("mercado","mercado");if(window.RACmercado)window.RACmercado.render(parts[1]||"");return}
     if(top!=="esportes"){sideMark(top,top);return}
     var sp=sports.indexOf(parts[1])<0?"beisebol":parts[1];
     sports.forEach(function(x){document.getElementById("sp-"+x).hidden=(x!==sp)});

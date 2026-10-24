@@ -279,6 +279,8 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
 .hero .shade{position:absolute;inset:0;background:linear-gradient(to top,var(--scrim) 8%,rgba(5,9,7,.25) 60%,transparent)}
 .hero .ov{position:absolute;left:0;right:0;bottom:0;padding:clamp(16px,3vw,28px);display:grid;gap:10px;justify-items:start}
 .hero .chipl{position:static}
+.hero .hchips{display:flex;flex-wrap:wrap;gap:6px}
+.hero .hdate{background:var(--on-img);color:#0E1B2C;text-transform:none;letter-spacing:.01em}
 .hero .hs{display:flex;align-items:center;gap:10px 14px;flex-wrap:wrap;font:800 clamp(30px,5.4vw,52px)/1 var(--f-display);text-transform:uppercase;letter-spacing:.005em}
 .hero .hs .lg{width:46px;height:46px;padding:5px}
 .hero .hs .lo{opacity:.62}
@@ -929,7 +931,7 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
     var aw=g.away,hm_=g.home,post=g.state==="post";
     var hl=h("p",{class:"hl"});
     a.appendChild(h("div",{class:"ov"},
-      g.label?h("span",{class:"chipl",text:g.label}):null,
+      h("div",{class:"hchips"},g.label?h("span",{class:"chipl",text:g.label}):null,h("span",{class:"chipl hdate",text:dayTitle(new Date(g.date))})),
       h("div",{class:"hs"},img(aw.logo,"lg"),h("span",{class:post&&!aw.winner?"lo":"",text:aw.name.split(" ").pop()+" "+dash(aw.score)}),h("span",{class:"lo",text:"x"}),h("span",{class:post&&!hm_.winner?"lo":"",text:dash(hm_.score)+" "+hm_.name.split(" ").pop()}),img(hm_.logo,"lg")),
       hl,
       h("span",{class:"cta"},h("i",null,svg(PLAY)),"Ver melhores momentos")));

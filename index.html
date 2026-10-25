@@ -147,6 +147,18 @@ form.add{display:grid;grid-template-columns:1fr 70px 130px auto;gap:8px;margin:1
 .mkbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px}
 .mkbar .pills{margin:0;flex:1 1 360px}
 .mkuser{display:flex;align-items:center;gap:10px;margin-left:auto}
+.mkadd{display:inline-flex;align-items:center;justify-content:center;gap:8px;font:700 15px var(--f-ui);padding:12px 20px;border-radius:14px;background:var(--accent);color:var(--accent-ink);text-decoration:none;box-shadow:0 6px 18px rgba(0,0,0,.25)}
+.mkadd span{font-size:22px;line-height:1;font-weight:500}
+.mkadd:hover{filter:brightness(1.08)}
+.mkadd[aria-current]{outline:2px solid #fff;outline-offset:2px}
+@media (max-width:640px){.mkadd{flex:1 1 100%}}
+.qrsave{position:sticky;bottom:0;z-index:2;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;margin:0 -4px;padding:12px 4px;background:var(--surface);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);border-top:1px solid var(--line)}
+.qrsave button{flex:0 1 auto;font-size:16px;padding:12px 22px}
+.qrsave .sub{margin:0}
+.qrdone{display:grid;justify-items:start;gap:8px;padding:6px 0}
+.qrdone h2{margin:0}
+.qrdone p{margin:0}
+.qrcheck{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--good);color:#fff;font:700 24px var(--f-ui)}
 .mkuser .sub{color:#fff;text-shadow:0 1px 6px rgba(0,0,0,.5)}
 .mkmeses{background:var(--glass);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-radius:12px;padding:4px;overflow-x:auto}
 .mkmeses button{font-size:13px;padding:7px 10px;white-space:nowrap}

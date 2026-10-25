@@ -124,10 +124,12 @@
     var r = root(); r.innerHTML = "";
     var bar = h("div", { class: "mkbar" });
     var tabs = h("div", { class: "pills mkpills", "aria-label": "Mercado" });
-    VIEWS.forEach(function (x) { tabs.appendChild(h("a", { href: "#mercado/" + x[0], "aria-current": x[0] === v ? "page" : null, text: x[1] })); });
+    /* "Adicionar nota" fica fora das abas, como botão de destaque no topo */
+    VIEWS.forEach(function (x) { if (x[0] !== "importar") tabs.appendChild(h("a", { href: "#mercado/" + x[0], "aria-current": x[0] === v ? "page" : null, text: x[1] })); });
+    var add = h("a", { class: "mkadd", href: "#mercado/importar", "aria-current": v === "importar" ? "page" : null }, h("span", { "aria-hidden": "true", text: "+" }), " Adicionar nota");
     var out = h("button", { type: "button", class: "ghostbtn", text: "Sair" });
     out.onclick = function () { sb.auth.signOut().then(function () { rows = null; render(v); }); };
-    bar.appendChild(tabs); bar.appendChild(h("div", { class: "mkuser" }, h("span", { class: "sub", text: user.email }), out));
+    bar.appendChild(add); bar.appendChild(tabs); bar.appendChild(h("div", { class: "mkuser" }, h("span", { class: "sub", text: user.email }), out));
     r.appendChild(bar);
     var body = h("div", { class: "stack" }); r.appendChild(body);
     if (!rows.length && v !== "importar") {
@@ -575,7 +577,7 @@
       var chave = chaveDoLink(texto);
       if (!/^https?:\/\//.test(texto) || !chave) { qmsg.textContent = "Esse QR Code não parece ser de uma nota fiscal (NFC-e)."; return; }
       url = texto; link.value = texto;
-      qmsg.textContent = "QR Code lido: nota " + chave.slice(25, 34).replace(/^0+/, "") + ".";
+      qmsg.textContent = "✓ QR Code lido: nota " + chave.slice(25, 34).replace(/^0+/, "") + ". Ela ainda não foi salva: siga o passo 2.";
       mostrarPasso2(chave);
     }
     function decodificar(canvas) {
@@ -686,14 +688,28 @@
         });
         passo3.appendChild(h("div", { class: "qrlist" }, linhas));
         passo3.appendChild(h("p", { class: "sub", text: "Produto “existente” entra no histórico de preços dele; “novo” cria um produto. Pode trocar escrevendo outro nome ou escolhendo da lista." }));
-        var salvarB = h("button", { type: "button", text: "Salvar nota" }), st3 = h("p", { class: "sub", role: "status" });
-        passo3.appendChild(h("div", { class: "vfil" }, salvarB)); passo3.appendChild(st3);
+        /* barra de salvar presa ao pé da tela enquanto a lista de itens rola */
+        var salvarB = h("button", { type: "button", text: "Salvar nota · " + money(nota.pago) }), st3 = h("p", { class: "sub", role: "status" });
+        passo3.appendChild(h("div", { class: "qrsave" }, salvarB, st3));
         salvarB.onclick = function () {
           salvarB.disabled = true; st3.textContent = "Salvando…";
-          salvarNotaQR(nota, selMerc.value, prods).then(function () {
-            st3.textContent = "Nota salva."; return loadRows(true);
-          }).then(function () { setTimeout(function () { location.hash = "#mercado/notas"; }, 700); })
-            .catch(function (e) { salvarB.disabled = false; st3.textContent = "Não consegui salvar: " + (e.message || e); });
+          var nomeMerc = selMerc.options[selMerc.selectedIndex].text.replace(/^Novo mercado: /, "");
+          salvarNotaQR(nota, selMerc.value, prods).then(function () { return loadRows(true); }).then(function () {
+            /* troca o quadro inteiro por uma confirmação clara do que entrou */
+            p.innerHTML = "";
+            p.appendChild(h("div", { class: "qrdone" },
+              h("div", { class: "qrcheck", "aria-hidden": "true", text: "✓" }),
+              h("h2", { text: "Nota salva" }),
+              h("p", { text: semCidade(nomeMerc) + " · " + dataBR(nota.data) + " · " + nota.itens.length + " itens · " + money(nota.pago) }),
+              h("p", { class: "sub", text: "Ela já aparece no painel como a última compra e entrou no histórico de preços." }),
+              h("div", { class: "vfil" },
+                h("a", { class: "ghostbtn pri", href: "#mercado/painel", text: "Ver no painel" }),
+                h("a", { class: "ghostbtn", href: "#mercado/notas", text: "Ver notas" }))));
+            var outra = h("button", { type: "button", class: "ghostbtn", text: "Adicionar outra nota" });
+            outra.onclick = function () { drawApp("importar"); };
+            p.querySelector(".vfil").appendChild(outra);
+            p.scrollIntoView({ behavior: "smooth", block: "start" });
+          }).catch(function (e) { salvarB.disabled = false; st3.textContent = "Não consegui salvar: " + (e.message || e); });
         };
       }).catch(function (e) { info.textContent = "Não consegui carregar seus produtos: " + e.message; });
     }

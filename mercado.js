@@ -561,6 +561,47 @@
     return nota;
   }
 
+  /* Tabela em markdown (| Item | Qtd | Unit. | Total |): acha as colunas pelo cabeçalho, seja qual for a ordem.
+     Linha "Desconto no item" vai para o item de cima. */
+  function itensDaTabela(txt) {
+    var linhas = String(txt || "").replace(/\r/g, "").split("\n").map(function (l) { return l.trim(); });
+    var itens = [], col = null;
+    function celulas(l) { return l.replace(/^\|/, "").replace(/\|$/, "").split("|").map(function (c) { return c.replace(/\*\*/g, "").trim(); }); }
+    function achar(cab, re, menos) { for (var i = 0; i < cab.length; i++) if (re.test(norm(cab[i])) && !(menos && menos.test(norm(cab[i])))) return i; return -1; }
+    linhas.forEach(function (l) {
+      if (!/^\|.*\|$/.test(l)) { col = null; return; }
+      var c = celulas(l);
+      if (c.every(function (x) { return /^:?-+:?$/.test(x) || !x; })) return;
+      if (!col) {
+        var cab = c.map(norm);
+        var ci = achar(cab, /item|descri|produto/);
+        if (ci < 0) return;
+        col = { item: ci, qtd: achar(cab, /qtd|quant/), unit: achar(cab, /unit|preco|pre\. ?un|vl\.? ?un/), total: -1 };
+        for (var i = cab.length - 1; i >= 0; i--) if (i !== col.unit && /total|valor/.test(cab[i])) { col.total = i; break; }
+        return;
+      }
+      var nome = c[col.item] || "", tot = col.total >= 0 ? c[col.total] || "" : "";
+      if (/desconto/i.test(nome) || (!nome && /desconto/i.test(l))) {
+        var dv = /(\d+[.,]\d{2})/.exec(tot || l);
+        if (dv && itens.length) itens[itens.length - 1].descItem = (itens[itens.length - 1].descItem || 0) + num(dv[1]);
+        return;
+      }
+      if (!nome || /^(subtotal|total)/i.test(nome)) return;
+      var qc = col.qtd >= 0 ? c[col.qtd] || "" : "";
+      var qm = /(\d+(?:[.,]\d+)?)\s*(un|und|unid|kg|l|lt|g)?\b(?:\s*[x×*]\s*(?:R\$\s*)?(\d+[.,]\d{2,3}))?/i.exec(qc);
+      var u = qm && qm[2] ? qm[2].toLowerCase() : (/kg/i.test(c[col.unit] || "") ? "kg" : "un");
+      u = /^k/.test(u) ? "kg" : /^l/.test(u) ? "l" : "un";
+      var it = { desc: nome, qtd: qm ? num(qm[1]) || 1 : 1, un: u, vu: num(((col.unit >= 0 ? c[col.unit] : "") || (qm && qm[3]) || "").replace(/\/.*$/, "")), vt: num(tot.replace(/\(.*$/, "")) };
+      var dm = /desconto[^\d]{0,15}(\d+[.,]\d{2})/i.exec(tot); if (dm) it.descItem = num(dm[1]);
+      if (!it.vt && it.vu) it.vt = Math.round(it.qtd * it.vu * 100) / 100;
+      if (!it.vu && it.vt) it.vu = Math.round(it.vt / it.qtd * 100) / 100;
+      var bruto = Math.round(it.qtd * it.vu * 100) / 100;
+      if (it.descItem && Math.abs(bruto - it.descItem - it.vt) < 0.05) it.vt = bruto;
+      it.duvida = !it.vt || Math.abs(bruto - it.vt) > 0.05;
+      itens.push(it);
+    });
+    return itens;
+  }
   /* Resposta "normal" do Claude ou do ChatGPT (tabela ou lista), quando a pessoa manda só a foto sem o pedido.
      Cada item tem "qtd un × preço" e, na mesma linha ou na seguinte, o total; a descrição vem antes. */
   function lerTextoLivre(txt) {
@@ -568,8 +609,8 @@
       return l.replace(/\*\*/g, "").replace(/\|/g, "  ").replace(/\s+/g, " ").trim();
     }).filter(function (l) { return l && !/^[-:\s]+$/.test(l); });
     var QX = /(\d+(?:[.,]\d+)?)\s*(un|und|unid|kg|l|lt)\.?\s*[x×*]\s*(?:R\$\s*)?(\d+[.,]\d{2,3})/i, DIN = /(\d+[.,]\d{2})(?!\d)/;
-    var nota = { itens: [], fonte: "foto" }, usada = {};
-    ls.forEach(function (l, i) {
+    var nota = { itens: itensDaTabela(txt), fonte: "foto" }, usada = {};
+    if (!nota.itens.length) ls.forEach(function (l, i) {
       var m = QX.exec(l); if (!m) return;
       var desc = l.slice(0, m.index).replace(/^\d{1,3}[.)]?\s+/, "").replace(/[-–—:]\s*$/, "").trim();
       if (desc.replace(/[^A-Za-zÀ-ú]/g, "").length < 3 && i > 0 && !usada[i - 1] && !QX.test(ls[i - 1])) { desc = ls[i - 1].replace(/^\d{1,3}[.)]?\s+/, "").trim(); usada[i - 1] = 1; }
@@ -590,43 +631,52 @@
     var t = ls.join("\n");
     var em = /(\d{2})\/(\d{2})\/(20\d{2})/.exec(t); nota.data = em ? em[3] + "-" + em[2] + "-" + em[1] : "";
     var tp = /total\s*(?:de|pago|:)?\s*R\$\s*(\d+[.,]\d{2})/i.exec(t);
-    nota.desconto = Math.round(sum(nota.itens, function (x) { return x.descItem; }) * 100) / 100;
+    nota.desconto = Math.round(sum(nota.itens, function (x) { return x.descItem || 0; }) * 100) / 100;
     nota.pago = tp ? num(tp[1]) : Math.round((sum(nota.itens, function (x) { return x.vt; }) - nota.desconto) * 100) / 100;
     var mm = /((?:[Ss]uper|[Hh]iper)?[Mm]ercados?|[Aa]tacad[ãa]o|[Aa]tacarejo)\s+([A-ZÀ-Ú][\wÀ-ú'&-]+(?:\s+[A-ZÀ-Ú][\wÀ-ú'&-]+)?)/.exec(t);
     nota.mercado = mm ? mm[1] + " " + mm[2] : "";
-    var cn = /(\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2})/.exec(t); nota.cnpj = cn ? cn[1].replace(/\D/g, "") : "";
+    var cn = /(\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2})|CNPJ\D{0,6}(\d{14})/.exec(t); nota.cnpj = cn ? (cn[1] || cn[2]).replace(/\D/g, "") : "";
     var pg = /(cart[ãa]o de cr[ée]dito|cart[ãa]o de d[ée]bito|pix|dinheiro|vale[- ]alimenta[çc][ãa]o)/i.exec(t); nota.pagamento = pg ? pg[1] : "";
-    var nn = /n[úu]mero[:\s]*0*(\d{3,9})/i.exec(t); nota.numero = nn ? nn[1] : "";
+    var nn = /(?:n[úu]mero|n[º°o])\.?[:\s]*0*(\d{3,9})/i.exec(t); nota.numero = nn ? nn[1] : "";
+    var se = /s[ée]rie[:\s]*0*(\d{1,3})/i.exec(t);
     var ch = /((?:\d{4}\s?){11})/.exec(t.replace(/\n/g, " ")); nota.chave = ch ? ch[1].replace(/\D/g, "") : "";
     if (!/^35\d{42}$/.test(nota.chave)) nota.chave = "";
-    nota.serie = ""; nota.texto = t;
+    nota.serie = se ? se[1] : ""; nota.texto = t;
     return nota;
   }
 
   function painelFoto(body) {
     var p = panel("Nota pela foto", "O Claude ou o ChatGPT lê a foto do cupom de graça; você cola a resposta aqui e confere antes de salvar.");
     var ia = h("div", { class: "qrstep" });
-    var copiar = h("button", { type: "button", text: "Copiar pedido" });
-    var cmsg = h("span", { class: "sub", role: "status" });
+    var cmsg = h("p", { class: "sub", role: "status" });
     var pedTxt = h("textarea", { class: "qrpaste", rows: "4", readonly: "", hidden: "", "aria-label": "Pedido para copiar" }); pedTxt.value = PEDIDO;
-    copiar.onclick = function () {
-      (navigator.clipboard ? navigator.clipboard.writeText(PEDIDO) : Promise.reject()).then(function () { cmsg.textContent = "✓ Pedido copiado"; copiar.textContent = "Copiar de novo"; })
-        .catch(function () { cmsg.textContent = "Copie o texto abaixo:"; pedTxt.hidden = false; pedTxt.select(); });
+    /* o link abre o app e, no mesmo toque, copia o pedido: lá é só anexar a foto e colar */
+    function abrirIA(nome, url) {
+      var a = h("a", { class: "filebtn", href: url, target: "_blank", rel: "noopener", text: "Abrir o " + nome });
+      a.onclick = function () {
+        try { navigator.clipboard.writeText(PEDIDO).then(function () { cmsg.textContent = "✓ Pedido copiado. No " + nome + ": anexe a foto do cupom, cole o pedido e envie."; }, function () { pedTxt.hidden = false; }); } catch (e) { pedTxt.hidden = false; }
+      };
+      return a;
+    }
+    var resp = h("textarea", { class: "qrpaste", rows: "3", placeholder: "…ou cole aqui a resposta", "aria-label": "Resposta do Claude ou ChatGPT" });
+    var colar = h("button", { type: "button", text: "Colar a resposta" });
+    colar.onclick = function () {
+      if (!navigator.clipboard || !navigator.clipboard.readText) { resp.focus(); return; }
+      navigator.clipboard.readText().then(function (t) { resp.value = t; tentarResp(); }, function () { rmsg.textContent = "Toque no quadro abaixo e cole."; resp.focus(); });
     };
-    var resp = h("textarea", { class: "qrpaste", rows: "4", placeholder: "Cole aqui a resposta do Claude ou do ChatGPT", "aria-label": "Resposta do Claude ou ChatGPT" });
     var rmsg = h("p", { class: "sub", role: "status" });
     ia.appendChild(h("ol", { class: "how" },
-      h("li", null, "Toque em ", h("b", { text: "Copiar pedido" }), "."),
-      h("li", null, "Abra o app do ", h("a", { class: "link", href: "https://claude.ai/new", target: "_blank", rel: "noopener", text: "Claude" }), " ou do ",
-        h("a", { class: "link", href: "https://chatgpt.com/", target: "_blank", rel: "noopener", text: "ChatGPT" }), ", anexe a foto do cupom e cole o pedido."),
-      h("li", null, "Toque no ícone de copiar logo abaixo da resposta (o primeiro, de dois quadradinhos) e cole no quadro abaixo. Se você mandou só a foto, sem o pedido, também funciona.")));
-    ia.appendChild(h("div", { class: "vfil" }, copiar, cmsg));
-    ia.appendChild(pedTxt); ia.appendChild(resp); ia.appendChild(rmsg);
+      h("li", null, "Toque em um dos botões. O pedido já vai copiado."),
+      h("li", null, "No app, anexe a foto do cupom, cole o pedido e envie."),
+      h("li", null, "Copie a resposta inteira (ícone de copiar logo abaixo dela), volte aqui e toque em ", h("b", { text: "Colar a resposta" }), ".")));
+    ia.appendChild(h("div", { class: "vfil" }, abrirIA("Claude", "https://claude.ai/new"), abrirIA("ChatGPT", "https://chatgpt.com/")));
+    ia.appendChild(cmsg); ia.appendChild(pedTxt);
+    ia.appendChild(h("div", { class: "vfil" }, colar)); ia.appendChild(resp); ia.appendChild(rmsg);
     function tentarResp() {
       if (!resp.value.trim()) { rmsg.textContent = ""; return; }
       var nota = lerResposta(resp.value);
       if (!nota || !nota.itens.length) nota = lerTextoLivre(resp.value);
-      if (!nota || !nota.itens.length) { rmsg.textContent = "Não achei os itens nesse texto. Copie a resposta inteira do Claude ou do ChatGPT (o ícone de copiar logo abaixo da resposta) e cole de novo."; return; }
+      if (!nota || !nota.itens.length) { rmsg.textContent = "Não achei os itens nesse texto. Copie a resposta inteira (ícone de copiar logo abaixo dela) e tente de novo."; return; }
       rmsg.textContent = "✓ Resposta lida: " + nota.itens.length + " itens. Confira abaixo e salve.";
       conferir(nota);
       passo2.scrollIntoView({ behavior: "smooth", block: "start" });

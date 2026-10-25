@@ -470,17 +470,17 @@
     carregar();
   }
 
-  /* ---------- Nota pelo QR Code (NFC-e) ----------
-     A Fazenda de SP não deixa robôs lerem a página da nota, então o fluxo usa o navegador do próprio Rayner:
-     o site lê o QR, abre a nota na Fazenda, ele copia o texto da página e cola aqui; o site monta a nota.
-     O texto colado fica só na memória da página: CPF e demais dados do consumidor são ignorados. */
-  var JSQR_JS = "https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js";
+  /* ---------- Nota pela foto do cupom ----------
+     A Fazenda de SP não deixa robôs nem outros sites abrirem a nota, então a nota entra pela foto do cupom:
+     o OCR (Tesseract, roda no próprio navegador, de graça) lê o texto, o site monta os itens e a pessoa confere.
+     A foto não sai do aparelho; CPF e demais dados do consumidor são ignorados. */
+  var TESS_JS = "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js";
   var ABREV = { refrig: "refrigerante", min: "mineral", fgo: "frango", frgo: "frango", ling: "linguica", tosc: "toscana", rep: "refil", liq: "liquido", cong: "congelado", choc: "chocolate", bisc: "biscoito", qj: "queijo", mus: "mussarela", mussar: "mussarela", pres: "presunto", sab: "sabonete", amac: "amaciante", deterg: "detergente", lav: "lava", pao: "pao", fr: "frances", trad: "tradicional", integ: "integral", desn: "desnatado", sach: "sache", bov: "bovino", sui: "suino", peit: "peito", file: "file", agua: "agua", cerv: "cerveja", lt: "lata" };
   var CATS_PALAVRAS = [
     ["Bebidas", /refrig|coca|guarana|agua|suco|cerveja|cerv|energet|cha |sprite|pepsi|schweppes/],
     ["Açougue/Frios", /carne|bov|acem|miolo|frango|fgo|peito|coxa|lingui|ling\.|presunto|pres\.|mussarela|queijo|salsicha|mortadela|bacon|suin|bisteca|fraldinha|picanha|patinho/],
     ["Peixaria", /peixe|tilapia|salmao|corvina|bacalhau|camarao/],
-    ["Hortifruti", /banana|tomate|cebola|batata|alface|limao|uva|maca |mamao|cenoura|abobr|pepino|pimentao|alho|mandioca|laranja|morango|berinjela|couve|kg\)?$/],
+    ["Hortifruti", /banana|tomate|cebola|batata|alface|limao|uva|maca |mamao|cenoura|abobr|pepino|pimentao|alho|mandioca|laranja|morango|berinjela|couve|\Dkg\)?$/],
     ["Padaria", /pao |pao$|paes|bisnag|salgado|coxinha|empada|rosca|pao de queijo/],
     ["Chocolates/Doces", /chocolate|choc|bombom|doce|bolo|torta|pudim|biscoito wafer|trident|nutella|petit/],
     ["Limpeza", /detergente|deterg|amaciante|sabao|desinfet|agua sanit|limpador|veja|cif|omo|lava |raid|inseticida/],
@@ -506,7 +506,7 @@
   /* Nome legível para produto novo: tira o "kg" da balança, expande abreviações comuns do cupom e capitaliza */
   var EXPANDE = { refrig: "Refrigerante", min: "Mineral", fgo: "Frango", frgo: "Frango", ling: "Linguiça", tosc: "Toscana", rep: "Refil", liq: "Líquido", cong: "Congelado", agua: "Água", file: "Filé", pao: "Pão", choc: "Chocolate", bisc: "Biscoito", qj: "Queijo", pres: "Presunto", sab: "Sabonete", amac: "Amaciante", deterg: "Detergente", bov: "Bovino", sui: "Suíno", feijao: "Feijão", acucar: "Açúcar", cafe: "Café", limao: "Limão", macarrao: "Macarrão", oleo: "Óleo", sabao: "Sabão", trad: "Tradicional", integ: "Integral" };
   function nomeBonito(t) {
-    return String(t).replace(/[\s.]*kg$/i, "").replace(/(\D)\.(?=\S)/g, "$1 ").replace(/\s+/g, " ").trim().split(" ").map(function (w) {
+    return String(t).replace(/(\D)[\s.]*kg$/i, "$1").replace(/(\D)\.(?=\S)/g, "$1 ").replace(/\s+/g, " ").trim().split(" ").map(function (w) {
       var k = norm(w).replace(/[^a-z0-9]/g, "");
       if (EXPANDE[k]) return EXPANDE[k];
       if (/^\d/.test(w)) return w.toLowerCase();
@@ -515,28 +515,51 @@
   }
   function categoriaPalpite(t) { var n = norm(t); for (var i = 0; i < CATS_PALAVRAS.length; i++) if (CATS_PALAVRAS[i][1].test(n)) return CATS_PALAVRAS[i][0]; return "Mercearia"; }
 
-  /* Lê o texto copiado da página "Consulta Resumida NFC-e" */
-  function lerTextoNota(txt) {
-    var t = String(txt || "").replace(/\r/g, "").replace(/\u00a0/g, " ");
-    var nota = { itens: [] };
-    var ini = t.split(/\n/).map(function (l) { return l.trim(); }).filter(Boolean);
-    var iDoc = ini.findIndex(function (l) { return /DOCUMENTO AUXILIAR/i.test(l); });
-    nota.mercado = iDoc >= 0 && ini[iDoc + 1] ? ini[iDoc + 1] : "";
-    var cnpj = /CNPJ:\s*([\d./-]+)/i.exec(t); nota.cnpj = cnpj ? cnpj[1].replace(/\D/g, "") : "";
-    var end = iDoc >= 0 && ini[iDoc + 3] ? ini[iDoc + 3] : ""; nota.endereco = end.replace(/&#\d+;/g, function (m) { return String.fromCharCode(+m.slice(2, -1)); });
-    var re = /([^\n]+?)\s*\(C[óo]digo:\s*([^)]+?)\s*\)\s*\n?\s*Qtde\.?:\s*([\d.,]+)\s*UN:\s*(\w+)\s*Vl\.\s*Unit\.?:\s*([\d.,]+)\s*Vl\.\s*Total\s*\n?\s*([\d.,]+)/gi, m;
-    while ((m = re.exec(t))) {
-      var u = m[4].toLowerCase(); u = u === "kg" ? "kg" : (u === "l" || u === "lt") ? "l" : "un";
-      nota.itens.push({ desc: m[1].trim(), codigo: m[2].trim(), qtd: num(m[3]), un: u, vu: num(m[5]), vt: num(m[6]) });
-    }
-    function campo(re2) { var x = re2.exec(t); return x ? x[1].trim() : ""; }
-    nota.valorTotal = num(campo(/Valor total R\$:?\s*\n?\s*([\d.,]+)/i));
-    nota.desconto = num(campo(/Descontos R\$:?\s*\n?\s*([\d.,]+)/i));
-    nota.pago = num(campo(/Valor a pagar R\$:?\s*\n?\s*([\d.,]+)/i)) || nota.valorTotal;
-    var fp = /Valor pago R\$:?\s*\n?\s*([^\n\d][^\n]*)/i.exec(t); nota.pagamento = fp ? fp[1].trim() : "";
-    nota.numero = campo(/N[úu]mero:\s*(\d+)/i); nota.serie = campo(/S[ée]rie:\s*(\d+)/i);
-    var em = /Emiss[ãa]o:\s*(\d{2})\/(\d{2})\/(\d{4})/i.exec(t); nota.data = em ? em[3] + "-" + em[2] + "-" + em[1] : "";
-    var ch = /Chave de acesso:?\s*\n?\s*([\d\s]{44,60})/i.exec(t); nota.chave = ch ? ch[1].replace(/\D/g, "").slice(0, 44) : "";
+  /* Lê o texto que o OCR tirou da foto do cupom (DANFE NFC-e impresso).
+     Cada item termina com "qtde UN x valor-unitário valor-total"; a descrição vem antes, às vezes quebrada na linha de cima.
+     Nada do consumidor (CPF) é lido. */
+  var TAIL = /(\d+(?:[.,]\d+)?)\s*(UN|UND|UNID|KG|KGS|L|LT|PC|PCT|CX|FD|DZ|SC|BD|GF|PT|BJ)\b\.?\s*[xX×*%]?\s*(\d+[.,]\d{2,3})\s+=?\s*(\d+[.,]\d{2})\s*(?:[A-Z]{1,2}\d{0,2})?\s*$/i;
+  var TAIL_SEM_TOTAL = /(\d+(?:[.,]\d+)?)\s*(UN|UND|UNID|KG|KGS|L|LT|PC|PCT|CX|FD|DZ|SC|BD|GF|PT|BJ)\b\.?\s*[xX×*%]\s*(\d+[.,]\d{2,3})\b/i;
+  var NAO_ITEM = /cnpj|danfe|documento auxiliar|c[óo]digo|descri[çc][ãa]o|qtde?\.? total|valor total|valor a pagar|desconto|forma (de )?pagamento|troco|tributos|consumidor|chave de acesso|protocolo|consulte|emiss[ãa]o|s[ée]rie|via (do )?consumidor|nfc-?e/i;
+  function lerCupom(txt) {
+    var t = String(txt || "").replace(/\r/g, "").replace(/ /g, " ");
+    var ls = t.split("\n").map(function (l) { return l.replace(/\s+/g, " ").replace(/(^|\s)[oO]([.,]\d)/g, "$10$2").trim(); }).filter(Boolean);
+    var nota = { itens: [], fonte: "foto" };
+    var iC = ls.findIndex(function (l) { return /CNPJ/i.test(l); });
+    var cab = iC > 0 ? ls[iC - 1] : (iC === 0 ? ls[0].replace(/CNPJ.*$/i, "") : ls[0] || "");
+    nota.mercado = cab.replace(/[^A-Za-zÀ-ú0-9&.\- ]/g, "").trim();
+    var cn = /CNPJ\D{0,6}([\d.\/\- ]{14,22})/i.exec(t); nota.cnpj = cn ? cn[1].replace(/\D/g, "").slice(0, 14) : "";
+    if (nota.cnpj.length !== 14) nota.cnpj = "";
+    var usada = {}, IDX = /^[\dOoBIl|]{3}\s/;
+    ls.forEach(function (l, i) {
+      var m = TAIL.exec(l), soUnit = false;
+      /* total cortado na foto: usa quantidade × preço e marca para conferir */
+      if (!m && IDX.test(l)) { m = TAIL_SEM_TOTAL.exec(l); soUnit = !!m; }
+      if (!m) return;
+      var desc = l.slice(0, m.index).trim();
+      /* descrição quebrada: a linha de cima começa com o número do item, e esta não */
+      if (i > 0 && !usada[i - 1] && !IDX.test(l) && IDX.test(ls[i - 1]) && !TAIL.test(ls[i - 1]) && !NAO_ITEM.test(ls[i - 1])) {
+        desc = ls[i - 1] + " " + desc; usada[i - 1] = 1;
+      }
+      usada[i] = 1;
+      desc = desc.replace(IDX, "").replace(/^(?=\S*\d{5})\S{6,14}\s+/, "").replace(/\s+/g, " ").trim();
+      var u = m[2].toLowerCase(); u = /^kg/.test(u) ? "kg" : (u === "l" || u === "lt") ? "l" : "un";
+      var it = { desc: desc || "Item " + (nota.itens.length + 1), qtd: num(m[1]) || 1, un: u, vu: num(m[3]) };
+      it.vt = soUnit ? Math.round(it.qtd * it.vu * 100) / 100 : num(m[4]);
+      it.duvida = soUnit || Math.abs(it.qtd * it.vu - it.vt) > 0.05 || !desc;
+      nota.itens.push(it);
+    });
+    function valor(re) { var x = re.exec(t); return x ? num(x[1]) : 0; }
+    nota.valorTotal = valor(/valor\s*total[^\d\n]{0,40}(\d+[.,]\d{2})/i);
+    nota.desconto = valor(/descontos?[^\d\n]{0,40}(\d+[.,]\d{2})/i);
+    nota.pago = valor(/valor\s*a\s*pagar[^\d\n]{0,12}(\d+[.,]\d{2})/i) || (nota.valorTotal ? Math.round((nota.valorTotal - nota.desconto) * 100) / 100 : 0);
+    var iF = ls.findIndex(function (l) { return /forma\s*(de\s*)?pagamento/i.test(l); });
+    nota.pagamento = iF >= 0 && ls[iF + 1] ? ls[iF + 1].replace(/[\d.,]+\s*$/, "").trim() : "";
+    var nn = /N[º°o.:]*\s*(\d{3,9})\s*S[ée]rie\s*:?\s*(\d{1,3})/i.exec(t); nota.numero = nn ? nn[1].replace(/^0+/, "") : ""; nota.serie = nn ? nn[2] : "";
+    var em = /(\d{2})\/(\d{2})\/(20\d{2})/.exec(t);
+    nota.data = em ? em[3] + "-" + em[2] + "-" + em[1] : "";
+    var ch = /((?:\d{4}\s?){11})/.exec(t.replace(/\n/g, " ")); nota.chave = ch ? ch[1].replace(/\D/g, "") : "";
+    if (!/^35\d{42}$/.test(nota.chave)) nota.chave = "";
     return nota;
   }
   /* Espalha o desconto da nota entre os itens, proporcional ao valor de cada um, para a soma bater com o que foi pago */
@@ -549,168 +572,191 @@
     var resto = Math.round((d - usado) * 100) / 100, maior = nota.itens.slice().sort(function (a, b) { return b.vt - a.vt; })[0];
     maior.desc_rateio = Math.round((maior.desc_rateio + resto) * 100) / 100;
   }
-  function chaveDoLink(link) {
-    var m = /[?&]p=(\d{44})/.exec(decodeURIComponent(link || "")) || /(\d{44})/.exec(String(link || "").replace(/\s/g, ""));
-    return m ? m[1] : "";
+
+  /* Foto: escala de cinza, contraste esticado e tamanho bom para o OCR */
+  function prepararFoto(file) {
+    return createImageBitmap(file).then(function (bmp) {
+      var k = Math.min(2.5, 1800 / bmp.width), c = document.createElement("canvas");
+      c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+      var ctx = c.getContext("2d"); ctx.drawImage(bmp, 0, 0, c.width, c.height);
+      var img = ctx.getImageData(0, 0, c.width, c.height), d = img.data, hist = new Array(256).fill(0), n = d.length / 4;
+      for (var i = 0; i < d.length; i += 4) { var g = Math.round(d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114); d[i] = g; hist[g]++; }
+      var lo = 0, hi = 255, acc = 0;
+      for (acc = 0; lo < 255 && (acc += hist[lo]) < n * 0.02; lo++);
+      for (acc = 0; hi > 0 && (acc += hist[hi]) < n * 0.02; hi--);
+      var esc = 255 / Math.max(1, hi - lo);
+      for (i = 0; i < d.length; i += 4) { var v = Math.max(0, Math.min(255, (d[i] - lo) * esc)); d[i] = d[i + 1] = d[i + 2] = v; }
+      ctx.putImageData(img, 0, 0);
+      return c;
+    });
+  }
+  var ocrWorker = null;
+  function ocr(canvas, progresso) {
+    var w = ocrWorker || loadScript(TESS_JS).then(function () {
+      return window.Tesseract.createWorker("por", 1, { logger: function (m) { if (m.status === "recognizing text") progresso(m.progress); } });
+    }).then(function (wk) { return wk.setParameters({ tessedit_pageseg_mode: "6", preserve_interword_spaces: "1" }).then(function () { return wk; }); });
+    ocrWorker = w;
+    return w.then(function (wk) { return wk.recognize(canvas); }).then(function (r) { return r.data.text; })
+      .catch(function (e) { ocrWorker = null; throw e; });
   }
 
-  function painelQR(body) {
-    var p = panel("Nota pelo QR Code", "Para notas fiscais de mercado (NFC-e) de São Paulo.");
-    var passo1 = h("div", { class: "qrstep" }, h("b", { text: "1. Leia o QR Code da nota" }));
-    var cam = h("button", { type: "button", text: "Abrir a câmera" });
-    var fotoLab = h("label", { class: "ghostbtn", for: "qr-foto", text: "Ler de uma foto" });
-    var foto = h("input", { type: "file", id: "qr-foto", accept: "image/*", capture: "environment", hidden: "" });
-    var link = h("input", { type: "url", placeholder: "…ou cole aqui o link do QR Code", "aria-label": "Link do QR Code", autocomplete: "off" });
-    var video = h("video", { class: "qrvideo", playsinline: "", muted: "", hidden: "" });
-    var qmsg = h("p", { class: "sub", role: "status" });
-    passo1.appendChild(h("div", { class: "vfil" }, cam, fotoLab, foto, link));
-    passo1.appendChild(video); passo1.appendChild(qmsg);
+  function painelFoto(body) {
+    var p = panel("Nota pela foto", "Tire uma foto do cupom fiscal. O site lê os itens no próprio celular; você confere antes de salvar.");
+    var passo1 = h("div", { class: "qrstep" });
+    var tirar = h("label", { class: "filebtn", for: "nf-cam", text: "Tirar foto do cupom" });
+    var cam = h("input", { type: "file", id: "nf-cam", accept: "image/*", capture: "environment", hidden: "" });
+    var gal = h("label", { class: "ghostbtn", for: "nf-gal", text: "Escolher da galeria" });
+    var galI = h("input", { type: "file", id: "nf-gal", accept: "image/*", multiple: "", hidden: "" });
+    var fmsg = h("p", { class: "sub", role: "status" });
+    passo1.appendChild(h("div", { class: "vfil" }, tirar, cam, gal, galI));
+    passo1.appendChild(h("ul", { class: "how" },
+      h("li", null, "Estique o cupom numa mesa, com boa luz e sem sombra."),
+      h("li", null, "Enquadre só o papel, bem reto. Cupom comprido: tire uma foto da parte de cima e outra da de baixo.")));
+    passo1.appendChild(fmsg);
     var passo2 = h("div", { class: "qrstep", hidden: "" });
-    var passo3 = h("div", { class: "qrstep", hidden: "" });
-    p.appendChild(passo1); p.appendChild(passo2); p.appendChild(passo3);
+    p.appendChild(passo1); p.appendChild(passo2);
     body.appendChild(p);
-    var stream = null, url = "";
+    var textos = [];
 
-    function pararCamera() { if (stream) { stream.getTracks().forEach(function (tr) { tr.stop(); }); stream = null; } video.hidden = true; }
-    function achou(texto) {
-      pararCamera();
-      var chave = chaveDoLink(texto);
-      if (!/^https?:\/\//.test(texto) || !chave) { qmsg.textContent = "Esse QR Code não parece ser de uma nota fiscal (NFC-e)."; return; }
-      url = texto; link.value = texto;
-      qmsg.textContent = "✓ QR Code lido: nota " + chave.slice(25, 34).replace(/^0+/, "") + ". Ela ainda não foi salva: siga o passo 2.";
-      mostrarPasso2(chave);
+    function lerArquivos(files) {
+      files = Array.prototype.slice.call(files || []); if (!files.length) return;
+      var feito = Promise.resolve();
+      files.forEach(function (f) {
+        feito = feito.then(function () {
+          var nro = textos.length + 1;
+          fmsg.textContent = "Lendo a foto " + nro + "… (a primeira vez demora mais, baixa o leitor de texto)";
+          return prepararFoto(f).then(function (c) {
+            return ocr(c, function (x) { fmsg.textContent = "Lendo a foto " + nro + "… " + Math.round(x * 100) + "%"; });
+          }).then(function (txt) { textos.push(txt); });
+        });
+      });
+      feito.then(function () {
+        cam.value = ""; galI.value = "";
+        montar(textos.join("\n"));
+      }).catch(function (e) { fmsg.textContent = "Não consegui ler a foto (" + (e.message || e) + "). Tente de novo."; });
     }
-    function decodificar(canvas) {
-      var ctx = canvas.getContext("2d"), img = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      var r = window.jsQR(img.data, img.width, img.height, { inversionAttempts: "attemptBoth" });
-      return r && r.data;
-    }
-    cam.onclick = function () {
-      qmsg.textContent = "Abrindo a câmera…";
-      Promise.all([loadScript(JSQR_JS), navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false })]).then(function (r) {
-        stream = r[1]; video.srcObject = stream; video.hidden = false; video.play();
-        qmsg.textContent = "Aponte para o QR Code da nota.";
-        var c = document.createElement("canvas");
-        (function loop() {
-          if (!stream) return;
-          if (video.readyState >= 2) {
-            c.width = video.videoWidth; c.height = video.videoHeight; c.getContext("2d").drawImage(video, 0, 0);
-            var d = decodificar(c); if (d) { achou(d); return; }
-          }
-          requestAnimationFrame(loop);
-        })();
-      }).catch(function () { qmsg.textContent = "Não consegui abrir a câmera. Use “Ler de uma foto” ou cole o link do QR Code."; });
-    };
-    foto.onchange = function () {
-      var f = foto.files && foto.files[0]; if (!f) return;
-      qmsg.textContent = "Lendo a foto…";
-      loadScript(JSQR_JS).then(function () { return createImageBitmap(f); }).then(function (bmp) {
-        var c = document.createElement("canvas"), k = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
-        c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k); c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
-        var d = decodificar(c); foto.value = "";
-        if (d) achou(d); else qmsg.textContent = "Não achei um QR Code nessa foto. Tente uma foto mais de perto e bem iluminada.";
-      }).catch(function () { qmsg.textContent = "Não consegui ler essa foto."; });
-    };
-    link.addEventListener("change", function () { if (link.value.trim()) achou(link.value.trim()); });
+    cam.onchange = function () { lerArquivos(cam.files); };
+    galI.onchange = function () { lerArquivos(galI.files); };
 
-    function mostrarPasso2(chave) {
-      passo2.innerHTML = ""; passo2.hidden = false; passo3.hidden = true;
-      passo2.appendChild(h("b", { text: "2. Abra a nota e copie o texto da página" }));
-      passo2.appendChild(h("ol", { class: "how" },
-        h("li", null, "Toque em ", h("b", { text: "Abrir a nota na Fazenda" }), "."),
-        h("li", null, "Na página da nota, selecione tudo (no computador ", h("b", { text: "Ctrl+A" }), "; no celular, segure o dedo no texto e toque em ", h("b", { text: "Selecionar tudo" }), ") e copie."),
-        h("li", null, "Volte para esta aba e cole no quadro abaixo.")));
-      /* abre o mesmo endereço que a câmera do celular abre, sem dizer à Fazenda de qual site veio (com origem ela recusa) */
-      var p0 = /[?&]p=([^&#\s]+)/.exec(url), parm = p0 ? decodeURIComponent(p0[1]) : chave;
-      var href = "https://www.nfce.fazenda.sp.gov.br/NFCeConsultaPublica/Paginas/ConsultaQRCode.aspx?p=" + parm.split("|").map(encodeURIComponent).join("%7C");
-      var abrir = h("a", { class: "ghostbtn pri", href: href, target: "_blank", rel: "noopener noreferrer", referrerpolicy: "no-referrer", text: "Abrir a nota na Fazenda" });
-      var area = h("textarea", { class: "qrpaste", rows: "4", placeholder: "Cole aqui o texto da página da nota", "aria-label": "Texto da nota" });
-      passo2.appendChild(h("div", { class: "vfil" }, abrir));
-      passo2.appendChild(area);
-      var aviso = h("p", { class: "sub", role: "status" }); passo2.appendChild(aviso);
-      function tentar() {
-        var nota = lerTextoNota(area.value);
-        if (!nota.itens.length) { aviso.textContent = area.value.trim() ? "Não encontrei os itens nesse texto. Confira se copiou a página inteira da nota." : ""; return; }
-        if (nota.chave && chave && nota.chave !== chave) { aviso.textContent = "O texto colado é de outra nota (a chave não bate com o QR Code lido)."; return; }
-        nota.chave = nota.chave || chave; area.value = ""; aviso.textContent = "";
-        conferir(nota);
-      }
-      area.addEventListener("paste", function () { setTimeout(tentar, 30); });
-      area.addEventListener("input", tentar);
+    function montar(texto) {
+      var nota = lerCupom(texto);
+      fmsg.textContent = nota.itens.length ? "✓ " + textos.length + (textos.length === 1 ? " foto lida" : " fotos lidas") + ": achei " + nota.itens.length + " itens. Confira abaixo e salve." :
+        "Não consegui achar os itens na foto. Tente outra foto mais de perto e reta, ou adicione os itens à mão abaixo.";
+      gal.textContent = "Somar outra foto"; tirar.textContent = "Tirar mais uma foto";
+      conferir(nota, texto);
     }
 
-    function conferir(nota) {
-      ratearDesconto(nota);
-      passo3.innerHTML = ""; passo3.hidden = false;
-      passo3.appendChild(h("b", { text: "3. Confira e salve" }));
-      var info = h("p", { class: "sub", text: "Carregando seus produtos…" }); passo3.appendChild(info);
+    function conferir(nota, texto) {
+      passo2.innerHTML = ""; passo2.hidden = false;
+      passo2.appendChild(h("b", { text: "Confira e salve" }));
+      var info = h("p", { class: "sub", text: "Carregando seus produtos…" }); passo2.appendChild(info);
       Promise.all([sb.from("mercados").select("id,nome,cnpj").then(ok), sb.from("produtos").select("id,nome,categoria,unidade").order("nome").then(ok),
-        sb.from("notas").select("id").eq("chave_nfce", nota.chave).then(ok), sb.from("itens").select("descricao,produto_id").then(ok)]).then(function (r) {
-        var mercs = r[0], prods = r[1], jaExiste = r[2].length > 0, apelidos = {};
+        nota.chave ? sb.from("notas").select("id").eq("chave_nfce", nota.chave).then(ok) : Promise.resolve([]),
+        sb.from("itens").select("descricao,produto_id").then(ok)]).then(function (r) {
+        var mercs = r[0], prods = r[1], apelidos = {};
         r[3].forEach(function (x) { if (x.produto_id) apelidos[norm(x.descricao)] = x.produto_id; });
         info.textContent = "";
-        if (jaExiste) { passo3.appendChild(h("p", { class: "qrwarn", text: "Essa nota já está cadastrada na sua conta." })); return; }
+        if (r[2].length) { passo2.appendChild(h("p", { class: "qrwarn", text: "Essa nota já está cadastrada na sua conta." })); return; }
         var cats = Object.keys(groupBy(prods, function (x) { return x.categoria; })).sort();
         CATS_PALAVRAS.forEach(function (c) { if (cats.indexOf(c[0]) < 0) cats.push(c[0]); }); cats.sort();
         /* mercado: pelo CNPJ guardado, senão pelo nome parecido */
         var merc = mercs.filter(function (m) { return m.cnpj && m.cnpj === nota.cnpj; })[0] ||
           mercs.map(function (m) { return [m, semelhanca(nota.mercado, m.nome)]; }).sort(function (a, b) { return b[1] - a[1]; }).filter(function (x) { return x[1] >= 0.5; }).map(function (x) { return x[0]; })[0];
         var selMerc = h("select", { "aria-label": "Mercado" }, mercs.map(function (m) { return h("option", { value: m.id, selected: merc && merc.id === m.id ? "" : null, text: m.nome }); }),
-          h("option", { value: "novo", selected: merc ? null : "", text: "Novo mercado: " + nomeBonito(nota.mercado) }));
-        var soma = Math.round(sum(nota.itens, function (x) { return x.vt; }) * 100) / 100;
-        var bate = Math.abs(soma - nota.valorTotal) < 0.02;
-        passo3.appendChild(h("div", { class: "qrhead" },
-          h("div", null, h("span", { class: "sub", text: "Mercado" }), selMerc),
-          h("div", null, h("span", { class: "sub", text: "Data" }), h("b", { text: nota.data ? dataBR(nota.data) : "—" })),
-          h("div", null, h("span", { class: "sub", text: "Nota" }), h("b", { text: (nota.numero || "—") + (nota.serie ? " (série " + nota.serie + ")" : "") })),
-          h("div", null, h("span", { class: "sub", text: "Pago" }), h("b", { text: money(nota.pago) }), nota.desconto ? h("span", { class: "sub", text: " desconto " + money(nota.desconto) }) : null)));
-        passo3.appendChild(h("p", { class: bate ? "qrok" : "qrwarn", text: bate ? "✓ A soma dos " + nota.itens.length + " itens bate com o total da nota (" + money(nota.valorTotal) + ")." : "A soma dos itens (" + money(soma) + ") não bate com o total da nota (" + money(nota.valorTotal) + "). Confira se o texto foi copiado inteiro." }));
-        var dl = h("datalist", { id: "qr-prods" }, prods.map(function (x) { return h("option", { value: x.nome }); }));
-        passo3.appendChild(dl);
-        var linhas = nota.itens.map(function (it) {
+          h("option", { value: "novo", selected: merc ? null : "", text: "Novo mercado" + (nota.mercado ? ": " + nomeBonito(nota.mercado) : "") }));
+        var novoNome = h("input", { type: "text", value: nomeBonito(nota.mercado || ""), placeholder: "Nome do mercado", "aria-label": "Nome do novo mercado", hidden: merc ? "" : null });
+        selMerc.addEventListener("change", function () { novoNome.hidden = selMerc.value !== "novo"; });
+        var dataI = h("input", { type: "date", value: nota.data || new Date().toISOString().slice(0, 10), "aria-label": "Data da compra" });
+        var pagoI = h("input", { type: "text", inputmode: "decimal", value: nota.pago ? nota.pago.toFixed(2).replace(".", ",") : "", "aria-label": "Total pago" });
+        var descI = h("input", { type: "text", inputmode: "decimal", value: nota.desconto ? nota.desconto.toFixed(2).replace(".", ",") : "", placeholder: "0,00", "aria-label": "Desconto" });
+        passo2.appendChild(h("div", { class: "qrhead" },
+          h("div", null, h("span", { class: "sub", text: "Mercado" }), selMerc, novoNome),
+          h("div", null, h("span", { class: "sub", text: "Data" }), dataI),
+          h("div", null, h("span", { class: "sub", text: "Total pago (R$)" }), pagoI),
+          h("div", null, h("span", { class: "sub", text: "Desconto da nota (R$)" }), descI)));
+        var conta = h("p", { role: "status" }); passo2.appendChild(conta);
+        var dl = h("datalist", { id: "nf-prods" }, prods.map(function (x) { return h("option", { value: x.nome }); }));
+        passo2.appendChild(dl);
+        var lista = h("div", { class: "qrlist" }); passo2.appendChild(lista);
+
+        function linha(it) {
           var pid = apelidos[norm(it.desc)], prod = pid && prods.filter(function (x) { return x.id === pid; })[0];
-          if (!prod) {
+          if (!prod && it.desc) {
             var best = prods.filter(function (x) { return x.unidade === it.un || it.un === "un"; }).map(function (x) { return [x, semelhanca(it.desc, x.nome)]; }).sort(function (a, b) { return b[1] - a[1]; })[0];
             if (best && best[1] >= 0.6) prod = best[0];
           }
-          it.prodNome = prod ? prod.nome : nomeBonito(it.desc);
-          it.cat = prod ? prod.categoria : categoriaPalpite(it.desc);
-          var inp = h("input", { type: "text", list: "qr-prods", value: it.prodNome, "aria-label": "Produto para " + it.desc });
-          var cat = h("select", { "aria-label": "Categoria" }, cats.map(function (c) { return h("option", { value: c, selected: c === it.cat ? "" : null, text: c }); }));
+          var inp = h("input", { type: "text", list: "nf-prods", value: prod ? prod.nome : (it.desc ? nomeBonito(it.desc) : ""), placeholder: "Produto", "aria-label": "Produto" });
+          var cat = h("select", { "aria-label": "Categoria" }, cats.map(function (c) { return h("option", { value: c, selected: c === (prod ? prod.categoria : categoriaPalpite(it.desc || "")) ? "" : null, text: c }); }));
+          var qtd = h("input", { type: "text", inputmode: "decimal", class: "nfnum", value: String(it.qtd).replace(".", ","), "aria-label": "Quantidade" });
+          var un = h("select", { class: "nfun", "aria-label": "Unidade" }, [["un", "un"], ["kg", "kg"], ["l", "L"]].map(function (u) { return h("option", { value: u[0], selected: u[0] === it.un ? "" : null, text: u[1] }); }));
+          var vt = h("input", { type: "text", inputmode: "decimal", class: "nfnum", value: it.vt ? it.vt.toFixed(2).replace(".", ",") : "", placeholder: "0,00", "aria-label": "Valor do item" });
           var tag = h("span", { class: "qrtag" });
+          var tira = h("button", { type: "button", class: "ghostbtn nfx", title: "Tirar este item", "aria-label": "Tirar este item", text: "×" });
           function marcar() {
             var p2 = prods.filter(function (x) { return x.nome === inp.value.trim(); })[0];
             tag.textContent = p2 ? "existente" : "novo"; tag.className = "qrtag " + (p2 ? "old" : "new");
             if (p2) { cat.value = p2.categoria; cat.disabled = true; } else cat.disabled = false;
           }
           inp.addEventListener("input", marcar); marcar();
-          it.inp = inp; it.sel = cat;
-          return h("div", { class: "qritem" },
-            h("div", { class: "qrdesc" }, h("span", { class: "sub", text: it.desc }), h("span", { class: "sub", text: fmtQtd(it.qtd, it.un) + " × " + money(it.vu) + " = " + money(it.vt) })),
-            h("div", { class: "qrprod" }, inp, tag), cat);
-        });
-        passo3.appendChild(h("div", { class: "qrlist" }, linhas));
-        passo3.appendChild(h("p", { class: "sub", text: "Produto “existente” entra no histórico de preços dele; “novo” cria um produto. Pode trocar escrevendo outro nome ou escolhendo da lista." }));
-        /* barra de salvar presa ao pé da tela enquanto a lista de itens rola */
-        var salvarB = h("button", { type: "button", text: "Salvar nota · " + money(nota.pago) }), st3 = h("p", { class: "sub", role: "status" });
-        passo3.appendChild(h("div", { class: "qrsave" }, salvarB, st3));
+          var row = h("div", { class: "qritem nfitem" + (it.duvida ? " duvida" : "") },
+            h("div", { class: "qrdesc" }, h("span", { class: "sub", text: it.desc || "Item adicionado à mão" }),
+              h("span", { class: "sub", text: it.duvida ? "Confira: quantidade × preço não bate com o total lido" : fmtQtd(it.qtd, it.un) + " × " + money(it.vu) })),
+            h("div", { class: "qrprod" }, inp, tag), cat,
+            h("div", { class: "nfvals" }, qtd, un, h("span", { class: "sub", text: "R$" }), vt, tira));
+          var reg = { it: it, inp: inp, sel: cat, qtd: qtd, un: un, vt: vt, row: row };
+          tira.onclick = function () { row.remove(); regs.splice(regs.indexOf(reg), 1); somar(); };
+          [qtd, vt].forEach(function (x) { x.addEventListener("input", somar); });
+          return reg;
+        }
+        var regs = nota.itens.map(linha);
+        regs.forEach(function (g) { lista.appendChild(g.row); });
+        var mais = h("button", { type: "button", class: "ghostbtn", text: "+ Adicionar item" });
+        mais.onclick = function () { var g = linha({ desc: "", qtd: 1, un: "un", vu: 0, vt: 0 }); regs.push(g); lista.appendChild(g.row); g.inp.focus(); somar(); };
+        passo2.appendChild(h("div", { class: "vfil" }, mais));
+        if (texto) passo2.appendChild(h("details", { class: "nftexto" }, h("summary", { text: "Ver o texto lido da foto" }), h("pre", { text: texto })));
+
+        function somar() {
+          var soma = Math.round(sum(regs, function (g) { return num(g.vt.value); }) * 100) / 100, d = num(descI.value), pago = num(pagoI.value);
+          var bate = pago && Math.abs(soma - d - pago) < 0.02;
+          conta.className = bate ? "qrok" : "qrwarn";
+          conta.textContent = !pago ? "Itens somam " + money(soma) + ". Preencha o total pago para conferir." :
+            bate ? "✓ Os " + regs.length + " itens (" + money(soma) + (d ? " − desconto " + money(d) : "") + ") batem com o total pago (" + money(pago) + ")." :
+            "Os itens somam " + money(soma - d) + (d ? " já com desconto" : "") + ", mas o total pago é " + money(pago) + ". Diferença de " + money(Math.abs(soma - d - pago)) + ": confira os valores (os itens em amarelo são os mais suspeitos).";
+        }
+        [pagoI, descI].forEach(function (x) { x.addEventListener("input", somar); });
+        somar();
+
+        var salvarB = h("button", { type: "button", text: "Salvar nota" }), st3 = h("p", { class: "sub", role: "status" });
+        passo2.appendChild(h("div", { class: "qrsave" }, salvarB, st3));
         salvarB.onclick = function () {
+          var vazios = regs.filter(function (g) { return !g.inp.value.trim() || !(num(g.vt.value) > 0); });
+          if (!regs.length) { st3.textContent = "Não há itens para salvar."; return; }
+          if (vazios.length) { st3.textContent = "Preencha o produto e o valor de todos os itens (ou tire com ×)."; vazios[0].inp.focus(); return; }
+          if (!dataI.value) { st3.textContent = "Preencha a data da compra."; dataI.focus(); return; }
+          if (selMerc.value === "novo" && !novoNome.value.trim()) { st3.textContent = "Escreva o nome do mercado."; novoNome.focus(); return; }
+          var final = { mercado: selMerc.value === "novo" ? novoNome.value.trim() : "", cnpj: nota.cnpj, endereco: "", data: dataI.value, numero: nota.numero, serie: nota.serie,
+            chave: nota.chave, pagamento: nota.pagamento, fonte: "foto", desconto: num(descI.value),
+            itens: regs.map(function (g) {
+              var q = num(g.qtd.value) || 1, v = Math.round(num(g.vt.value) * 100) / 100;
+              return { desc: g.it.desc || g.inp.value.trim(), qtd: q, un: g.un.value, vt: v, vu: Math.round(v / q * 100) / 100, inp: g.inp, sel: g.sel };
+            }) };
+          final.pago = num(pagoI.value) || Math.round((sum(final.itens, function (x) { return x.vt; }) - final.desconto) * 100) / 100;
+          ratearDesconto(final);
           salvarB.disabled = true; st3.textContent = "Salvando…";
-          var nomeMerc = selMerc.options[selMerc.selectedIndex].text.replace(/^Novo mercado: /, "");
-          salvarNotaQR(nota, selMerc.value, prods).then(function () { return loadRows(true); }).then(function () {
+          var nomeMerc = selMerc.value === "novo" ? final.mercado : selMerc.options[selMerc.selectedIndex].text;
+          salvarNota(final, selMerc.value, prods).then(function () { return loadRows(true); }).then(function () {
             /* troca o quadro inteiro por uma confirmação clara do que entrou */
             p.innerHTML = "";
+            var outra = h("button", { type: "button", class: "ghostbtn", text: "Adicionar outra nota" });
+            outra.onclick = function () { drawApp("importar"); };
             p.appendChild(h("div", { class: "qrdone" },
               h("div", { class: "qrcheck", "aria-hidden": "true", text: "✓" }),
               h("h2", { text: "Nota salva" }),
-              h("p", { text: semCidade(nomeMerc) + " · " + dataBR(nota.data) + " · " + nota.itens.length + " itens · " + money(nota.pago) }),
+              h("p", { text: semCidade(nomeMerc) + " · " + dataBR(final.data) + " · " + final.itens.length + " itens · " + money(final.pago) }),
               h("p", { class: "sub", text: "Ela já aparece no painel como a última compra e entrou no histórico de preços." }),
               h("div", { class: "vfil" },
                 h("a", { class: "ghostbtn pri", href: "#mercado/painel", text: "Ver no painel" }),
-                h("a", { class: "ghostbtn", href: "#mercado/notas", text: "Ver notas" }))));
-            var outra = h("button", { type: "button", class: "ghostbtn", text: "Adicionar outra nota" });
-            outra.onclick = function () { drawApp("importar"); };
-            p.querySelector(".vfil").appendChild(outra);
+                h("a", { class: "ghostbtn", href: "#mercado/notas", text: "Ver notas" }), outra)));
             p.scrollIntoView({ behavior: "smooth", block: "start" });
           }).catch(function (e) { salvarB.disabled = false; st3.textContent = "Não consegui salvar: " + (e.message || e); });
         };
@@ -718,10 +764,10 @@
     }
   }
 
-  function salvarNotaQR(nota, mercadoId, prods) {
+  function salvarNota(nota, mercadoId, prods) {
     var porNome = {}; prods.forEach(function (x) { porNome[x.nome] = x; });
     var p = Promise.resolve(mercadoId);
-    if (mercadoId === "novo") p = sb.from("mercados").insert({ nome: nomeBonito(nota.mercado), cnpj: nota.cnpj || null, cidade: (/,\s*([^,]+?)\s*,\s*([A-Z]{2})\s*$/.exec(nota.endereco) || []).slice(1).join("/") || null }).select("id").single().then(ok).then(function (m) { return m.id; });
+    if (mercadoId === "novo") p = sb.from("mercados").insert({ nome: nota.mercado, cnpj: nota.cnpj || null, cidade: (/,\s*([^,]+?)\s*,\s*([A-Z]{2})\s*$/.exec(nota.endereco) || []).slice(1).join("/") || null }).select("id").single().then(ok).then(function (m) { return m.id; });
     else if (nota.cnpj) p = sb.from("mercados").update({ cnpj: nota.cnpj }).eq("id", mercadoId).is("cnpj", null).then(function () { return mercadoId; });
     var novos = {};
     nota.itens.forEach(function (it) { var n = it.inp.value.trim() || nomeBonito(it.desc); it.prodNome = n; if (!porNome[n] && !novos[n]) novos[n] = { nome: n, categoria: it.sel.value, unidade: it.un }; });
@@ -731,7 +777,7 @@
       return lista.length ? sb.from("produtos").insert(lista).select("id,nome,categoria,unidade").then(ok).then(function (d) { d.forEach(function (x) { porNome[x.nome] = x; }); }) : null;
     }).then(function () {
       return sb.from("notas").insert({ mercado_id: mercadoId, data: nota.data, numero: nota.numero || null, serie: nota.serie || null, chave_nfce: nota.chave || null,
-        forma_pagamento: nota.pagamento || null, total: nota.pago, fonte: "qr", observacao: nota.desconto ? "Desconto de " + money(nota.desconto) + " na nota" : null }).select("id").single().then(ok);
+        forma_pagamento: nota.pagamento || null, total: nota.pago, fonte: nota.fonte, observacao: nota.desconto ? "Desconto de " + money(nota.desconto) + " na nota" : null }).select("id").single().then(ok);
     }).then(function (n) {
       return sb.from("itens").insert(nota.itens.map(function (it) {
         var pr = porNome[it.prodNome];
@@ -744,7 +790,7 @@
 
   /* ---------- Importar o Excel (aba "Compras") ---------- */
   function viewImportar(body) {
-    painelQR(body);
+    painelFoto(body);
     var p = panel("Importar planilha", "Use o seu controle_mercado.xlsx. Só a aba “Compras” é lida; notas que já estão na conta são puladas, então pode importar de novo sem duplicar.");
     var lab = h("label", { class: "filebtn", for: "mk-file", text: "Escolher o arquivo .xlsx" });
     var inp = h("input", { type: "file", id: "mk-file", accept: ".xlsx,.xls", hidden: "" });

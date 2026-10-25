@@ -253,6 +253,16 @@ form.add{display:grid;grid-template-columns:1fr 70px 130px auto;gap:8px;margin:1
 .qrtag.old{background:color-mix(in srgb,var(--good) 15%,transparent);color:var(--good)}
 .qrtag.new{background:color-mix(in srgb,var(--accent) 15%,transparent);color:var(--accent)}
 @media(max-width:760px){.qritem{grid-template-columns:minmax(0,1fr)}}
+.nfitem{grid-template-columns:minmax(0,1fr) minmax(0,1.2fr) minmax(0,150px) auto}
+.nfitem.duvida{background:color-mix(in srgb,var(--warn) 12%,transparent);border-radius:8px;padding-inline:8px}
+.nfitem.duvida .qrdesc .sub:last-child{color:var(--warn);font-weight:600}
+.nfvals{display:flex;align-items:center;gap:6px}
+.nfvals .nfnum{width:74px;text-align:right}
+.nfvals .nfun{width:auto}
+.nfx{padding:4px 10px;font-size:16px;line-height:1}
+.nftexto summary{cursor:pointer;font:600 13px var(--f-ui);color:var(--muted)}
+.nftexto pre{white-space:pre-wrap;font:12px var(--f-mono);max-height:260px;overflow:auto;background:var(--bg);padding:10px;border-radius:8px}
+@media(max-width:760px){.nfitem{grid-template-columns:minmax(0,1fr)}}
 .mkmerge{margin:10px 0;padding:12px;border-radius:10px;background:var(--hover);display:grid;gap:8px}
 
 /* Vagas */

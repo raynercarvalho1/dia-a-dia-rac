@@ -518,7 +518,7 @@
   /* Lê o texto que o OCR tirou da foto do cupom (DANFE NFC-e impresso).
      Cada item termina com "qtde UN x valor-unitário valor-total"; a descrição vem antes, às vezes quebrada na linha de cima.
      Nada do consumidor (CPF) é lido. */
-  var TAIL = /(\d+(?:[.,]\d+)?)\s*(UN|UND|UNID|KG|KGS|L|LT|PC|PCT|CX|FD|DZ|SC|BD|GF|PT|BJ)\b\.?\s*[xX×*%]?\s*(\d+[.,]\d{2,3})\s+=?\s*(\d+[.,]\d{2})\s*(?:[A-Z]{1,2}\d{0,2})?\s*$/i;
+  var TAIL = /(\d+(?:[.,]\d+)?)\s*(UN|UND|UNID|UM|KG|K6|KGS|L|LT|PC|PCT|CX|FD|DZ|SC|BD|GF|PT|BJ)\b\.?\s*[xX×*%+]?\s*(\d+[.,]\d{2,3})\s*(?:[A-Z]{1,2}\d{0,2}\b|[1lI|!]\b)?\s*[—–=|-]?\s*(\d+[.,]\d{2})\s*[|!:]?\s*$/i;
   var TAIL_SEM_TOTAL = /(\d+(?:[.,]\d+)?)\s*(UN|UND|UNID|KG|KGS|L|LT|PC|PCT|CX|FD|DZ|SC|BD|GF|PT|BJ)\b\.?\s*[xX×*%]\s*(\d+[.,]\d{2,3})\b/i;
   var NAO_ITEM = /cnpj|danfe|documento auxiliar|c[óo]digo|descri[çc][ãa]o|qtde?\.? total|valor total|valor a pagar|desconto|forma (de )?pagamento|troco|tributos|consumidor|chave de acesso|protocolo|consulte|emiss[ãa]o|s[ée]rie|via (do )?consumidor|nfc-?e/i;
   function lerCupom(txt) {
@@ -532,6 +532,9 @@
     if (nota.cnpj.length !== 14) nota.cnpj = "";
     var usada = {}, IDX = /^[\dOoBIl|]{3}\s/;
     ls.forEach(function (l, i) {
+      /* "Desconto Item:002  -1,68" vai para o item de cima */
+      var di = /desconto\s*it/i.test(l) && /(\d+[.,]\d{2})\s*\S?\s*$/.exec(l);
+      if (di && nota.itens.length) { var ult = nota.itens[nota.itens.length - 1]; ult.descItem = (ult.descItem || 0) + num(di[1]); usada[i] = 1; return; }
       var m = TAIL.exec(l), soUnit = false;
       /* total cortado na foto: usa quantidade × preço e marca para conferir */
       if (!m && IDX.test(l)) { m = TAIL_SEM_TOTAL.exec(l); soUnit = !!m; }
@@ -543,7 +546,7 @@
       }
       usada[i] = 1;
       desc = desc.replace(IDX, "").replace(/^(?=\S*\d{5})\S{6,14}\s+/, "").replace(/\s+/g, " ").trim();
-      var u = m[2].toLowerCase(); u = /^kg/.test(u) ? "kg" : (u === "l" || u === "lt") ? "l" : "un";
+      var u = m[2].toLowerCase(); u = /^k/.test(u) ? "kg" : (u === "l" || u === "lt") ? "l" : "un";
       var it = { desc: desc || "Item " + (nota.itens.length + 1), qtd: num(m[1]) || 1, un: u, vu: num(m[3]) };
       it.vt = soUnit ? Math.round(it.qtd * it.vu * 100) / 100 : num(m[4]);
       it.duvida = soUnit || Math.abs(it.qtd * it.vu - it.vt) > 0.05 || !desc;
@@ -551,8 +554,11 @@
     });
     function valor(re) { var x = re.exec(t); return x ? num(x[1]) : 0; }
     nota.valorTotal = valor(/valor\s*total[^\d\n]{0,40}(\d+[.,]\d{2})/i);
-    nota.desconto = valor(/descontos?[^\d\n]{0,40}(\d+[.,]\d{2})/i);
-    nota.pago = valor(/valor\s*a\s*pagar[^\d\n]{0,12}(\d+[.,]\d{2})/i) || (nota.valorTotal ? Math.round((nota.valorTotal - nota.desconto) * 100) / 100 : 0);
+    nota.desconto = valor(/descontos?(?!\s*it)[^\d\n]{0,40}(\d+[.,]\d{2})/i) + sum(nota.itens, function (x) { return x.descItem || 0; });
+    /* sem "Valor a pagar", o "Valor total" já pode ser o líquido: vale o que fechar a conta */
+    var somaIt = sum(nota.itens, function (x) { return x.vt; });
+    nota.pago = valor(/valor\s*a\s*pagar[^\d\n]{0,40}(\d+[.,]\d{2})/i) ||
+      (nota.valorTotal && Math.abs(somaIt - nota.desconto - nota.valorTotal) < 0.02 ? nota.valorTotal : nota.valorTotal ? Math.round((nota.valorTotal - nota.desconto) * 100) / 100 : 0);
     var iF = ls.findIndex(function (l) { return /forma\s*(de\s*)?pagamento/i.test(l); });
     nota.pagamento = iF >= 0 && ls[iF + 1] ? ls[iF + 1].replace(/[\d.,]+\s*$/, "").trim() : "";
     var nn = /N[º°o.:]*\s*(\d{3,9})\s*S[ée]rie\s*:?\s*(\d{1,3})/i.exec(t); nota.numero = nn ? nn[1].replace(/^0+/, "") : ""; nota.serie = nn ? nn[2] : "";
@@ -565,10 +571,12 @@
   /* Espalha o desconto da nota entre os itens, proporcional ao valor de cada um, para a soma bater com o que foi pago */
   function ratearDesconto(nota) {
     var soma = sum(nota.itens, function (x) { return x.vt; }), d = Math.round((nota.desconto || 0) * 100) / 100;
-    nota.itens.forEach(function (x) { x.desc_rateio = 0; });
-    if (!d || !soma) return;
+    /* desconto que o cupom já diz de qual item é fica nele; o resto é espalhado */
+    nota.itens.forEach(function (x) { x.desc_rateio = Math.round((x.descItem || 0) * 100) / 100; });
+    d = Math.round((d - sum(nota.itens, function (x) { return x.desc_rateio; })) * 100) / 100;
+    if (d <= 0 || !soma) return;
     var usado = 0;
-    nota.itens.forEach(function (x) { x.desc_rateio = Math.floor(d * x.vt / soma * 100) / 100; usado += x.desc_rateio; });
+    nota.itens.forEach(function (x) { var k = Math.floor(d * x.vt / soma * 100) / 100; x.desc_rateio = Math.round((x.desc_rateio + k) * 100) / 100; usado += k; });
     var resto = Math.round((d - usado) * 100) / 100, maior = nota.itens.slice().sort(function (a, b) { return b.vt - a.vt; })[0];
     maior.desc_rateio = Math.round((maior.desc_rateio + resto) * 100) / 100;
   }
@@ -600,9 +608,67 @@
       .catch(function (e) { ocrWorker = null; throw e; });
   }
 
+  /* Pedido que a pessoa cola no Claude ou no ChatGPT junto com a foto; a resposta (JSON) é colada de volta aqui */
+  var PEDIDO = "Leia a foto deste cupom fiscal de supermercado e responda SOMENTE com um bloco de código JSON, sem comentários, neste formato:\n" +
+    '{"mercado":"nome do mercado","cnpj":"só números","data":"AAAA-MM-DD","numero":"","serie":"","chave":"44 dígitos da chave de acesso, sem espaços","pagamento":"forma de pagamento","total_pago":0.00,"desconto_nota":0.00,' +
+    '"itens":[{"descricao":"como está no cupom","qtd":1,"un":"un ou kg","valor_unitario":0.00,"valor_total":0.00,"desconto":0.00}]}\n' +
+    "Regras: um objeto por item, na ordem do cupom. valor_total é o total da linha antes de desconto. Linha \"Desconto Item\" vai no campo desconto do item dela. " +
+    "desconto_nota é só desconto geral da nota (0 se não houver). Use ponto como separador decimal. Não inclua CPF nem dados do consumidor. Se não conseguir ler um número, use null.";
+  function lerResposta(txt) {
+    var t = String(txt || ""), a = t.indexOf("{"), b = t.lastIndexOf("}");
+    if (a < 0 || b < a) return null;
+    var j; try { j = JSON.parse(t.slice(a, b + 1)); } catch (e) { return null; }
+    if (!j || !Array.isArray(j.itens)) return null;
+    function n2(v) { return v == null ? 0 : typeof v === "number" ? v : num(v); }
+    var nota = { fonte: "foto", mercado: String(j.mercado || ""), cnpj: String(j.cnpj || "").replace(/\D/g, ""), numero: String(j.numero || "").replace(/^0+/, ""), serie: String(j.serie || ""),
+      chave: String(j.chave || "").replace(/\D/g, ""), pagamento: String(j.pagamento || ""), data: /^\d{4}-\d{2}-\d{2}$/.test(j.data) ? j.data : (isoData(j.data) || "") };
+    if (nota.cnpj.length !== 14) nota.cnpj = "";
+    if (!/^\d{44}$/.test(nota.chave)) nota.chave = "";
+    nota.itens = j.itens.map(function (x) {
+      var u = norm(x.un); u = /^k/.test(u) ? "kg" : /^l/.test(u) ? "l" : "un";
+      var it = { desc: String(x.descricao || "").trim(), qtd: n2(x.qtd) || 1, un: u, vu: n2(x.valor_unitario), vt: n2(x.valor_total), descItem: Math.abs(n2(x.desconto)) };
+      if (!it.vt && it.vu) it.vt = Math.round(it.qtd * it.vu * 100) / 100;
+      it.duvida = !it.vt || (it.vu && Math.abs(it.qtd * it.vu - it.vt) > 0.05);
+      return it;
+    });
+    nota.desconto = Math.round((Math.abs(n2(j.desconto_nota)) + sum(nota.itens, function (x) { return x.descItem; })) * 100) / 100;
+    nota.pago = n2(j.total_pago) || Math.round((sum(nota.itens, function (x) { return x.vt; }) - nota.desconto) * 100) / 100;
+    return nota;
+  }
+
   function painelFoto(body) {
-    var p = panel("Nota pela foto", "Tire uma foto do cupom fiscal. O site lê os itens no próprio celular; você confere antes de salvar.");
-    var passo1 = h("div", { class: "qrstep" });
+    var p = panel("Nota pela foto", "Tire uma foto do cupom fiscal e escolha um dos jeitos abaixo. Você confere tudo antes de salvar.");
+    /* jeito 1: Claude ou ChatGPT */
+    var ia = h("div", { class: "qrstep" }, h("b", { text: "Jeito 1 · Com o Claude ou o ChatGPT (grátis e mais preciso)" }));
+    var copiar = h("button", { type: "button", text: "Copiar pedido" });
+    var cmsg = h("span", { class: "sub", role: "status" });
+    var pedTxt = h("textarea", { class: "qrpaste", rows: "4", readonly: "", hidden: "", "aria-label": "Pedido para copiar" }); pedTxt.value = PEDIDO;
+    copiar.onclick = function () {
+      (navigator.clipboard ? navigator.clipboard.writeText(PEDIDO) : Promise.reject()).then(function () { cmsg.textContent = "✓ Pedido copiado"; copiar.textContent = "Copiar de novo"; })
+        .catch(function () { cmsg.textContent = "Copie o texto abaixo:"; pedTxt.hidden = false; pedTxt.select(); });
+    };
+    var resp = h("textarea", { class: "qrpaste", rows: "4", placeholder: "Cole aqui a resposta do Claude ou do ChatGPT", "aria-label": "Resposta do Claude ou ChatGPT" });
+    var rmsg = h("p", { class: "sub", role: "status" });
+    ia.appendChild(h("ol", { class: "how" },
+      h("li", null, "Toque em ", h("b", { text: "Copiar pedido" }), "."),
+      h("li", null, "Abra o app do ", h("a", { class: "link", href: "https://claude.ai/new", target: "_blank", rel: "noopener", text: "Claude" }), " ou do ",
+        h("a", { class: "link", href: "https://chatgpt.com/", target: "_blank", rel: "noopener", text: "ChatGPT" }), ", anexe a foto do cupom e cole o pedido."),
+      h("li", null, "Na resposta, toque no botão de copiar do bloco de código e cole no quadro abaixo.")));
+    ia.appendChild(h("div", { class: "vfil" }, copiar, cmsg));
+    ia.appendChild(pedTxt); ia.appendChild(resp); ia.appendChild(rmsg);
+    function tentarResp() {
+      if (!resp.value.trim()) { rmsg.textContent = ""; return; }
+      var nota = lerResposta(resp.value);
+      if (!nota || !nota.itens.length) { rmsg.textContent = "Não reconheci a resposta. Copie o bloco inteiro que o Claude ou o ChatGPT devolveu (começa com { e termina com })."; return; }
+      rmsg.textContent = "✓ Resposta lida: " + nota.itens.length + " itens. Confira abaixo e salve.";
+      conferir(nota, null);
+      passo2.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    resp.addEventListener("paste", function () { setTimeout(tentarResp, 30); });
+    resp.addEventListener("input", tentarResp);
+    p.appendChild(ia);
+    /* jeito 2: OCR no próprio aparelho */
+    var passo1 = h("div", { class: "qrstep" }, h("b", { text: "Jeito 2 · Ler a foto aqui mesmo (menos preciso)" }));
     var tirar = h("label", { class: "filebtn", for: "nf-cam", text: "Tirar foto do cupom" });
     var cam = h("input", { type: "file", id: "nf-cam", accept: "image/*", capture: "environment", hidden: "" });
     var gal = h("label", { class: "ghostbtn", for: "nf-gal", text: "Escolher da galeria" });
@@ -700,7 +766,7 @@
           inp.addEventListener("input", marcar); marcar();
           var row = h("div", { class: "qritem nfitem" + (it.duvida ? " duvida" : "") },
             h("div", { class: "qrdesc" }, h("span", { class: "sub", text: it.desc || "Item adicionado à mão" }),
-              h("span", { class: "sub", text: it.duvida ? "Confira: quantidade × preço não bate com o total lido" : fmtQtd(it.qtd, it.un) + " × " + money(it.vu) })),
+              h("span", { class: "sub", text: it.duvida ? "Confira: quantidade × preço não bate com o total lido" : fmtQtd(it.qtd, it.un) + " × " + money(it.vu) + (it.descItem ? " · desconto de " + money(it.descItem) : "") })),
             h("div", { class: "qrprod" }, inp, tag), cat,
             h("div", { class: "nfvals" }, qtd, un, h("span", { class: "sub", text: "R$" }), vt, tira));
           var reg = { it: it, inp: inp, sel: cat, qtd: qtd, un: un, vt: vt, row: row };
@@ -738,7 +804,8 @@
             chave: nota.chave, pagamento: nota.pagamento, fonte: "foto", desconto: num(descI.value),
             itens: regs.map(function (g) {
               var q = num(g.qtd.value) || 1, v = Math.round(num(g.vt.value) * 100) / 100;
-              return { desc: g.it.desc || g.inp.value.trim(), qtd: q, un: g.un.value, vt: v, vu: Math.round(v / q * 100) / 100, inp: g.inp, sel: g.sel };
+              var vu = g.it.vu && Math.abs(g.it.vu * q - v) < 0.05 ? g.it.vu : Math.round(v / q * 100) / 100;
+              return { desc: g.it.desc || g.inp.value.trim(), qtd: q, un: g.un.value, vt: v, vu: vu, descItem: g.it.descItem || 0, inp: g.inp, sel: g.sel };
             }) };
           final.pago = num(pagoI.value) || Math.round((sum(final.itens, function (x) { return x.vt; }) - final.desconto) * 100) / 100;
           ratearDesconto(final);
@@ -783,7 +850,7 @@
         var pr = porNome[it.prodNome];
         return { nota_id: n.id, produto_id: pr ? pr.id : null, descricao: it.desc, categoria: pr ? pr.categoria : it.sel.value, quantidade: it.qtd, unidade: it.un,
           valor_unitario: it.vu, valor_total: Math.round((it.vt - (it.desc_rateio || 0)) * 100) / 100, desconto: it.desc_rateio || 0,
-          observacao: it.desc_rateio ? "Desconto da nota rateado: " + money(it.desc_rateio) : null };
+          observacao: it.desc_rateio ? (it.descItem ? "Desconto no item: " : "Desconto da nota rateado: ") + money(it.desc_rateio) : null };
       })).then(ok);
     });
   }

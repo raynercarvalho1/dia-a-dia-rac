@@ -620,7 +620,10 @@
         h("li", null, "Toque em ", h("b", { text: "Abrir a nota na Fazenda" }), "."),
         h("li", null, "Na página da nota, selecione tudo (no computador ", h("b", { text: "Ctrl+A" }), "; no celular, segure o dedo no texto e toque em ", h("b", { text: "Selecionar tudo" }), ") e copie."),
         h("li", null, "Volte para esta aba e cole no quadro abaixo.")));
-      var abrir = h("a", { class: "ghostbtn pri", href: url, target: "_blank", rel: "noopener", text: "Abrir a nota na Fazenda" });
+      /* abre o mesmo endereço que a câmera do celular abre, sem dizer à Fazenda de qual site veio (com origem ela recusa) */
+      var p0 = /[?&]p=([^&#\s]+)/.exec(url), parm = p0 ? decodeURIComponent(p0[1]) : chave;
+      var href = "https://www.nfce.fazenda.sp.gov.br/NFCeConsultaPublica/Paginas/ConsultaQRCode.aspx?p=" + parm.split("|").map(encodeURIComponent).join("%7C");
+      var abrir = h("a", { class: "ghostbtn pri", href: href, target: "_blank", rel: "noopener noreferrer", referrerpolicy: "no-referrer", text: "Abrir a nota na Fazenda" });
       var area = h("textarea", { class: "qrpaste", rows: "4", placeholder: "Cole aqui o texto da página da nota", "aria-label": "Texto da nota" });
       passo2.appendChild(h("div", { class: "vfil" }, abrir));
       passo2.appendChild(area);

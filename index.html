@@ -195,6 +195,15 @@ form.add{display:grid;grid-template-columns:1fr 70px 130px auto;gap:8px;margin:1
 .mknota[open] summary{margin-bottom:8px}
 .mkt{font:700 15px var(--f-ui);font-variant-numeric:tabular-nums}
 .mkimp{margin-top:14px;display:grid;gap:10px;justify-items:start}
+.mkplist{display:grid;gap:0;margin-top:6px}
+.mkprow{display:grid;grid-template-columns:22px minmax(0,1fr) minmax(0,190px) minmax(0,170px);gap:10px;align-items:center;padding:7px 0;border-top:1px solid var(--line)}
+.mkprow:first-child{border-top:0}
+.mkprow input[type=checkbox]{width:18px;height:18px;accent-color:var(--accent)}
+.mkpname{width:100%;background:transparent;border-color:transparent;font-weight:600;padding:6px 8px}
+.mkpname:hover,.mkpname:focus{background:var(--bg);border-color:var(--line)}
+.mkprow .sub{text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:700px){.mkprow{grid-template-columns:22px minmax(0,1fr)}.mkprow select,.mkprow .sub{grid-column:2;text-align:left}}
+.mkmerge{margin:10px 0;padding:12px;border-radius:10px;background:var(--hover);display:grid;gap:8px}
 
 /* Vagas */
 .vhead{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:10px 16px}

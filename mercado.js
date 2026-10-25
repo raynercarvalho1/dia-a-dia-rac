@@ -118,7 +118,7 @@
   }
 
   /* ---------- casca: abas internas e sair ---------- */
-  var VIEWS = [["painel", "Painel"], ["precos", "Preços"], ["notas", "Notas"], ["importar", "Importar"]];
+  var VIEWS = [["painel", "Painel"], ["precos", "Preços"], ["notas", "Notas"], ["produtos", "Produtos"], ["importar", "Importar"]];
   function drawApp(sub) {
     var v = VIEWS.some(function (x) { return x[0] === sub; }) ? sub : (rows.length ? "painel" : "importar");
     var r = root(); r.innerHTML = "";
@@ -134,7 +134,7 @@
       body.appendChild(h("div", { class: "panel" }, h("p", { class: "empty" }, "Ainda não há compras na sua conta. ", h("a", { class: "link", href: "#mercado/importar", text: "Importe o seu Excel" }), " para começar.")));
       return;
     }
-    ({ painel: viewPainel, precos: viewPrecos, notas: viewNotas, importar: viewImportar })[v](body);
+    ({ painel: viewPainel, precos: viewPrecos, notas: viewNotas, produtos: viewProdutos, importar: viewImportar })[v](body);
   }
 
   /* ---------- Painel ---------- */
@@ -324,6 +324,79 @@
       p.appendChild(d);
     });
     body.appendChild(p);
+  }
+
+  /* ---------- Produtos: renomear, juntar repetidos e trocar categoria ---------- */
+  function viewProdutos(body) {
+    var p = panel("Produtos", "Junte nomes diferentes do mesmo produto para o histórico de preços ficar num lugar só. A categoria escolhida aqui vale para todas as compras do produto.");
+    var tools = h("div", { class: "vfil" });
+    var q = h("input", { type: "search", placeholder: "Buscar produto", "aria-label": "Buscar produto", autocomplete: "off" });
+    var juntar = h("button", { type: "button", class: "ghostbtn pri", disabled: "", text: "Juntar selecionados" });
+    tools.appendChild(q); tools.appendChild(juntar); p.appendChild(tools);
+    var form = h("div", { class: "mkmerge", hidden: "" }); p.appendChild(form);
+    var info = h("p", { class: "sub", role: "status" }); p.appendChild(info);
+    var list = h("div", { class: "mkplist" }); p.appendChild(list);
+    body.appendChild(p);
+    var prods = [], sel = {};
+    var cats = Object.keys(groupBy(rows, function (x) { return x.categoria; })).sort();
+    var stats = groupBy(rows, function (x) { return x.produto_id || ""; });
+    function carregar() {
+      info.textContent = "Carregando…";
+      return sb.from("produtos").select("id,nome,categoria,unidade").order("nome").then(ok).then(function (d) {
+        prods = d; info.textContent = d.length + " produtos"; draw();
+      }).catch(function (e) { info.textContent = "Não consegui carregar os produtos: " + e.message; });
+    }
+    function selecionados() { return prods.filter(function (x) { return sel[x.id]; }); }
+    function atualizarBotao() { var n = selecionados().length; juntar.disabled = n < 2; juntar.textContent = n >= 2 ? "Juntar " + n + " selecionados" : "Juntar selecionados"; }
+    function salvar(promessa, okMsg) {
+      info.textContent = "Salvando…";
+      return promessa.then(ok).then(function () { info.textContent = okMsg; return loadRows(true); })
+        .then(function () { stats = groupBy(rows, function (x) { return x.produto_id || ""; }); return carregar(); })
+        .catch(function (e) { info.textContent = /duplicate|unique/i.test(e.message) ? "Já existe um produto com esse nome. Para juntar os dois, marque ambos e use “Juntar selecionados”." : "Não consegui salvar: " + e.message; draw(); });
+    }
+    function draw() {
+      var nq = norm(q.value);
+      list.innerHTML = "";
+      prods.filter(function (x) { return !nq || norm(x.nome + " " + x.categoria).indexOf(nq) >= 0; }).forEach(function (x) {
+        var compras = stats[x.id] || [];
+        var cb = h("input", { type: "checkbox", "aria-label": "Selecionar " + x.nome, checked: sel[x.id] ? "" : null });
+        cb.onchange = function () { if (cb.checked) sel[x.id] = 1; else delete sel[x.id]; atualizarBotao(); };
+        var nome = h("input", { type: "text", value: x.nome, "aria-label": "Nome do produto", class: "mkpname" });
+        nome.onchange = function () { var v = nome.value.trim(); if (!v || v === x.nome) { nome.value = x.nome; return; } salvar(sb.from("produtos").update({ nome: v }).eq("id", x.id), "Nome atualizado."); };
+        var cat = h("select", { "aria-label": "Categoria" }, cats.concat(cats.indexOf(x.categoria) < 0 ? [x.categoria] : []).map(function (c) { return h("option", { value: c, selected: c === x.categoria ? "" : null, text: c }); }));
+        cat.onchange = function () { salvar(sb.from("produtos").update({ categoria: cat.value }).eq("id", x.id), "Categoria atualizada."); };
+        list.appendChild(h("div", { class: "mkprow" }, cb, nome, cat,
+          h("span", { class: "sub", text: compras.length + (compras.length === 1 ? " compra" : " compras") + (compras.length ? " · " + money(compras[compras.length - 1].valor_unitario) + (x.unidade === "kg" ? "/kg" : "") : "") })));
+      });
+      atualizarBotao();
+    }
+    juntar.onclick = function () {
+      var l = selecionados(); if (l.length < 2) return;
+      var mais = l.slice().sort(function (a, b) { return (stats[b.id] || []).length - (stats[a.id] || []).length; })[0];
+      form.innerHTML = ""; form.hidden = false;
+      var nome = h("input", { type: "text", value: mais.nome, "aria-label": "Nome final" });
+      var cat = h("select", { "aria-label": "Categoria final" }, cats.map(function (c) { return h("option", { value: c, selected: c === mais.categoria ? "" : null, text: c }); }));
+      var go = h("button", { type: "button", text: "Juntar" }), cancel = h("button", { type: "button", class: "ghostbtn", text: "Cancelar" });
+      cancel.onclick = function () { form.hidden = true; };
+      go.onclick = function () {
+        var alvo = mais, outros = l.filter(function (x) { return x.id !== alvo.id; }).map(function (x) { return x.id; });
+        var novoNome = nome.value.trim() || alvo.nome;
+        form.hidden = true;
+        info.textContent = "Juntando…";
+        var conflito = prods.filter(function (x) { return x.nome === novoNome && x.id !== alvo.id && outros.indexOf(x.id) < 0; })[0];
+        if (conflito) { info.textContent = "Já existe outro produto chamado “" + novoNome + "”. Marque ele também para juntar todos."; return; }
+        var passo = sb.from("itens").update({ produto_id: alvo.id }).in("produto_id", outros).then(ok)
+          .then(function () { return sb.from("produtos").delete().in("id", outros).then(ok); })
+          .then(function () { return sb.from("produtos").update({ nome: novoNome, categoria: cat.value }).eq("id", alvo.id); });
+        sel = {};
+        salvar(passo, l.length + " produtos juntados em “" + novoNome + "”.");
+      };
+      form.appendChild(h("p", { class: "sub", text: "Juntar " + l.length + " produtos em um só. As compras de todos passam para ele." }));
+      form.appendChild(h("div", { class: "vfil" }, nome, cat, go, cancel));
+      nome.focus();
+    };
+    q.addEventListener("input", draw);
+    carregar();
   }
 
   /* ---------- Importar o Excel (aba "Compras") ---------- */

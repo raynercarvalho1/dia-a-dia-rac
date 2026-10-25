@@ -179,26 +179,27 @@
     var g1 = h("div", { class: "mkgrid" });
     var pmk = panel("Por mercado", "Clique num mercado para ver as compras de " + MESES[+st.mes.slice(5) - 1]);
     pmk.appendChild(hbars(porMercado.map(function (x) { return [x.m, x.t, semCidade(x.m), x.n + (x.n === 1 ? " compra" : " compras")]; }), total, "mercado"));
-    g1.appendChild(pmk);
+    /* o detalhe abre logo abaixo do quadro clicado, na mesma coluna */
+    g1.appendChild(h("div", { class: "mkcol" }, pmk, st.pick && st.pick.tipo === "mercado" ? detalhe(doMes) : null));
     var porMes = meses.map(function (k) { return [k, sum(rows.filter(function (x) { return x.mk === k; }), function (x) { return x.valor_total; })]; });
     var pm = panel("Mês a mês", "Clique numa coluna para ver o mês");
     pm.appendChild(vbars(porMes.slice(-12), st.mes));
     g1.appendChild(pm);
     body.appendChild(g1);
-    if (st.pick && st.pick.tipo === "mercado") body.appendChild(detalhe(doMes));
 
     /* linha 2: categorias + produtos que mais pesaram */
     var g2 = h("div", { class: "mkgrid" });
     var porCat = Object.entries(groupBy(doMes, function (x) { return x.categoria; })).map(function (e) { return [e[0], sum(e[1], function (x) { return x.valor_total; })]; }).sort(function (a, b) { return b[1] - a[1]; });
     var pc = panel("Por categoria", "Clique numa categoria para ver os itens");
     pc.appendChild(hbars(porCat, total, "categoria"));
-    g2.appendChild(pc);
+    g2.appendChild(h("div", { class: "mkcol" }, pc, st.pick && st.pick.tipo === "categoria" ? detalhe(doMes) : null));
     var porProd = agruparProdutos(doMes).slice(0, 10);
     var pp = panel("O que mais pesou", "Os 10 produtos com maior gasto no mês. Clique para ver o histórico de preço.");
     pp.appendChild(listaProdutos(porProd));
     g2.appendChild(pp);
     body.appendChild(g2);
-    if (st.pick && st.pick.tipo === "categoria") body.appendChild(detalhe(doMes));
+    /* voltando do gráfico de um produto: volta para o mesmo ponto do painel */
+    if (st.voltarY != null) { var y = st.voltarY; st.voltarY = null; setTimeout(function () { window.scrollTo(0, y); }, 0); }
   }
   function agruparProdutos(l) {
     return Object.entries(groupBy(l, function (x) { return x.produto; })).map(function (e) {
@@ -212,7 +213,7 @@
         h("span", { class: "pln" }, h("b", { text: x.p }), h("span", { class: "sub", text: x.c })),
         h("span", { class: "plq", text: fmtQtd(x.q, x.u) }),
         h("span", { class: "plt", text: money(x.t) }));
-      b.onclick = function () { st.prod = x.p; st.q = ""; location.hash = "#mercado/precos"; };
+      b.onclick = function () { st.prod = x.p; st.q = ""; st.voltar = true; st.voltarY = window.scrollY; location.hash = "#mercado/precos"; };
       return b;
     }));
   }
@@ -321,7 +322,7 @@
       list.innerHTML = "";
       list.appendChild(h("p", { class: "sub", text: l.length + " produtos" }));
       list.appendChild(tabela(["Produto", "Último preço", "1º preço", "Variação", "Compras"], l.map(function (p) {
-        var b = h("button", { type: "button", class: "mkprod", text: p.nome }); b.onclick = function () { st.prod = p.nome; showProd(); window.scrollTo({ top: 0, behavior: "smooth" }); };
+        var b = h("button", { type: "button", class: "mkprod", text: p.nome }); b.onclick = function () { st.prod = p.nome; st.voltar = false; st.voltarY = null; showProd(); window.scrollTo({ top: 0, behavior: "smooth" }); };
         return [h("span", null, b, h("span", { class: "sub", text: " · " + p.cat })), money(p.ult.valor_unitario) + (p.u === "kg" ? "/kg" : ""), money(p.pri.valor_unitario), varTag(p.compras.length > 1 ? p.varTotal : null), String(p.compras.length)];
       }), 1));
     }
@@ -339,7 +340,12 @@
         d.appendChild(h("h3", { class: "dayh", text: "Onde saiu mais barato" }));
         d.appendChild(tabela(["Mercado", "Menor preço", "Último preço", "Última compra"], porMerc.map(function (m) { return [m[0], money(m[1]), money(m[2]), m[3]]; }), 1));
       }
-      var fechar = h("button", { type: "button", class: "ghostbtn", text: "Fechar gráfico" }); fechar.onclick = function () { st.prod = null; detail.innerHTML = ""; };
+      /* quem veio do painel volta para o painel ao fechar */
+      var fechar = h("button", { type: "button", class: "ghostbtn", text: st.voltar ? "Fechar e voltar ao painel" : "Fechar gráfico" });
+      fechar.onclick = function () {
+        st.prod = null; detail.innerHTML = "";
+        if (st.voltar) { st.voltar = false; location.hash = "#mercado/painel"; } else st.voltarY = null;
+      };
       d.appendChild(h("div", { class: "vfoot" }, fechar));
       detail.appendChild(d);
     }

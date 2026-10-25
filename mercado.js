@@ -477,10 +477,9 @@
   }
 
   /* ---------- Nota pela foto do cupom ----------
-     A Fazenda de SP não deixa robôs nem outros sites abrirem a nota, então a nota entra pela foto do cupom:
-     o OCR (Tesseract, roda no próprio navegador, de graça) lê o texto, o site monta os itens e a pessoa confere.
-     A foto não sai do aparelho; CPF e demais dados do consumidor são ignorados. */
-  var TESS_JS = "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js";
+     A Fazenda de SP não deixa robôs nem outros sites abrirem a nota, e ler a letra de matriz do cupom no navegador
+     erra demais. Então a pessoa manda a foto para o Claude ou o ChatGPT (grátis no app), cola a resposta aqui e confere.
+     CPF e demais dados do consumidor são ignorados. */
   var ABREV = { refrig: "refrigerante", min: "mineral", fgo: "frango", frgo: "frango", ling: "linguica", tosc: "toscana", rep: "refil", liq: "liquido", cong: "congelado", choc: "chocolate", bisc: "biscoito", qj: "queijo", mus: "mussarela", mussar: "mussarela", pres: "presunto", sab: "sabonete", amac: "amaciante", deterg: "detergente", lav: "lava", pao: "pao", fr: "frances", trad: "tradicional", integ: "integral", desn: "desnatado", sach: "sache", bov: "bovino", sui: "suino", peit: "peito", file: "file", agua: "agua", cerv: "cerveja", lt: "lata" };
   var CATS_PALAVRAS = [
     ["Bebidas", /refrig|coca|guarana|agua|suco|cerveja|cerv|energet|cha |sprite|pepsi|schweppes/],
@@ -521,59 +520,6 @@
   }
   function categoriaPalpite(t) { var n = norm(t); for (var i = 0; i < CATS_PALAVRAS.length; i++) if (CATS_PALAVRAS[i][1].test(n)) return CATS_PALAVRAS[i][0]; return "Mercearia"; }
 
-  /* Lê o texto que o OCR tirou da foto do cupom (DANFE NFC-e impresso).
-     Cada item termina com "qtde UN x valor-unitário valor-total"; a descrição vem antes, às vezes quebrada na linha de cima.
-     Nada do consumidor (CPF) é lido. */
-  var TAIL = /(\d+(?:[.,]\d+)?)\s*(UN|UND|UNID|UM|KG|K6|KGS|L|LT|PC|PCT|CX|FD|DZ|SC|BD|GF|PT|BJ)\b\.?\s*[xX×*%+]?\s*(\d+[.,]\d{2,3})\s*(?:[A-Z]{1,2}\d{0,2}\b|[1lI|!]\b)?\s*[—–=|-]?\s*(\d+[.,]\d{2})\s*[|!:]?\s*$/i;
-  var TAIL_SEM_TOTAL = /(\d+(?:[.,]\d+)?)\s*(UN|UND|UNID|KG|KGS|L|LT|PC|PCT|CX|FD|DZ|SC|BD|GF|PT|BJ)\b\.?\s*[xX×*%]\s*(\d+[.,]\d{2,3})\b/i;
-  var NAO_ITEM = /cnpj|danfe|documento auxiliar|c[óo]digo|descri[çc][ãa]o|qtde?\.? total|valor total|valor a pagar|desconto|forma (de )?pagamento|troco|tributos|consumidor|chave de acesso|protocolo|consulte|emiss[ãa]o|s[ée]rie|via (do )?consumidor|nfc-?e/i;
-  function lerCupom(txt) {
-    var t = String(txt || "").replace(/\r/g, "").replace(/ /g, " ");
-    var ls = t.split("\n").map(function (l) { return l.replace(/\s+/g, " ").replace(/(^|\s)[oO]([.,]\d)/g, "$10$2").trim(); }).filter(Boolean);
-    var nota = { itens: [], fonte: "foto" };
-    var iC = ls.findIndex(function (l) { return /CNPJ/i.test(l); });
-    var cab = iC > 0 ? ls[iC - 1] : (iC === 0 ? ls[0].replace(/CNPJ.*$/i, "") : ls[0] || "");
-    nota.mercado = cab.replace(/[^A-Za-zÀ-ú0-9&.\- ]/g, "").trim();
-    var cn = /CNPJ\D{0,6}([\d.\/\- ]{14,22})/i.exec(t); nota.cnpj = cn ? cn[1].replace(/\D/g, "").slice(0, 14) : "";
-    if (nota.cnpj.length !== 14) nota.cnpj = "";
-    var usada = {}, IDX = /^[\dOoBIl|]{3}\s/;
-    ls.forEach(function (l, i) {
-      /* "Desconto Item:002  -1,68" vai para o item de cima */
-      var di = /desconto\s*it/i.test(l) && /(\d+[.,]\d{2})\s*\S?\s*$/.exec(l);
-      if (di && nota.itens.length) { var ult = nota.itens[nota.itens.length - 1]; ult.descItem = (ult.descItem || 0) + num(di[1]); usada[i] = 1; return; }
-      var m = TAIL.exec(l), soUnit = false;
-      /* total cortado na foto: usa quantidade × preço e marca para conferir */
-      if (!m && IDX.test(l)) { m = TAIL_SEM_TOTAL.exec(l); soUnit = !!m; }
-      if (!m) return;
-      var desc = l.slice(0, m.index).trim();
-      /* descrição quebrada: a linha de cima começa com o número do item, e esta não */
-      if (i > 0 && !usada[i - 1] && !IDX.test(l) && IDX.test(ls[i - 1]) && !TAIL.test(ls[i - 1]) && !NAO_ITEM.test(ls[i - 1])) {
-        desc = ls[i - 1] + " " + desc; usada[i - 1] = 1;
-      }
-      usada[i] = 1;
-      desc = desc.replace(IDX, "").replace(/^(?=\S*\d{5})\S{6,14}\s+/, "").replace(/\s+/g, " ").trim();
-      var u = m[2].toLowerCase(); u = /^k/.test(u) ? "kg" : (u === "l" || u === "lt") ? "l" : "un";
-      var it = { desc: desc || "Item " + (nota.itens.length + 1), qtd: num(m[1]) || 1, un: u, vu: num(m[3]) };
-      it.vt = soUnit ? Math.round(it.qtd * it.vu * 100) / 100 : num(m[4]);
-      it.duvida = soUnit || Math.abs(it.qtd * it.vu - it.vt) > 0.05 || !desc;
-      nota.itens.push(it);
-    });
-    function valor(re) { var x = re.exec(t); return x ? num(x[1]) : 0; }
-    nota.valorTotal = valor(/valor\s*total[^\d\n]{0,40}(\d+[.,]\d{2})/i);
-    nota.desconto = valor(/descontos?(?!\s*it)[^\d\n]{0,40}(\d+[.,]\d{2})/i) + sum(nota.itens, function (x) { return x.descItem || 0; });
-    /* sem "Valor a pagar", o "Valor total" já pode ser o líquido: vale o que fechar a conta */
-    var somaIt = sum(nota.itens, function (x) { return x.vt; });
-    nota.pago = valor(/valor\s*a\s*pagar[^\d\n]{0,40}(\d+[.,]\d{2})/i) ||
-      (nota.valorTotal && Math.abs(somaIt - nota.desconto - nota.valorTotal) < 0.02 ? nota.valorTotal : nota.valorTotal ? Math.round((nota.valorTotal - nota.desconto) * 100) / 100 : 0);
-    var iF = ls.findIndex(function (l) { return /forma\s*(de\s*)?pagamento/i.test(l); });
-    nota.pagamento = iF >= 0 && ls[iF + 1] ? ls[iF + 1].replace(/[\d.,]+\s*$/, "").trim() : "";
-    var nn = /N[º°o.:]*\s*(\d{3,9})\s*S[ée]rie\s*:?\s*(\d{1,3})/i.exec(t); nota.numero = nn ? nn[1].replace(/^0+/, "") : ""; nota.serie = nn ? nn[2] : "";
-    var em = /(\d{2})\/(\d{2})\/(20\d{2})/.exec(t);
-    nota.data = em ? em[3] + "-" + em[2] + "-" + em[1] : "";
-    var ch = /((?:\d{4}\s?){11})/.exec(t.replace(/\n/g, " ")); nota.chave = ch ? ch[1].replace(/\D/g, "") : "";
-    if (!/^35\d{42}$/.test(nota.chave)) nota.chave = "";
-    return nota;
-  }
   /* Espalha o desconto da nota entre os itens, proporcional ao valor de cada um, para a soma bater com o que foi pago */
   function ratearDesconto(nota) {
     var soma = sum(nota.itens, function (x) { return x.vt; }), d = Math.round((nota.desconto || 0) * 100) / 100;
@@ -585,33 +531,6 @@
     nota.itens.forEach(function (x) { var k = Math.floor(d * x.vt / soma * 100) / 100; x.desc_rateio = Math.round((x.desc_rateio + k) * 100) / 100; usado += k; });
     var resto = Math.round((d - usado) * 100) / 100, maior = nota.itens.slice().sort(function (a, b) { return b.vt - a.vt; })[0];
     maior.desc_rateio = Math.round((maior.desc_rateio + resto) * 100) / 100;
-  }
-
-  /* Foto: escala de cinza, contraste esticado e tamanho bom para o OCR */
-  function prepararFoto(file) {
-    return createImageBitmap(file).then(function (bmp) {
-      var k = Math.min(2.5, 1800 / bmp.width), c = document.createElement("canvas");
-      c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
-      var ctx = c.getContext("2d"); ctx.drawImage(bmp, 0, 0, c.width, c.height);
-      var img = ctx.getImageData(0, 0, c.width, c.height), d = img.data, hist = new Array(256).fill(0), n = d.length / 4;
-      for (var i = 0; i < d.length; i += 4) { var g = Math.round(d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114); d[i] = g; hist[g]++; }
-      var lo = 0, hi = 255, acc = 0;
-      for (acc = 0; lo < 255 && (acc += hist[lo]) < n * 0.02; lo++);
-      for (acc = 0; hi > 0 && (acc += hist[hi]) < n * 0.02; hi--);
-      var esc = 255 / Math.max(1, hi - lo);
-      for (i = 0; i < d.length; i += 4) { var v = Math.max(0, Math.min(255, (d[i] - lo) * esc)); d[i] = d[i + 1] = d[i + 2] = v; }
-      ctx.putImageData(img, 0, 0);
-      return c;
-    });
-  }
-  var ocrWorker = null;
-  function ocr(canvas, progresso) {
-    var w = ocrWorker || loadScript(TESS_JS).then(function () {
-      return window.Tesseract.createWorker("por", 1, { logger: function (m) { if (m.status === "recognizing text") progresso(m.progress); } });
-    }).then(function (wk) { return wk.setParameters({ tessedit_pageseg_mode: "6", preserve_interword_spaces: "1" }).then(function () { return wk; }); });
-    ocrWorker = w;
-    return w.then(function (wk) { return wk.recognize(canvas); }).then(function (r) { return r.data.text; })
-      .catch(function (e) { ocrWorker = null; throw e; });
   }
 
   /* Pedido que a pessoa cola no Claude ou no ChatGPT junto com a foto; a resposta (JSON) é colada de volta aqui */
@@ -642,10 +561,51 @@
     return nota;
   }
 
+  /* Resposta "normal" do Claude ou do ChatGPT (tabela ou lista), quando a pessoa manda só a foto sem o pedido.
+     Cada item tem "qtd un × preço" e, na mesma linha ou na seguinte, o total; a descrição vem antes. */
+  function lerTextoLivre(txt) {
+    var ls = String(txt || "").replace(/\r/g, "").split("\n").map(function (l) {
+      return l.replace(/\*\*/g, "").replace(/\|/g, "  ").replace(/\s+/g, " ").trim();
+    }).filter(function (l) { return l && !/^[-:\s]+$/.test(l); });
+    var QX = /(\d+(?:[.,]\d+)?)\s*(un|und|unid|kg|l|lt)\.?\s*[x×*]\s*(?:R\$\s*)?(\d+[.,]\d{2,3})/i, DIN = /(\d+[.,]\d{2})(?!\d)/;
+    var nota = { itens: [], fonte: "foto" }, usada = {};
+    ls.forEach(function (l, i) {
+      var m = QX.exec(l); if (!m) return;
+      var desc = l.slice(0, m.index).replace(/^\d{1,3}[.)]?\s+/, "").replace(/[-–—:]\s*$/, "").trim();
+      if (desc.replace(/[^A-Za-zÀ-ú]/g, "").length < 3 && i > 0 && !usada[i - 1] && !QX.test(ls[i - 1])) { desc = ls[i - 1].replace(/^\d{1,3}[.)]?\s+/, "").trim(); usada[i - 1] = 1; }
+      usada[i] = 1;
+      var resto = l.slice(m.index + m[0].length), tot = DIN.exec(resto.replace(/desconto.*$/i, ""));
+      var linhaDesc = resto;
+      if (!tot && ls[i + 1] && !QX.test(ls[i + 1])) { tot = DIN.exec(ls[i + 1].replace(/desconto.*$/i, "")); linhaDesc = ls[i + 1]; usada[i + 1] = 1; }
+      var u = m[2].toLowerCase(); u = /^k/.test(u) ? "kg" : /^l/.test(u) ? "l" : "un";
+      var it = { desc: desc, qtd: num(m[1]) || 1, un: u, vu: num(m[3]) };
+      var bruto = Math.round(it.qtd * it.vu * 100) / 100, v = tot ? num(tot[1]) : bruto;
+      var dm = /desconto[^\d]{0,15}(\d+[.,]\d{2})/i.exec(linhaDesc), d = dm ? num(dm[1]) : 0;
+      /* o total pode vir antes ou depois do desconto: fica o que fechar com qtd × preço */
+      if (d && Math.abs(bruto - d - v) < 0.05) v = bruto;
+      it.vt = v; it.descItem = d;
+      it.duvida = !desc || Math.abs(bruto - v) > 0.05;
+      nota.itens.push(it);
+    });
+    var t = ls.join("\n");
+    var em = /(\d{2})\/(\d{2})\/(20\d{2})/.exec(t); nota.data = em ? em[3] + "-" + em[2] + "-" + em[1] : "";
+    var tp = /total\s*(?:de|pago|:)?\s*R\$\s*(\d+[.,]\d{2})/i.exec(t);
+    nota.desconto = Math.round(sum(nota.itens, function (x) { return x.descItem; }) * 100) / 100;
+    nota.pago = tp ? num(tp[1]) : Math.round((sum(nota.itens, function (x) { return x.vt; }) - nota.desconto) * 100) / 100;
+    var mm = /((?:[Ss]uper|[Hh]iper)?[Mm]ercados?|[Aa]tacad[ãa]o|[Aa]tacarejo)\s+([A-ZÀ-Ú][\wÀ-ú'&-]+(?:\s+[A-ZÀ-Ú][\wÀ-ú'&-]+)?)/.exec(t);
+    nota.mercado = mm ? mm[1] + " " + mm[2] : "";
+    var cn = /(\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2})/.exec(t); nota.cnpj = cn ? cn[1].replace(/\D/g, "") : "";
+    var pg = /(cart[ãa]o de cr[ée]dito|cart[ãa]o de d[ée]bito|pix|dinheiro|vale[- ]alimenta[çc][ãa]o)/i.exec(t); nota.pagamento = pg ? pg[1] : "";
+    var nn = /n[úu]mero[:\s]*0*(\d{3,9})/i.exec(t); nota.numero = nn ? nn[1] : "";
+    var ch = /((?:\d{4}\s?){11})/.exec(t.replace(/\n/g, " ")); nota.chave = ch ? ch[1].replace(/\D/g, "") : "";
+    if (!/^35\d{42}$/.test(nota.chave)) nota.chave = "";
+    nota.serie = ""; nota.texto = t;
+    return nota;
+  }
+
   function painelFoto(body) {
-    var p = panel("Nota pela foto", "Tire uma foto do cupom fiscal e escolha um dos jeitos abaixo. Você confere tudo antes de salvar.");
-    /* jeito 1: Claude ou ChatGPT */
-    var ia = h("div", { class: "qrstep" }, h("b", { text: "Jeito 1 · Com o Claude ou o ChatGPT (grátis e mais preciso)" }));
+    var p = panel("Nota pela foto", "O Claude ou o ChatGPT lê a foto do cupom de graça; você cola a resposta aqui e confere antes de salvar.");
+    var ia = h("div", { class: "qrstep" });
     var copiar = h("button", { type: "button", text: "Copiar pedido" });
     var cmsg = h("span", { class: "sub", role: "status" });
     var pedTxt = h("textarea", { class: "qrpaste", rows: "4", readonly: "", hidden: "", "aria-label": "Pedido para copiar" }); pedTxt.value = PEDIDO;
@@ -659,72 +619,33 @@
       h("li", null, "Toque em ", h("b", { text: "Copiar pedido" }), "."),
       h("li", null, "Abra o app do ", h("a", { class: "link", href: "https://claude.ai/new", target: "_blank", rel: "noopener", text: "Claude" }), " ou do ",
         h("a", { class: "link", href: "https://chatgpt.com/", target: "_blank", rel: "noopener", text: "ChatGPT" }), ", anexe a foto do cupom e cole o pedido."),
-      h("li", null, "Na resposta, toque no botão de copiar do bloco de código e cole no quadro abaixo.")));
+      h("li", null, "Toque no ícone de copiar logo abaixo da resposta (o primeiro, de dois quadradinhos) e cole no quadro abaixo. Se você mandou só a foto, sem o pedido, também funciona.")));
     ia.appendChild(h("div", { class: "vfil" }, copiar, cmsg));
     ia.appendChild(pedTxt); ia.appendChild(resp); ia.appendChild(rmsg);
     function tentarResp() {
       if (!resp.value.trim()) { rmsg.textContent = ""; return; }
       var nota = lerResposta(resp.value);
-      if (!nota || !nota.itens.length) { rmsg.textContent = "Não reconheci a resposta. Copie o bloco inteiro que o Claude ou o ChatGPT devolveu (começa com { e termina com })."; return; }
+      if (!nota || !nota.itens.length) nota = lerTextoLivre(resp.value);
+      if (!nota || !nota.itens.length) { rmsg.textContent = "Não achei os itens nesse texto. Copie a resposta inteira do Claude ou do ChatGPT (o ícone de copiar logo abaixo da resposta) e cole de novo."; return; }
       rmsg.textContent = "✓ Resposta lida: " + nota.itens.length + " itens. Confira abaixo e salve.";
-      conferir(nota, null);
+      conferir(nota);
       passo2.scrollIntoView({ behavior: "smooth", block: "start" });
     }
     resp.addEventListener("paste", function () { setTimeout(tentarResp, 30); });
     resp.addEventListener("input", tentarResp);
     p.appendChild(ia);
-    /* jeito 2: OCR no próprio aparelho */
-    var passo1 = h("div", { class: "qrstep" }, h("b", { text: "Jeito 2 · Ler a foto aqui mesmo (menos preciso)" }));
-    var tirar = h("label", { class: "filebtn", for: "nf-cam", text: "Tirar foto do cupom" });
-    var cam = h("input", { type: "file", id: "nf-cam", accept: "image/*", capture: "environment", hidden: "" });
-    var gal = h("label", { class: "ghostbtn", for: "nf-gal", text: "Escolher da galeria" });
-    var galI = h("input", { type: "file", id: "nf-gal", accept: "image/*", multiple: "", hidden: "" });
-    var fmsg = h("p", { class: "sub", role: "status" });
-    passo1.appendChild(h("div", { class: "vfil" }, tirar, cam, gal, galI));
-    passo1.appendChild(h("ul", { class: "how" },
-      h("li", null, "Estique o cupom numa mesa, com boa luz e sem sombra."),
-      h("li", null, "Enquadre só o papel, bem reto. Cupom comprido: tire uma foto da parte de cima e outra da de baixo.")));
-    passo1.appendChild(fmsg);
     var passo2 = h("div", { class: "qrstep", hidden: "" });
-    p.appendChild(passo1); p.appendChild(passo2);
+    p.appendChild(passo2);
     body.appendChild(p);
-    var textos = [];
 
-    function lerArquivos(files) {
-      files = Array.prototype.slice.call(files || []); if (!files.length) return;
-      var feito = Promise.resolve();
-      files.forEach(function (f) {
-        feito = feito.then(function () {
-          var nro = textos.length + 1;
-          fmsg.textContent = "Lendo a foto " + nro + "… (a primeira vez demora mais, baixa o leitor de texto)";
-          return prepararFoto(f).then(function (c) {
-            return ocr(c, function (x) { fmsg.textContent = "Lendo a foto " + nro + "… " + Math.round(x * 100) + "%"; });
-          }).then(function (txt) { textos.push(txt); });
-        });
-      });
-      feito.then(function () {
-        cam.value = ""; galI.value = "";
-        montar(textos.join("\n"));
-      }).catch(function (e) { fmsg.textContent = "Não consegui ler a foto (" + (e.message || e) + "). Tente de novo."; });
-    }
-    cam.onchange = function () { lerArquivos(cam.files); };
-    galI.onchange = function () { lerArquivos(galI.files); };
-
-    function montar(texto) {
-      var nota = lerCupom(texto);
-      fmsg.textContent = nota.itens.length ? "✓ " + textos.length + (textos.length === 1 ? " foto lida" : " fotos lidas") + ": achei " + nota.itens.length + " itens. Confira abaixo e salve." :
-        "Não consegui achar os itens na foto. Tente outra foto mais de perto e reta, ou adicione os itens à mão abaixo.";
-      gal.textContent = "Somar outra foto"; tirar.textContent = "Tirar mais uma foto";
-      conferir(nota, texto);
-    }
-
-    function conferir(nota, texto) {
+    function conferir(nota) {
       passo2.innerHTML = ""; passo2.hidden = false;
       passo2.appendChild(h("b", { text: "Confira e salve" }));
       var info = h("p", { class: "sub", text: "Carregando seus produtos…" }); passo2.appendChild(info);
       Promise.all([sb.from("mercados").select("id,nome,cnpj").then(ok), sb.from("produtos").select("id,nome,categoria,unidade").order("nome").then(ok),
         nota.chave ? sb.from("notas").select("id").eq("chave_nfce", nota.chave).then(ok) : Promise.resolve([]),
-        sb.from("itens").select("descricao,produto_id").then(ok)]).then(function (r) {
+        sb.from("itens").select("descricao,produto_id").then(ok),
+        nota.data ? sb.from("notas").select("id,mercado_id,total").eq("data", nota.data).then(ok) : Promise.resolve([])]).then(function (r) {
         var mercs = r[0], prods = r[1], apelidos = {};
         r[3].forEach(function (x) { if (x.produto_id) apelidos[norm(x.descricao)] = x.produto_id; });
         info.textContent = "";
@@ -733,7 +654,9 @@
         CATS_PALAVRAS.forEach(function (c) { if (cats.indexOf(c[0]) < 0) cats.push(c[0]); }); cats.sort();
         /* mercado: pelo CNPJ guardado, senão pelo nome parecido */
         var merc = mercs.filter(function (m) { return m.cnpj && m.cnpj === nota.cnpj; })[0] ||
-          mercs.map(function (m) { return [m, semelhanca(nota.mercado, m.nome)]; }).sort(function (a, b) { return b[1] - a[1]; }).filter(function (x) { return x[1] >= 0.5; }).map(function (x) { return x[0]; })[0];
+          mercs.map(function (m) { return [m, semelhanca(nota.mercado, m.nome)]; }).sort(function (a, b) { return b[1] - a[1]; }).filter(function (x) { return x[1] >= 0.5; }).map(function (x) { return x[0]; })[0] ||
+          /* senão, o primeiro nome do mercado aparece em algum lugar do texto colado ("Confiança", "Reinaldo") */
+          mercs.filter(function (m) { var w = norm(semCidade(m.nome)).split(" ")[0]; return w.length > 3 && norm(nota.texto || nota.mercado).indexOf(w) >= 0; })[0];
         var selMerc = h("select", { "aria-label": "Mercado" }, mercs.map(function (m) { return h("option", { value: m.id, selected: merc && merc.id === m.id ? "" : null, text: m.nome }); }),
           h("option", { value: "novo", selected: merc ? null : "", text: "Novo mercado" + (nota.mercado ? ": " + nomeBonito(nota.mercado) : "") }));
         var novoNome = h("input", { type: "text", value: nomeBonito(nota.mercado || ""), placeholder: "Nome do mercado", "aria-label": "Nome do novo mercado", hidden: merc ? "" : null });
@@ -746,6 +669,8 @@
           h("div", null, h("span", { class: "sub", text: "Data" }), dataI),
           h("div", null, h("span", { class: "sub", text: "Total pago (R$)" }), pagoI),
           h("div", null, h("span", { class: "sub", text: "Desconto da nota (R$)" }), descI)));
+        var igual = (r[4] || []).filter(function (n) { return Math.abs(+n.total - nota.pago) < 0.02 && (!merc || n.mercado_id === merc.id); });
+        if (igual.length) passo2.appendChild(h("p", { class: "qrwarn", text: "Atenção: já existe uma compra de " + money(nota.pago) + " em " + dataBR(nota.data) + (merc ? " nesse mercado" : "") + ". Se for a mesma, não salve de novo." }));
         var conta = h("p", { role: "status" }); passo2.appendChild(conta);
         var dl = h("datalist", { id: "nf-prods" }, prods.map(function (x) { return h("option", { value: x.nome }); }));
         passo2.appendChild(dl);
@@ -785,7 +710,6 @@
         var mais = h("button", { type: "button", class: "ghostbtn", text: "+ Adicionar item" });
         mais.onclick = function () { var g = linha({ desc: "", qtd: 1, un: "un", vu: 0, vt: 0 }); regs.push(g); lista.appendChild(g.row); g.inp.focus(); somar(); };
         passo2.appendChild(h("div", { class: "vfil" }, mais));
-        if (texto) passo2.appendChild(h("details", { class: "nftexto" }, h("summary", { text: "Ver o texto lido da foto" }), h("pre", { text: texto })));
 
         function somar() {
           var soma = Math.round(sum(regs, function (g) { return num(g.vt.value); }) * 100) / 100, d = num(descI.value), pago = num(pagoI.value);

@@ -437,6 +437,23 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
 .tbl.ls th.num,.tbl.ls td.num{min-width:34px;padding:6px 4px;text-align:center;font:600 17px var(--f-display)}
 .tbl.ls td.tot{font-weight:800;color:var(--accent)}
 .tbl.ls .rb{display:inline-block;min-width:26px;padding:1px 6px;border-radius:5px;background:var(--accent);color:var(--accent-ink);font-weight:800}
+.tbl.ls button.rb{font:inherit;font-weight:800;border:0;cursor:pointer}
+.tbl.ls button.rb:hover,.tbl.ls button.rb:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
+.sctip{position:fixed;z-index:60;width:min(360px,calc(100vw - 16px));max-height:min(70vh,520px);overflow:auto;background:var(--side);color:var(--ink);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);font:14px var(--f-body);pointer-events:none}
+.sctip-in{display:grid}
+.sctip .sch{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line);font:600 13px var(--f-ui);color:var(--muted)}
+.sctip .scp{display:grid;gap:6px;padding:10px 12px 10px 14px;border-left:3px solid var(--accent)}
+.sctip .scp+.scp{border-top:1px solid var(--line)}
+.sctip .sct{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.sctip .scs{font:600 14px var(--f-display);background:var(--bg);border-radius:99px;padding:2px 10px;white-space:nowrap}
+.sctip .scs .lead{font-weight:800;color:var(--accent)}
+.sctip p{margin:0;color:var(--muted);line-height:1.35}
+.sctip .scc{display:flex;align-items:center;gap:4px;font:700 12px var(--f-ui)}
+.sctip .cnt{display:inline-flex;gap:3px;margin-right:8px}
+.sctip .cnt i{width:8px;height:8px;border-radius:50%;border:1px solid var(--muted)}
+.sctip .cnt.b i.on{background:#3FB950;border-color:#3FB950}
+.sctip .cnt.s i.on{background:#E5484D;border-color:#E5484D}
+.sctip .cnt.o i.on{background:#F0B429;border-color:#F0B429}
 .pc{display:inline-flex;align-items:center;gap:10px;min-width:0}
 .ph.s{width:30px;height:30px}
 .ph{width:34px;height:34px;border-radius:50%;object-fit:cover;background:var(--line);flex:none}
@@ -1471,12 +1488,54 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
     var lp=panel("Placar por entrada");
     var tb=table(cols,[lrow("away"),lrow("home")],1,"ls");
     tb.querySelectorAll("tr").forEach(function(tr){var c=tr.children;if(c.length>3)c[c.length-3].classList.add("tot")});
-    /* entradas com corrida ficam em destaque */
-    tb.querySelectorAll("tbody tr").forEach(function(tr){Array.prototype.forEach.call(tr.children,function(td,i){
-      if(i>0&&i<=n&&/^[1-9]\d*$/.test(td.textContent)){var v=td.textContent;td.textContent="";td.appendChild(h("span",{class:"rb",text:v}))}})});
+    /* jogadas que valeram corrida, por entrada e time ("3|away") */
+    var pontos={};
+    ((feed.liveData.plays||{}).allPlays||[]).forEach(function(pl){
+      if(!pl.about||!pl.about.isScoringPlay)return;
+      var k=pl.about.inning+"|"+(pl.about.halfInning==="top"?"away":"home");(pontos[k]=pontos[k]||[]).push(pl)});
+    /* entradas com corrida ficam em destaque; passar o mouse (ou tocar) mostra como saíram */
+    tb.querySelectorAll("tbody tr").forEach(function(tr,ri){var side=ri===0?"away":"home";Array.prototype.forEach.call(tr.children,function(td,i){
+      if(i>0&&i<=n&&/^[1-9]\d*$/.test(td.textContent)){var v=td.textContent;td.textContent="";
+        var pls=pontos[i+"|"+side];
+        if(!pls){td.appendChild(h("span",{class:"rb",text:v}));return}
+        var b=h("button",{type:"button",class:"rb",text:v,"aria-label":v+" corrida(s) na "+i+"ª entrada: ver como saíram"});
+        ligarDica(b,function(){return resumoEntrada(g,gd,side,i,pls)});
+        td.appendChild(b)}})});
     lp.appendChild(tb);
-    lp.appendChild(h("p",{class:"note",text:"R corridas, H rebatidas válidas, E erros. Em destaque, as entradas em que saíram corridas. “x” quando o time da casa não precisou rebater na última entrada."}));
+    lp.appendChild(h("p",{class:"note",text:"R corridas, H rebatidas válidas, E erros. Em destaque, as entradas em que saíram corridas: passe o mouse (ou toque) para ver como cada corrida saiu. “x” quando o time da casa não precisou rebater na última entrada."}));
     return lp}
+  var EVENTO={"Single":"Simples","Double":"Duplo","Triple":"Triplo","Home Run":"Home run","Walk":"Walk","Intent Walk":"Walk intencional","Hit By Pitch":"Rebatedor atingido",
+    "Sac Fly":"Sac fly","Sac Bunt":"Sac bunt","Field Error":"Erro","Fielders Choice":"Escolha do defensor","Fielders Choice Out":"Escolha do defensor","Groundout":"Roller",
+    "Flyout":"Bola alta","Lineout":"Linha","Pop Out":"Pop out","Forceout":"Out forçado","Grounded Into DP":"Queimada dupla","Double Play":"Queimada dupla",
+    "Wild Pitch":"Wild pitch","Passed Ball":"Passed ball","Balk":"Balk","Stolen Base Home":"Roubo do home","Strikeout":"Strikeout","Catcher Interference":"Interferência do catcher"};
+  /* Quadro com as jogadas que valeram corrida numa meia-entrada: tipo, descrição, placar depois e contagem */
+  function resumoEntrada(g,gd,side,inn,pls){
+    var t=gd.teams[side];
+    var box=h("div",{class:"sctip-in"},h("div",{class:"sch"},logoImg(g[side].id,"sm"),h("b",{text:inn+"ª entrada, parte "+(side==="away"?"de cima":"de baixo")+" · "+(t.teamName||t.name)})));
+    function bolas(n,tot,cls){var s=h("span",{class:"cnt "+cls});for(var i=0;i<tot;i++)s.appendChild(h("i",{class:i<n?"on":null}));return s}
+    pls.forEach(function(pl){var r=pl.result||{},c=pl.count||{};
+      box.appendChild(h("div",{class:"scp"},
+        h("div",{class:"sct"},h("b",{text:EVENTO[r.event]||r.event||"Jogada"}),
+          h("span",{class:"scs"},h("span",{class:side==="away"?"lead":null,text:String(r.awayScore)})," – ",h("span",{class:side==="home"?"lead":null,text:String(r.homeScore)}))),
+        h("p",{text:r.description||""}),
+        h("div",{class:"scc"},"B",bolas(c.balls||0,4,"b"),"S",bolas(c.strikes||0,3,"s"),"O",bolas(c.outs||0,3,"o"))))});
+    return box}
+  /* Dica flutuante: abre ao passar o mouse ou focar, e com toque no celular */
+  var dicaEl=null,dicaDe=null;
+  function fecharDica(){if(dicaEl){dicaEl.remove();dicaEl=null;dicaDe=null}}
+  function ligarDica(alvo,montar){
+    function abrir(){if(dicaDe===alvo)return;fecharDica();dicaDe=alvo;
+      dicaEl=h("div",{class:"sctip",role:"tooltip"},montar());document.body.appendChild(dicaEl);
+      var r=alvo.getBoundingClientRect(),w=dicaEl.offsetWidth,hh=dicaEl.offsetHeight,vw=document.documentElement.clientWidth;
+      var x=Math.max(8,Math.min(vw-w-8,r.left+r.width/2-w/2)),y=r.bottom+8;
+      if(y+hh>innerHeight-8&&r.top-hh-8>8)y=r.top-hh-8;
+      dicaEl.style.left=x+"px";dicaEl.style.top=y+"px"}
+    alvo.addEventListener("mouseenter",abrir);alvo.addEventListener("focus",abrir);
+    alvo.addEventListener("mouseleave",fecharDica);alvo.addEventListener("blur",fecharDica);
+    alvo.addEventListener("click",function(e){e.stopPropagation();abrir()})}
+  document.addEventListener("click",fecharDica);
+  document.addEventListener("keydown",function(e){if(e.key==="Escape")fecharDica()});
+  addEventListener("scroll",fecharDica,{passive:true});addEventListener("hashchange",fecharDica);
   /* Box score: rebatedores e arremessadores dos dois times, com foto e redes sociais */
   function mlbBoxPanel(g,feed){
     var ld=feed.liveData,bp=panel("Box score");

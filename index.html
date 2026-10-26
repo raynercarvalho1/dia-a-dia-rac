@@ -828,6 +828,11 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
     p.appendChild(h("div",{class:"xht"},h("h2",{text:compact?c.n+" no X":c.n}),
       h("p",{class:"sub",text:c.h.length+(c.h.length===1?" perfil":" perfis")+" · "+c.h.map(function(x){return "@"+x}).join(", ")})));
     var acts=h("div",{class:"xacts"});
+    /* sem perfis cadastrados a busca do X viria com posts de qualquer pessoa: leva para o cadastro */
+    if(!c.h.length){
+      p.querySelector(".sub").textContent="Nenhum perfil cadastrado neste navegador ainda.";
+      if(compact)acts.appendChild(h("a",{class:"pri",href:"#x/"+c.k,text:"Cadastrar os perfis"}));
+      p.appendChild(acts);return p}
     acts.appendChild(x36link(c.h,"Posts das últimas 36h","pri"));
     if(XLISTS[c.k])acts.appendChild(ext(XLISTS[c.k],"Abrir a lista no X",""));
     else if(!compact)acts.appendChild(ext("https://x.com/i/lists/create","Criar a lista no X",""));

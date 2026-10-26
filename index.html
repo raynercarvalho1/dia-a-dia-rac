@@ -742,7 +742,7 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
     document.documentElement.setAttribute("data-sec",top);
     setSide(false);
     window.scrollTo(0,0);
-    if(top==="x"){var cat=XCATS.some(function(c){return c.k===parts[1]})?parts[1]:"";sideMark(cat?"x/"+cat:"x","x");renderX(cat);return}
+    if(top==="x"){var cat=xCats().some(function(c){return c.k===parts[1]})?parts[1]:"";sideMark(cat?"x/"+cat:"x","x");renderX(cat);return}
     if(top==="mercado"){sideMark("mercado","mercado");if(window.RACmercado)window.RACmercado.render(parts[1]||"");return}
     if(top!=="esportes"){sideMark(top,top);return}
     var sp=sports.indexOf(parts[1])<0?"beisebol":parts[1];
@@ -794,7 +794,8 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
      Ler posts pela API do X é pago, então o site leva direto ao X: a busca "Mais recentes" com since_time
      mostra só as últimas 36h, do mais novo para o mais antigo, já logado na conta do Rayner. */
   var XCATS=[
-    {k:"amigos",n:"Amigos",c:"#E2700F",h:[]},
+    /* Amigos: só aparece depois da senha da área restrita, e os perfis ficam só no navegador do dono (nunca no código) */
+    {k:"amigos",n:"Amigos",c:"#E2700F",h:[],priv:true},
     {k:"jornalistas",n:"Jornalistas",c:"#1D6FE0",h:["SamPancher","reporterenato","GugaNoblat","demori","reinaldoazevedo","demetriovec","RenanPeixoto_"]},
     {k:"dodgers",n:"Dodgers",c:"#005A9C",h:["dodgernate","LADodgersMuse","SleeperDodgers","ShotimeLAD","DoyersDave","ChadMoriyama","DodgersNation","Dodgers"]},
     {k:"oficiais",n:"Oficiais",c:"#0E7C86",h:["TSEjusbr"]},
@@ -802,6 +803,11 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
     {k:"politicos",n:"Políticos",c:"#7A3FE0",h:["AndreJanonesMG","jonesmanoel_PE","ErikakHilton"]}];
   /* Links das Listas do X por categoria. Quando criar uma lista no X, cole o link aqui, ex.: amigos:"https://x.com/i/lists/123" */
   var XLISTS={};
+  var AMIGOSLS="rac-x-amigos";
+  function lerAmigos(){try{return JSON.parse(localStorage.getItem(AMIGOSLS)||"[]")}catch(e){return []}}
+  /* Categorias que quem está vendo pode ver */
+  function xCats(){var own=isOwner();
+    return XCATS.filter(function(c){if(c.priv){c.h=own?lerAmigos():[];return own}return true})}
   function x36(handles){
     var since=Math.floor(Date.now()/1000)-36*3600;
     return "https://x.com/search?q="+encodeURIComponent("("+handles.map(function(x){return "from:"+x}).join(" OR ")+") since_time:"+since)+"&src=typed_query&f=live"}
@@ -837,27 +843,41 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
         h("li",null,h("b",{text:"Curtir, responder e repostar: "}),"cada post aberto no X já tem esses botões, e a ação sai da sua conta. Contas privadas aparecem se você as segue."),
         h("li",null,h("b",{text:"Listas do X: "}),"crie uma lista para cada categoria no X e me mande o link. Aí o botão “Abrir a lista no X” aparece aqui.")));
       root.appendChild(how);
-      XCATS.forEach(function(c){root.appendChild(xCatHead(c,true))});
+      xCats().forEach(function(c){root.appendChild(xCatHead(c,true))});
       return}
-    var c=XCATS.filter(function(x){return x.k===cat})[0];
+    var c=xCats().filter(function(x){return x.k===cat})[0];
     root.appendChild(xCatHead(c,false));
+    if(c.priv)root.appendChild(editarAmigos(c));
     root.appendChild(h("div",{class:"xgrid"},c.h.map(function(x){
       return h("div",{class:"panel xp"},avatar(x,"av big"),h("b",{text:"@"+x}),
         h("div",{class:"xacts"},x36link([x],"Últimas 36h","pri"),ext("https://x.com/"+x,"Perfil",""),ext("https://x.com/intent/post?text="+encodeURIComponent("@"+x+" "),"Mencionar","")))})));
-    if(!XLISTS[c.k])root.appendChild(h("p",{class:"foot",text:"Ainda não há lista no X para "+c.n+". Crie a lista no X com estes perfis e me mande o link para eu colocar o botão aqui."}))}
-  (function(){
+    if(!XLISTS[c.k]&&!c.priv)root.appendChild(h("p",{class:"foot",text:"Ainda não há lista no X para "+c.n+". Crie a lista no X com estes perfis e me mande o link para eu colocar o botão aqui."}))}
+  /* Editor dos perfis de Amigos: ficam guardados só neste navegador */
+  function editarAmigos(c){
+    var p=panel("Só você vê esta categoria","Os perfis ficam guardados só neste navegador, nunca no site. Em outro aparelho, entre com a senha e cadastre de novo.");
+    var inp=h("input",{type:"text",value:c.h.map(function(x){return "@"+x}).join(", "),placeholder:"@perfil1, @perfil2",autocomplete:"off","aria-label":"Perfis dos amigos"});
+    var b=h("button",{type:"button",text:"Salvar perfis"});
+    b.onclick=function(){
+      var l=inp.value.split(/[\s,;]+/).map(function(x){return x.replace(/^@/,"").replace(/^https?:\/\/(www\.)?(x|twitter)\.com\//i,"").replace(/[^A-Za-z0-9_]/g,"")}).filter(Boolean);
+      try{localStorage.setItem(AMIGOSLS,JSON.stringify(l))}catch(e){}
+      montarSideX();renderX("amigos")};
+    p.appendChild(h("div",{class:"vfil"},inp,b));
+    return p}
+  /* Categorias do X na barra lateral; refeito quando a senha é digitada ou o acesso é travado */
+  function montarSideX(){
     var g=$("#grp-x"),total=0;
-    XCATS.forEach(function(c){total+=c.h.length;
+    g.querySelectorAll('a.it[data-k^="x/"]').forEach(function(a){a.remove()});
+    xCats().forEach(function(c){total+=c.h.length;
       g.appendChild(h("a",{class:"it",href:"#x/"+c.k,"data-k":"x/"+c.k},catIco(c),h("span",{class:"t",text:c.n}),h("span",{class:"cnt",text:String(c.h.length)})))});
-    $("#cnt-x").textContent=total;
-    $("#cnt-vagas").textContent="";
-    $("#cnt-breve").textContent=document.querySelectorAll("#em-breve .panel").length})();
+    $("#cnt-x").textContent=total}
+  $("#cnt-vagas").textContent="";
+  $("#cnt-breve").textContent=document.querySelectorAll("#em-breve .panel").length;
 
   /* Busca na barra lateral: seções, times, categorias e perfis do X */
   function norm(t){return t.normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase()}
   var DEST=[];
   document.querySelectorAll(".side a.it[data-k]").forEach(function(a){DEST.push({t:a.querySelector(".t").textContent,href:a.getAttribute("href"),ico:a.querySelector(".ico"),el:a})});
-  XCATS.forEach(function(c){c.h.forEach(function(x){DEST.push({t:"@"+x+" · "+c.n,href:"https://x.com/"+x,ext:true,av:x})})});
+  XCATS.forEach(function(c){if(!c.priv)c.h.forEach(function(x){DEST.push({t:"@"+x+" · "+c.n,href:"https://x.com/"+x,ext:true,av:x})})});
   var teamsAdded=false;
   $("#busca").addEventListener("focus",function(){
     if(teamsAdded)return;teamsAdded=true;
@@ -1796,6 +1816,7 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
       return Array.prototype.map.call(new Uint8Array(bits),function(x){return x.toString(16).padStart(2,"0")}).join("")})}
   function applyOwner(){
     var own=isOwner();
+    montarSideX();
     $("#bd-gate").hidden=own;$("#bd-area").hidden=!own;
     if(!own)$("#bdalert").hidden=true}
   var tries=0;

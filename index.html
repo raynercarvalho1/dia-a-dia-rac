@@ -195,13 +195,17 @@ form.add{display:grid;grid-template-columns:1fr 70px 130px auto;gap:8px;margin:1
 .mkprod:hover{color:var(--accent)}
 .vt{font:600 13px var(--f-ui)}
 .vt.up{color:var(--bad)} .vt.down{color:var(--good)} .vt.flat{color:var(--muted)}
-.lwrap{overflow-x:auto}
+.lwrap{overflow-x:auto;position:relative}
+.ldica{position:absolute;z-index:2;pointer-events:none;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.14);padding:8px 12px;white-space:nowrap;font:600 15px var(--f-ui);line-height:1.35}
+.ldica[hidden]{display:none}
+.ldica b{display:block;font-weight:800;font-size:16px}
+.lhit{fill:transparent;cursor:pointer;outline:none}
 .lchart{width:100%;min-width:420px;height:auto;display:block}
 .lgrid{stroke:var(--line);stroke-width:1}
 .lax{fill:var(--muted);font:500 11px var(--f-ui)}
 .lline{fill:none;stroke:var(--accent);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
 .lpt{fill:var(--accent);stroke:var(--side);stroke-width:2}
-.lpt:hover{r:7}
+.lpt.on{r:7}
 .llab{fill:var(--ink);font:700 12px var(--f-ui)}
 .mknota{border-top:1px solid var(--line);padding:8px 0}
 .mknota:first-of-type{border-top:0}

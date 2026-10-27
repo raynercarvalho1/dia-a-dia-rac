@@ -378,13 +378,40 @@
     svg.appendChild(s("text", { x: L, y: H - 8, class: "lax" }, dataBR(p.compras[0].data)));
     svg.appendChild(s("text", { x: W - R, y: H - 8, "text-anchor": "end", class: "lax" }, dataBR(p.compras[p.compras.length - 1].data)));
     if (pts.length > 1) svg.appendChild(s("polyline", { points: pts.map(function (q) { return X(q.t).toFixed(1) + "," + Y(q.v).toFixed(1); }).join(" "), class: "lline" }));
+    /* balão com o dia e o detalhe da compra: aparece ao passar o mouse e fica fixo ao tocar/clicar */
+    var wrap = h("div", { class: "lwrap" }, svg), dica = h("div", { class: "ldica", hidden: true }), fixo = null;
+    wrap.appendChild(dica);
+    function mostrar(q, c) {
+      dica.innerHTML = "";
+      dica.appendChild(h("b", { text: dataBR(q.x.data) }));
+      dica.appendChild(h("span", { text: money(q.v) + (p.u === "kg" ? "/kg" : "") + " · " + q.x.mercado.replace(/\s*\(.*\)$/, "") }));
+      dica.hidden = false;
+      var rw = wrap.getBoundingClientRect(), rc = c.getBoundingClientRect();
+      var x = rc.left + rc.width / 2 - rw.left + wrap.scrollLeft, y = rc.top - rw.top;
+      dica.style.left = Math.max(4, Math.min(x - dica.offsetWidth / 2, wrap.scrollWidth - dica.offsetWidth - 4)) + "px";
+      dica.style.top = (y - dica.offsetHeight - 10 < 0 ? y + rc.height + 10 : y - dica.offsetHeight - 10) + "px";
+    }
+    function esconder() { if (fixo) mostrar(fixo.q, fixo.c); else dica.hidden = true; }
     pts.forEach(function (q, i) {
       var c = s("circle", { cx: X(q.t), cy: Y(q.v), r: 5, class: "lpt" });
-      c.appendChild(s("title", null, dataBR(q.x.data) + " · " + money(q.v) + (p.u === "kg" ? "/kg" : "") + " · " + q.x.mercado.replace(/\s*\(.*\)$/, "")));
+      /* área de toque maior que a bolinha, para o dedo acertar no celular */
+      var alvo = s("circle", { cx: X(q.t), cy: Y(q.v), r: 16, class: "lhit", tabindex: 0, role: "button", "aria-label": dataBR(q.x.data) + ", " + money(q.v) + ", " + q.x.mercado });
+      alvo.addEventListener("mouseenter", function () { c.classList.add("on"); mostrar(q, c); });
+      alvo.addEventListener("mouseleave", function () { if (!fixo || fixo.c !== c) c.classList.remove("on"); esconder(); });
+      alvo.addEventListener("click", function (e) {
+        e.stopPropagation();
+        if (fixo) fixo.c.classList.remove("on");
+        if (fixo && fixo.c === c) { fixo = null; dica.hidden = true; return; }
+        fixo = { q: q, c: c }; c.classList.add("on"); mostrar(q, c);
+      });
+      alvo.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); alvo.dispatchEvent(new MouseEvent("click")); } });
       svg.appendChild(c);
       if (i === pts.length - 1) svg.appendChild(s("text", { x: Math.min(X(q.t), W - R - 4), y: Y(q.v) - 12, "text-anchor": "end", class: "llab" }, money(q.v)));
+      svg.appendChild(alvo);
     });
-    return h("div", { class: "lwrap" }, svg);
+    /* tocar fora das bolinhas solta o balão */
+    svg.addEventListener("click", function () { if (fixo) { fixo.c.classList.remove("on"); fixo = null; dica.hidden = true; } });
+    return wrap;
   }
 
   /* ---------- Notas ---------- */

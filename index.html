@@ -613,6 +613,11 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
 .gmhead .grow{flex:1;min-width:0}
 .gmhead .grow b,.gmhead .grow .sub{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .gmbox .wl li{padding:6px}
+.gmbox.min .wl{display:none}
+.gmtg{flex:none;width:30px;height:30px;border:1px solid var(--line);border-radius:8px;background:transparent;color:var(--muted);cursor:pointer;display:grid;place-items:center}
+.gmtg::before{content:"";width:7px;height:7px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:translateY(-2px) rotate(45deg);transition:transform .15s}
+.gmbox.min .gmtg::before{transform:rotate(-45deg)}
+.gmtg:hover{color:var(--ink)}
 .gmbox .wl li.gmnl a{font-weight:800}
 .gmbox .wl li.gmnl::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--accent);flex:none}
 .wform label[hidden]{display:none}
@@ -2255,7 +2260,13 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
     var c=contas[i],slot="g"+i,box=h("div",{class:"gmbox"});
     var head=h("div",{class:"gmhead"}),corpo=h("ul",{class:"wl"});
     box.appendChild(head);box.appendChild(corpo);
-    function cabecalho(txt,botao){head.innerHTML="";head.appendChild(h("span",{class:"grow"},h("b",{text:c.n}),h("span",{class:"sub",text:txt})));if(botao)head.appendChild(botao);head.appendChild(ext(c.u,"Abrir","ghostbtn"))}
+    /* encolher: esconde a lista e deixa só o nome e os não lidos (lembra neste aparelho) */
+    var chMin="rac-gm-min-"+slot,min=false;try{min=localStorage.getItem(chMin)==="1"}catch(e){}
+    function aplicarMin(){box.classList.toggle("min",min);tg.setAttribute("aria-expanded",String(!min));tg.title=min?"Mostrar os e-mails":"Encolher"}
+    var tg=h("button",{type:"button",class:"gmtg"});
+    tg.onclick=function(){min=!min;try{localStorage.setItem(chMin,min?"1":"0")}catch(e){}aplicarMin()};
+    aplicarMin();
+    function cabecalho(txt,botao){head.innerHTML="";head.appendChild(tg);head.appendChild(h("span",{class:"grow"},h("b",{text:c.n}),h("span",{class:"sub",text:txt})));if(botao)head.appendChild(botao);head.appendChild(ext(c.u,"Abrir","ghostbtn"))}
     function botao(rot){var b=h("button",{type:"button",class:"ghostbtn pri",text:rot});
       b.onclick=function(){b.disabled=true;gmConectar(slot,c.e).then(function(tk){return carregar(tk)}).catch(function(e){b.disabled=false;cabecalho("Não conectou ("+e.message+")",b)})};return b}
     function carregar(tk){

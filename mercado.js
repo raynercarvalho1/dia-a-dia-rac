@@ -639,11 +639,37 @@
     '"itens":[{"descricao":"como está no cupom","qtd":1,"un":"un ou kg","valor_unitario":0.00,"valor_total":0.00,"desconto":0.00}]}\n' +
     "Regras: um objeto por item, na ordem do cupom. valor_total é o total da linha antes de desconto. Linha \"Desconto Item\" vai no campo desconto do item dela. " +
     "desconto_nota é só desconto geral da nota (0 se não houver). Use ponto como separador decimal. Não inclua CPF nem dados do consumidor. Se não conseguir ler um número, use null.";
+  /* JSON que o app devolve nem sempre é perfeito: aspas curvas, vírgula decimal (22,68), vírgula sobrando no fim.
+     Se mesmo assim não abrir, pega item por item ({...} com "descricao"). */
+  function jsonTolerante(t) {
+    t = t.replace(/[\u201C\u201D\u201E\u2033]/g, '"').replace(/[\u2018\u2019]/g, "'").replace(/\u00A0/g, " ");
+    function tentar(x) {
+      try { return JSON.parse(x); } catch (e) { }
+      x = x.replace(/,\s*([}\]])/g, "$1").replace(/:\s*(-?\d+),(\d+)(?=\s*[,}\]])/g, ":$1.$2").replace(/:\s*(?:NaN|undefined)\b/g, ":null");
+      try { return JSON.parse(x); } catch (e) { return null; }
+    }
+    var a = t.indexOf("{"), b = t.lastIndexOf("}");
+    if (a < 0) return null;
+    var j = b > a ? tentar(t.slice(a, b + 1)) : null;
+    if (j) return j;
+    /* resposta cortada ou com defeito: salva os itens que estiverem inteiros */
+    var itens = (t.match(/\{[^{}]*"descri[^{}]*\}/g) || []).map(tentar).filter(Boolean);
+    if (!itens.length) return { cortado: true };
+    j = { itens: itens, cortado: true };
+    ["mercado", "cnpj", "data", "numero", "serie", "chave", "pagamento"].forEach(function (k) { var m = new RegExp('"' + k + '"\\s*:\\s*"([^"]*)"').exec(t); if (m) j[k] = m[1]; });
+    ["total_pago", "desconto_nota"].forEach(function (k) { var m = new RegExp('"' + k + '"\\s*:\\s*(-?\\d+(?:[.,]\\d+)?)').exec(t); if (m) j[k] = num(m[1]); });
+    return j;
+  }
   function lerResposta(txt) {
-    var t = String(txt || ""), a = t.indexOf("{"), b = t.lastIndexOf("}");
-    if (a < 0 || b < a) return null;
-    var j; try { j = JSON.parse(t.slice(a, b + 1)); } catch (e) { return null; }
-    if (!j || !Array.isArray(j.itens)) return null;
+    var j = jsonTolerante(String(txt || ""));
+    if (!j) return null;
+    /* nomes de campo que o app às vezes troca */
+    var lista = j.itens || j.items || j.produtos;
+    if (!Array.isArray(lista)) return j.cortado ? { cortado: true, itens: [] } : null;
+    j.itens = lista.map(function (x) {
+      return { descricao: x.descricao || x["descrição"] || x.nome || x.item || x.produto, qtd: x.qtd != null ? x.qtd : x.quantidade, un: x.un || x.unidade,
+        valor_unitario: x.valor_unitario != null ? x.valor_unitario : x.preco_unitario, valor_total: x.valor_total != null ? x.valor_total : x.total, desconto: x.desconto };
+    });
     function n2(v) { return v == null ? 0 : typeof v === "number" ? v : num(v); }
     var nota = { fonte: "foto", mercado: String(j.mercado || ""), cnpj: String(j.cnpj || "").replace(/\D/g, ""), numero: String(j.numero || "").replace(/^0+/, ""), serie: String(j.serie || ""),
       chave: String(j.chave || "").replace(/\D/g, ""), pagamento: String(j.pagamento || ""), data: /^\d{4}-\d{2}-\d{2}$/.test(j.data) ? j.data : (isoData(j.data) || "") };
@@ -658,6 +684,7 @@
     });
     nota.desconto = Math.round((Math.abs(n2(j.desconto_nota)) + sum(nota.itens, function (x) { return x.descItem; })) * 100) / 100;
     nota.pago = n2(j.total_pago) || Math.round((sum(nota.itens, function (x) { return x.vt; }) - nota.desconto) * 100) / 100;
+    nota.cortado = !!j.cortado;
     return nota;
   }
 
@@ -787,10 +814,15 @@
     ia.appendChild(h("div", { class: "vfil" }, colar)); ia.appendChild(resp); ia.appendChild(rmsg);
     function tentarResp() {
       if (!resp.value.trim()) { rmsg.textContent = ""; return; }
-      var nota = lerResposta(resp.value);
+      var nota = lerResposta(resp.value), cortado = nota && nota.cortado;
       if (!nota || !nota.itens.length) nota = lerTextoLivre(resp.value);
-      if (!nota || !nota.itens.length) { rmsg.textContent = "Não achei os itens nesse texto. Copie a resposta inteira (ícone de copiar logo abaixo dela) e tente de novo."; return; }
-      rmsg.textContent = "✓ Resposta lida: " + nota.itens.length + " itens. Confira abaixo e salve." +
+      if (!nota || !nota.itens.length) {
+        rmsg.textContent = cortado ? "O código veio cortado, sem os itens. No app, toque no ícone de copiar logo abaixo da resposta (não selecione o texto à mão) e cole de novo."
+          : "Não achei os itens nesse texto. Copie a resposta inteira (ícone de copiar logo abaixo dela) e tente de novo.";
+        return;
+      }
+      rmsg.textContent = "✓ Resposta lida: " + nota.itens.length + " itens. Confira abaixo e toque em Salvar nota no fim da lista." +
+        (cortado ? " Atenção: o código veio cortado no fim, confira se faltou algum item." : "") +
         (nota.semQtd ? " A resposta não trouxe quantidade nem preço por kg, então os itens entram como 1 unidade. Para o preço por kg sair certo, use o pedido do botão (ele já vai copiado)." : "");
       conferir(nota);
       passo2.scrollIntoView({ behavior: "smooth", block: "start" });

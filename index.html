@@ -1968,7 +1968,11 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
   function migrarDoNavegador(){
     if(SEM_TABELA)return;
     try{var velha=JSON.parse(localStorage.getItem(AMIGOSLS)||"[]");if(vazio(PESSOAL["x-amigos"])&&velha.length)pessoalGravar("x-amigos",velha)}catch(e){}
-    var ant=lsRead();if(!PESSOAL.aniversarios&&ant.length)pessoalGravar("aniversarios",ant);
+    /* junta a lista antiga deste navegador (ex.: o CSV do Facebook) com a da conta, sem repetir ninguém */
+    var ant=lsRead();if(!ant.length)return;
+    var conta=PESSOAL.aniversarios||[],tem={};conta.forEach(function(x){tem[bkey(x)]=1});
+    var novos=ant.filter(function(x){return !tem[bkey(x)]});
+    if(novos.length)pessoalGravar("aniversarios",conta.concat(novos));
   }
   function mostrarGate(texto){
     document.documentElement.classList.remove("logado");

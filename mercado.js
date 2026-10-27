@@ -154,7 +154,7 @@
     var seg = h("div", { class: "seg mkmeses", role: "group", "aria-label": "Mês" });
     meses.slice(-12).forEach(function (k) {
       var b = h("button", { type: "button", "aria-pressed": k === st.mes ? "true" : "false", text: mesCurto(k) });
-      b.onclick = function () { st.mes = k; drawApp("painel"); };
+      b.onclick = function () { st.mes = k; st.kpiNota = null; drawApp("painel"); };
       seg.appendChild(b);
     });
     body.appendChild(seg);
@@ -165,13 +165,17 @@
       .sort(function (a, b) { return b.t - a.t; });
 
     var delta = totAnt ? (total - totAnt) / totAnt : null;
-    var kCompras = kpi("Compras no mês", String(notas), notas ? "média de " + money(total / notas) + " por compra" : "");
+    /* os quadros do topo abrem o detalhe: os três do mês mostram as compras do mês; o total mostra mês a mês */
+    function abrir(qual) { return function () { st.kpi = st.kpi === qual ? null : qual; st.kpiNota = null; drawApp("painel"); }; }
+    var kCompras = kpi("Compras no mês", String(notas), notas ? "média de " + money(total / notas) + " por compra" : "", "", abrir("mes"), st.kpi === "mes");
     kCompras.appendChild(h("div", { class: "kmerc" }, porMercado.map(function (x) { return h("span", { text: semCidade(x.m).split(" ")[0] + " " + x.n }); })));
     body.appendChild(h("div", { class: "kpis" },
-      kpi("Gasto em " + mesNome(st.mes), money(total), delta === null ? "primeiro mês registrado" : (delta >= 0 ? "▲ " : "▼ ") + PCT.format(Math.abs(delta)) + " vs " + MESES[+meses[i - 1].slice(5) - 1], delta === null ? "" : delta > 0 ? "up" : "down"),
+      kpi("Gasto em " + mesNome(st.mes), money(total), delta === null ? "primeiro mês registrado" : (delta >= 0 ? "▲ " : "▼ ") + PCT.format(Math.abs(delta)) + " vs " + MESES[+meses[i - 1].slice(5) - 1], delta === null ? "" : delta > 0 ? "up" : "down", abrir("mes"), st.kpi === "mes"),
       kCompras,
-      kpi("Itens comprados", String(doMes.length), desc ? money(desc) + " em descontos" : "sem descontos registrados"),
-      kpi("Total desde " + mesNome(meses[0]).split(" ")[0], money(sum(rows, function (x) { return x.valor_total; })), meses.length + (meses.length === 1 ? " mês" : " meses"))));
+      kpi("Itens comprados", String(doMes.length), desc ? money(desc) + " em descontos" : "sem descontos registrados", "", abrir("mes"), st.kpi === "mes"),
+      kpi("Total desde " + mesNome(meses[0]).split(" ")[0], money(sum(rows, function (x) { return x.valor_total; })), meses.length + (meses.length === 1 ? " mês" : " meses"), "", abrir("total"), st.kpi === "total")));
+    if (st.kpi === "mes") body.appendChild(comprasDoMes(notasMes, total));
+    if (st.kpi === "total") body.appendChild(totalPorMes(meses));
 
     body.appendChild(ultimaCompra());
 
@@ -253,8 +257,58 @@
     }
     return p;
   }
-  function kpi(label, value, note, cls) {
-    return h("div", { class: "panel kpi" }, h("span", { class: "kl", text: label }), h("b", { class: "kv", text: value }), note ? h("span", { class: "kn " + (cls || ""), text: note }) : null);
+  function kpi(label, value, note, cls, onclick, ativo) {
+    var k = h(onclick ? "button" : "div", { class: "panel kpi" + (onclick ? " kbtn" : ""), type: onclick ? "button" : null, "aria-pressed": onclick ? String(!!ativo) : null },
+      h("span", { class: "kl", text: label }), h("b", { class: "kv", text: value }), note ? h("span", { class: "kn " + (cls || ""), text: note }) : null);
+    if (onclick) k.onclick = onclick;
+    return k;
+  }
+  /* Detalhe dos quadros do mês: cada compra num bloco (data, mercado, itens, desconto, total); clicar no bloco mostra os itens */
+  function comprasDoMes(notasMes, total) {
+    var mesTxt = MESES[+st.mes.slice(5) - 1];
+    var compras = Object.values(notasMes).sort(function (a, b) { return b[0].data.localeCompare(a[0].data) || (b[0].id < a[0].id ? -1 : 1); });
+    var fechar = h("button", { type: "button", class: "ghostbtn", text: "Fechar" });
+    fechar.onclick = function () { st.kpi = null; st.kpiNota = null; drawApp("painel"); };
+    var p = h("div", { class: "panel mkdet" });
+    p.appendChild(h("div", { class: "ulhead" }, h("div", null, h("h2", { text: "Compras de " + mesTxt }), h("p", { class: "sub", text: compras.length + (compras.length === 1 ? " compra" : " compras") + " · " + money(total) + " · clique numa compra para ver os itens" })), fechar));
+    var grade = h("div", { class: "kblocos" }), itens = h("div");
+    var aberta = compras.filter(function (l) { return l[0].nota === st.kpiNota; })[0];
+    compras.forEach(function (l) {
+      var f = l[0], tot = sum(l, function (x) { return x.valor_total; }), dsc = sum(l, function (x) { return x.desconto || 0; });
+      var b = h("button", { type: "button", class: "kbloco", "aria-pressed": String(l === aberta) },
+        h("span", { class: "kbd", text: dataBR(f.data) }),
+        h("b", { class: "kbm", text: semCidade(f.mercado) }),
+        h("b", { class: "kbt", text: money(tot) }),
+        h("span", { class: "sub", text: l.length + (l.length === 1 ? " item" : " itens") + (dsc ? " · " + money(dsc) + " de desconto" : "") + (f.forma_pagamento ? " · " + f.forma_pagamento : "") }));
+      b.onclick = function () { st.kpiNota = st.kpiNota === f.nota ? null : f.nota; drawApp("painel"); };
+      grade.appendChild(b);
+    });
+    p.appendChild(grade);
+    if (aberta) {
+      itens.appendChild(h("h3", { class: "dayh", text: semCidade(aberta[0].mercado) + " · " + dataBR(aberta[0].data) }));
+      itens.appendChild(listaProdutos(agruparProdutos(aberta)));
+      p.appendChild(itens);
+    }
+    return p;
+  }
+  /* Detalhe do total acumulado: um bloco por mês; clicar leva ao painel daquele mês já com as compras abertas */
+  function totalPorMes(meses) {
+    var fechar = h("button", { type: "button", class: "ghostbtn", text: "Fechar" });
+    fechar.onclick = function () { st.kpi = null; drawApp("painel"); };
+    var p = h("div", { class: "panel mkdet" });
+    p.appendChild(h("div", { class: "ulhead" }, h("div", null, h("h2", { text: "Mês a mês desde " + mesNome(meses[0]) }), h("p", { class: "sub", text: "Clique num mês para ver as compras dele" })), fechar));
+    var grade = h("div", { class: "kblocos" });
+    meses.slice().reverse().forEach(function (k) {
+      var l = rows.filter(function (x) { return x.mk === k; }), n = Object.keys(groupBy(l, function (x) { return x.nota; })).length, t = sum(l, function (x) { return x.valor_total; });
+      var b = h("button", { type: "button", class: "kbloco", "aria-pressed": String(k === st.mes) },
+        h("b", { class: "kbm", text: mesNome(k) }),
+        h("b", { class: "kbt", text: money(t) }),
+        h("span", { class: "sub", text: n + (n === 1 ? " compra" : " compras") + " · " + l.length + " itens · média de " + money(n ? t / n : 0) }));
+      b.onclick = function () { st.mes = k; st.kpi = "mes"; st.kpiNota = null; drawApp("painel"); };
+      grade.appendChild(b);
+    });
+    p.appendChild(grade);
+    return p;
   }
   function fmtQtd(q, u) { return u === "kg" ? q.toLocaleString("pt-BR", { maximumFractionDigits: 3 }) + " kg" : Math.round(q * 1000) / 1000 + (u === "l" ? " L" : " un"); }
   /* Barras horizontais de uma série só: rótulo, barra proporcional ao maior valor, valor e % do total.

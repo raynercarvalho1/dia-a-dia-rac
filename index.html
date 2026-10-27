@@ -214,6 +214,17 @@ form.add{display:grid;grid-template-columns:1fr 70px 130px auto;gap:8px;margin:1
 .mknota summary .mkn{flex:1;min-width:0}
 .mknota[open] summary{margin-bottom:8px}
 .mkt{font:700 15px var(--f-ui);font-variant-numeric:tabular-nums}
+.kbtn{font:inherit;color:inherit;text-align:left;border:1px solid transparent;cursor:pointer;transition:border-color .15s,transform .15s}
+.kbtn:hover{border-color:var(--line);transform:translateY(-1px)}
+.kbtn[aria-pressed="true"]{border-color:var(--accent)}
+.kblocos{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,190px),1fr));gap:10px;margin:8px 0 4px}
+.kbloco{display:flex;flex-direction:column;gap:2px;text-align:left;font:inherit;color:inherit;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px 12px;cursor:pointer;min-width:0}
+.kbloco:hover{border-color:var(--muted)}
+.kbloco[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.kbloco .kbd{font:600 12px var(--f-ui);color:var(--muted)}
+.kbloco .kbm{font:700 14px var(--f-ui);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kbloco .kbt{font:700 20px var(--f-ui);font-variant-numeric:tabular-nums}
+.kbloco .sub{font-size:12px}
 .kmerc{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
 .kmerc span{font:600 11.5px var(--f-ui);padding:2px 8px;border-radius:99px;background:var(--hover);color:var(--muted)}
 .ulhead{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:6px 16px;margin-bottom:6px}

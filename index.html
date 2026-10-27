@@ -723,6 +723,10 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
 .tblprec .tbl th{white-space:normal;vertical-align:bottom;line-height:1.25;letter-spacing:.03em}
 .tblprec .tbl th,.tblprec .tbl td{padding-right:6px}
 .tblprec .tbl th.num,.tblprec .tbl td.num{padding-left:6px;font-size:calc(13px + var(--fz) / 2)}
+.bgimg.mosaico{overflow:hidden}
+.bgimg .mos{position:absolute;inset:-12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));grid-auto-rows:250px;gap:10px;transform:rotate(-4deg) scale(1.12)}
+.bgimg .mos img{width:100%;height:100%;object-fit:cover;object-position:center 30%;border-radius:14px;display:block}
+.bgimg .mos img.esp{transform:scaleX(-1)}
 </style>
 </head>
 <body>
@@ -966,7 +970,7 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
     {k:"yosemite",n:"Yosemite",u:"https://upload.wikimedia.org/wikipedia/commons/thumb/1/13/Tunnel_View%2C_Yosemite_Valley%2C_Yosemite_NP_-_Diliff.jpg/1920px-Tunnel_View%2C_Yosemite_Valley%2C_Yosemite_NP_-_Diliff.jpg",by:"Diliff",lic:"CC BY-SA 3.0",src:"https://commons.wikimedia.org/wiki/File:Tunnel_View,_Yosemite_Valley,_Yosemite_NP_-_Diliff.jpg"}];
   function setBg(k){
     var b=BGS.filter(function(x){return x.k===k})[0]||BGS[0];
-    fundoDaPagina=null;$("#bgimg").style.removeProperty("--bgpos");
+    fundoDaPagina=null;var bgi=$("#bgimg");bgi.style.removeProperty("--bgpos");bgi.classList.remove("mosaico");bgi.innerHTML="";
     $("#bgimg").style.setProperty("--bgurl",'url("'+b.u+'")');
     document.querySelectorAll("#bgpick button").forEach(function(x){x.setAttribute("aria-pressed",x.dataset.k===b.k?"true":"false")});
     var cr=$("#credit");cr.innerHTML="";
@@ -983,7 +987,12 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
   var fundoDaPagina=null;
   function fundoPagina(url,nome){
     if(!url){if(fundoDaPagina)setBg(fundoSalvo());return}
-    fundoDaPagina=url;var bg=$("#bgimg");bg.style.setProperty("--bgurl",'url("'+url+'")');bg.style.setProperty("--bgpos","center 30%");
+    if(fundoDaPagina===url)return;
+    /* a foto em vários quadros (mosaico), alternando o lado, em vez de uma foto só esticada */
+    fundoDaPagina=url;var bg=$("#bgimg");bg.style.setProperty("--bgurl","none");bg.classList.add("mosaico");bg.innerHTML="";
+    var n=Math.ceil(Math.max(screen.width,innerWidth,1600)/180)*Math.ceil(Math.max(screen.height,innerHeight,1000)/250),g=h("div",{class:"mos"});
+    for(var i=0;i<n;i++)g.appendChild(h("img",{src:url,alt:"",class:i%2?"esp":null,decoding:"async"}));
+    bg.appendChild(g);
     var cr=$("#credit");cr.innerHTML="";cr.appendChild(document.createTextNode("Foto: "+nome))}
   /* Seletor de tema: Claro (padrão), Escuro ou Auto (segue o sistema) */
   function setTheme(t){

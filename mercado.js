@@ -815,8 +815,26 @@
     ia.appendChild(h("div", { class: "vfil" }, abrirIA("Claude", "https://claude.ai/new"), abrirIA("ChatGPT", "https://chatgpt.com/")));
     ia.appendChild(cmsg); ia.appendChild(pedTxt);
     ia.appendChild(h("div", { class: "vfil" }, colar)); ia.appendChild(resp); ia.appendChild(rmsg);
+    /* antes de tudo, a chave de acesso: se essa nota já está na conta, avisa e para aqui (mesmo com a resposta cortada) */
+    var vez = 0;
     function tentarResp() {
+      var minha = ++vez, ch = /(?:^|\D)(35\d{42})(?!\d)/.exec(resp.value.replace(/(\d)\s+(?=\d)/g, "$1"));
       if (!resp.value.trim()) { rmsg.textContent = ""; return; }
+      if (!ch) { lerEConferir(); return; }
+      rmsg.textContent = "Conferindo se a nota já foi lançada…";
+      sb.from("notas").select("data,total").eq("chave_nfce", ch[1]).then(ok).then(function (l) {
+        if (minha !== vez) return;
+        if (l.length) {
+          passo2.hidden = true; passo2.innerHTML = "";
+          rmsg.innerHTML = "";
+          rmsg.appendChild(h("span", { class: "qrwarn", text: "Essa nota já foi lançada" + (l[0].data ? " (compra de " + dataBR(l[0].data) + (l[0].total != null ? ", " + money(+l[0].total) : "") + ")" : "") + ". Não precisa adicionar de novo. " }));
+          rmsg.appendChild(h("a", { class: "link", href: "#mercado/notas", text: "Ver em Notas" }));
+          return;
+        }
+        lerEConferir();
+      }, function () { if (minha === vez) lerEConferir(); });
+    }
+    function lerEConferir() {
       var nota = lerResposta(resp.value), cortado = nota && nota.cortado;
       if (!nota || !nota.itens.length) nota = lerTextoLivre(resp.value);
       if (!nota || !nota.itens.length) {

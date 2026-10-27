@@ -2211,9 +2211,9 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
       wx.textContent=Math.round(d.current.temperature_2m)+"° agora em Sorocaba · "+WXTXT[wxKind(d.current.weather_code)]+" · máx. "+Math.round(d.daily.temperature_2m_max[0])+"°, mín. "+Math.round(d.daily.temperature_2m_min[0])+"°"}).catch(function(){})}
 
   /* E-mail: atalhos para as quatro caixas; ler as mensagens aqui dentro é o próximo passo */
-  var EMAILS_PADRAO=[{n:"Gmail 1",u:"https://mail.google.com/mail/u/0/#inbox"},{n:"Gmail 2",u:"https://mail.google.com/mail/u/1/#inbox"},{n:"Outlook",u:"https://outlook.live.com/mail/0/"},{n:"iCloud",u:"https://www.icloud.com/mail/"}];
+  var EMAILS_PADRAO=[{n:"Rayner Carvalho",u:"https://mail.google.com/mail/u/0/#inbox"},{n:"Raynim Carvalho",u:"https://mail.google.com/mail/u/1/#inbox"},{n:"Outlook",u:"https://outlook.live.com/mail/0/"},{n:"iCloud",u:"https://www.icloud.com/mail/"}];
   function wEmail(){
-    var p=wCard("E-mail","mail","#D93F2F"),contas=PESSOAL.emails||EMAILS_PADRAO;
+    var p=wCard("E-mail","mail","#D93F2F"),contas=(PESSOAL.emails||EMAILS_PADRAO).map(function(c){var n={"Gmail 1":"Rayner Carvalho","Gmail 2":"Raynim Carvalho"}[c.n];return n?Object.assign({},c,{n:n}):c});
     var ul=h("div");
     contas.forEach(function(c,i){
       if(/mail\.google\.com/.test(c.u)){ul.appendChild(gmailBloco(contas,i));return}

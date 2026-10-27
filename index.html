@@ -2665,23 +2665,15 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
     p.appendChild(h("p",{class:"note",text:"Resumo montado a partir dos laudos e receitas. Quem interpreta é o veterinário."}));
     return p}
 
-  /* Peso ao longo do tempo (linha simples, mesmo estilo do gráfico de preços do Mercado) */
+  /* Peso ao longo do tempo: o mesmo gráfico dos preços do Mercado (balão com o dia ao passar o mouse ou tocar) */
   function famPeso(regs){
     var pts=regs.filter(function(r){return r.tipo==="peso"&&pesoNum(r)!=null}).sort(function(a,b){return a.data.localeCompare(b.data)});
-    if(pts.length<2)return null;
-    var W=640,H=200,L=46,R=18,T=22,B=28,NS="http://www.w3.org/2000/svg";
-    function t(r){return new Date(r.data+"T12:00:00").getTime()}
-    var t0=t(pts[0]),t1=t(pts[pts.length-1]),vs=pts.map(pesoNum),lo=Math.min.apply(null,vs)-0.5,hi=Math.max.apply(null,vs)+0.5;
-    function X(r){return L+(t(r)-t0)/((t1-t0)||1)*(W-L-R)}function Y(v){return T+(1-(v-lo)/(hi-lo))*(H-T-B)}
-    function s(tag,a,txt){var e=document.createElementNS(NS,tag);Object.keys(a).forEach(function(k){e.setAttribute(k,a[k])});if(txt)e.textContent=txt;return e}
-    var g=s("svg",{viewBox:"0 0 "+W+" "+H,class:"lchart",role:"img","aria-label":"Peso ao longo do tempo"});
-    [lo+0.5,(lo+hi)/2,hi-0.5].forEach(function(v){g.appendChild(s("line",{x1:L,x2:W-R,y1:Y(v),y2:Y(v),class:"lgrid"}));g.appendChild(s("text",{x:L-6,y:Y(v)+4,"text-anchor":"end",class:"lax"},fmtN(Math.round(v*10)/10)+" kg"))});
-    g.appendChild(s("polyline",{points:pts.map(function(r){return X(r).toFixed(1)+","+Y(pesoNum(r)).toFixed(1)}).join(" "),class:"lline"}));
-    pts.forEach(function(r,i){var c=s("circle",{cx:X(r),cy:Y(pesoNum(r)),r:4.5,class:"lpt"});c.appendChild(s("title",{},dataBR(r.data)+" · "+fmtN(pesoNum(r))+" kg"));g.appendChild(c);
-      g.appendChild(s("text",{x:X(r),y:Y(pesoNum(r))-9,"text-anchor":i===0?"start":i===pts.length-1?"end":"middle",class:"llab"},fmtN(pesoNum(r))));
-      if(i===0||i===pts.length-1)g.appendChild(s("text",{x:X(r),y:H-8,"text-anchor":i===0?"start":"end",class:"lax"},dataBR(r.data)))});
+    if(pts.length<2||!window.RACmercado||!RACmercado.grafico)return null;
+    function kg(v){return fmtN(Math.round(v*10)/10)+" kg"}
     var p=panel("Peso",pts.length+" pesagens, de "+dataBR(pts[0].data)+" a "+dataBR(pts[pts.length-1].data));
-    p.appendChild(h("div",{class:"lwrap"},g));return p}
+    p.appendChild(RACmercado.grafico(pts.map(function(r,i){var ant=pts[i-1],d=ant?pesoNum(r)-pesoNum(ant):0;
+      return {data:r.data,v:pesoNum(r),det:fmtN(pesoNum(r))+" kg"+(ant?" ("+(d>0?"+":"")+fmtN(Math.round(d*10)/10)+" kg)":"")+(r.titulo&&r.titulo!=="Pesagem"?" · "+r.titulo.replace(/^Pesagem\s*\(?|\)$/g,""):"")}}),{fmt:kg,aria:"Peso ao longo do tempo"}));
+    return p}
 
   /* Exames de sangue lado a lado: cada linha um indicador, cada coluna uma data */
   function famComparaSangue(regs){

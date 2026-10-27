@@ -475,8 +475,16 @@
   }
   /* Linha do preço unitário no tempo: uma série, eixo de valores em R$, pontos com o valor e o mercado no hover */
   function lineChart(p) {
+    return graficoLinha(p.compras.map(function (x) {
+      return { data: x.data, v: x.valor_unitario, det: money(x.valor_unitario) + (p.u === "kg" ? "/kg" : "") + " · " + x.mercado.replace(/\s*\(.*\)$/, ""), aria: x.mercado };
+    }), { fmt: money, aria: "Preço de " + p.nome + " ao longo do tempo" });
+  }
+  /* Gráfico de linha usado no site todo (preços do Mercado, peso do Eddie e da Olivia):
+     pts = [{ data: "AAAA-MM-DD", v: número, det: texto do balão }], o.fmt formata os valores do eixo e do último ponto.
+     Balão com o dia em negrito ao passar o mouse; tocar/clicar deixa o balão fixo. */
+  function graficoLinha(lista, o) {
     var W = 640, H = 240, L = 58, R = 16, T = 16, B = 30;
-    var pts = p.compras.map(function (x) { return { t: new Date(x.data + "T12:00:00").getTime(), v: x.valor_unitario, x: x }; });
+    var pts = lista.map(function (x) { return { t: new Date(x.data + "T12:00:00").getTime(), v: x.v, x: x }; });
     var t0 = pts[0].t, t1 = pts[pts.length - 1].t; if (t1 === t0) { t0 -= 86400000 * 3; t1 += 86400000 * 3; }
     var vmin = Math.min.apply(null, pts.map(function (q) { return q.v; })), vmax = Math.max.apply(null, pts.map(function (q) { return q.v; }));
     var pad = (vmax - vmin) * 0.15 || vmax * 0.1 || 1; vmin = Math.max(0, vmin - pad); vmax = vmax + pad;
@@ -484,22 +492,22 @@
     function Y(v) { return T + (1 - (v - vmin) / (vmax - vmin)) * (H - T - B); }
     var NS = "http://www.w3.org/2000/svg";
     function s(tag, a, txt) { var e = document.createElementNS(NS, tag); Object.keys(a || {}).forEach(function (k) { e.setAttribute(k, a[k]); }); if (txt) e.textContent = txt; return e; }
-    var svg = s("svg", { viewBox: "0 0 " + W + " " + H, class: "lchart", role: "img", "aria-label": "Preço de " + p.nome + " ao longo do tempo" });
+    var svg = s("svg", { viewBox: "0 0 " + W + " " + H, class: "lchart", role: "img", "aria-label": o.aria || "" });
     for (var g = 0; g <= 3; g++) {
       var v = vmin + (vmax - vmin) * g / 3, y = Y(v);
       svg.appendChild(s("line", { x1: L, x2: W - R, y1: y, y2: y, class: "lgrid" }));
-      svg.appendChild(s("text", { x: L - 8, y: y + 4, "text-anchor": "end", class: "lax" }, money(v)));
+      svg.appendChild(s("text", { x: L - 8, y: y + 4, "text-anchor": "end", class: "lax" }, o.fmt(v)));
     }
-    svg.appendChild(s("text", { x: L, y: H - 8, class: "lax" }, dataBR(p.compras[0].data)));
-    svg.appendChild(s("text", { x: W - R, y: H - 8, "text-anchor": "end", class: "lax" }, dataBR(p.compras[p.compras.length - 1].data)));
+    svg.appendChild(s("text", { x: L, y: H - 8, class: "lax" }, dataBR(lista[0].data)));
+    svg.appendChild(s("text", { x: W - R, y: H - 8, "text-anchor": "end", class: "lax" }, dataBR(lista[lista.length - 1].data)));
     if (pts.length > 1) svg.appendChild(s("polyline", { points: pts.map(function (q) { return X(q.t).toFixed(1) + "," + Y(q.v).toFixed(1); }).join(" "), class: "lline" }));
-    /* balão com o dia e o detalhe da compra: aparece ao passar o mouse e fica fixo ao tocar/clicar */
+    /* balão com o dia e o detalhe: aparece ao passar o mouse e fica fixo ao tocar/clicar */
     var wrap = h("div", { class: "lwrap" }, svg), dica = h("div", { class: "ldica", hidden: true }), fixo = null;
     wrap.appendChild(dica);
     function mostrar(q, c) {
       dica.innerHTML = "";
       dica.appendChild(h("b", { text: dataBR(q.x.data) }));
-      dica.appendChild(h("span", { text: money(q.v) + (p.u === "kg" ? "/kg" : "") + " · " + q.x.mercado.replace(/\s*\(.*\)$/, "") }));
+      dica.appendChild(h("span", { text: q.x.det || o.fmt(q.v) }));
       dica.hidden = false;
       var rw = wrap.getBoundingClientRect(), rc = c.getBoundingClientRect();
       var x = rc.left + rc.width / 2 - rw.left + wrap.scrollLeft, y = rc.top - rw.top;
@@ -510,7 +518,7 @@
     pts.forEach(function (q, i) {
       var c = s("circle", { cx: X(q.t), cy: Y(q.v), r: 5, class: "lpt" });
       /* área de toque maior que a bolinha, para o dedo acertar no celular */
-      var alvo = s("circle", { cx: X(q.t), cy: Y(q.v), r: 16, class: "lhit", tabindex: 0, role: "button", "aria-label": dataBR(q.x.data) + ", " + money(q.v) + ", " + q.x.mercado });
+      var alvo = s("circle", { cx: X(q.t), cy: Y(q.v), r: 16, class: "lhit", tabindex: 0, role: "button", "aria-label": dataBR(q.x.data) + ", " + (q.x.det || o.fmt(q.v)) });
       alvo.addEventListener("mouseenter", function () { c.classList.add("on"); mostrar(q, c); });
       alvo.addEventListener("mouseleave", function () { if (!fixo || fixo.c !== c) c.classList.remove("on"); esconder(); });
       alvo.addEventListener("click", function (e) {
@@ -521,7 +529,7 @@
       });
       alvo.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); alvo.dispatchEvent(new MouseEvent("click")); } });
       svg.appendChild(c);
-      if (i === pts.length - 1) svg.appendChild(s("text", { x: Math.min(X(q.t), W - R - 4), y: Y(q.v) - 12, "text-anchor": "end", class: "llab" }, money(q.v)));
+      if (i === pts.length - 1) svg.appendChild(s("text", { x: Math.min(X(q.t), W - R - 4), y: Y(q.v) - 12, "text-anchor": "end", class: "llab" }, o.fmt(q.v)));
       svg.appendChild(alvo);
     });
     /* tocar fora das bolinhas solta o balão */
@@ -1185,5 +1193,5 @@
     });
   }
   /* O login do Mercado é o login do site todo: a página inteira usa este mesmo cliente */
-  window.RACmercado = { render: render, client: client, resumo: resumo, money: money };
+  window.RACmercado = { render: render, client: client, resumo: resumo, money: money, grafico: graficoLinha };
 })();

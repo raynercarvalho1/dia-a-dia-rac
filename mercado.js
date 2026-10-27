@@ -12,7 +12,7 @@
   var PCT = new Intl.NumberFormat("pt-BR", { style: "percent", maximumFractionDigits: 1 });
 
   var sb = null, user = null, rows = null, loadingRows = null;
-  var st = { mes: null, q: "", prod: null, sort: "alta" };
+  var st = { mes: null, q: "", prod: null, sort: "alta", pmes: "" };
 
   /* ---------- utilidades ---------- */
   function h(tag, attrs) {
@@ -357,8 +357,9 @@
   }
 
   /* ---------- Preços: histórico por produto ---------- */
-  function produtos() {
-    return Object.entries(groupBy(rows, function (x) { return x.produto; })).map(function (e) {
+  /* rs: as compras consideradas (todas, ou só as de um mês) */
+  function produtos(rs) {
+    return Object.entries(groupBy(rs || rows, function (x) { return x.produto; })).map(function (e) {
       var l = e[1].slice().sort(function (a, b) { return a.data.localeCompare(b.data); });
       var ult = l[l.length - 1], pri = l[0], pen = l.length > 1 ? l[l.length - 2] : null;
       var precos = l.map(function (x) { return x.valor_unitario; });
@@ -366,32 +367,38 @@
         varTotal: pri.valor_unitario ? (ult.valor_unitario - pri.valor_unitario) / pri.valor_unitario : 0,
         varUlt: pen && pen.valor_unitario ? (ult.valor_unitario - pen.valor_unitario) / pen.valor_unitario : 0,
         min: Math.min.apply(null, precos), max: Math.max.apply(null, precos),
-        mercados: Object.keys(groupBy(l, function (x) { return x.mercado; })).length };
+        mercados: Object.keys(groupBy(l, function (x) { return x.mercado; })).length,
+        /* quanto já foi gasto nesse produto desde a primeira compra (valor pago, já sem desconto) */
+        gasto: sum(l, function (x) { return x.valor_total; }), qtd: sum(l, function (x) { return x.quantidade; }) };
     });
   }
   function viewPrecos(body) {
-    var all = produtos();
+    /* "all" é sempre o histórico inteiro (gráfico); a lista usa o período escolhido */
+    var all = produtos(), meses = Object.keys(groupBy(rows, function (x) { return x.mk; })).sort().reverse();
+    if (st.pmes && meses.indexOf(st.pmes) < 0) st.pmes = "";
     var top = h("div", { class: "panel" },
       h("h2", { text: "Preços ao longo do tempo" }),
       h("p", { class: "sub", text: "Preço por unidade (ou por kg) em cada compra. Clique num produto para ver o gráfico e onde saiu mais barato." }));
     var tools = h("div", { class: "vfil" });
     var q = h("input", { type: "search", placeholder: "Buscar produto", "aria-label": "Buscar produto", value: st.q, autocomplete: "off" });
     var sort = h("select", { "aria-label": "Ordenar" },
-      [["alta", "Mais subiram"], ["baixa", "Mais baixaram"], ["compras", "Mais comprados"], ["nome", "Nome"]].map(function (o) { return h("option", { value: o[0], selected: st.sort === o[0] ? "" : null, text: o[1] }); }));
-    tools.appendChild(q); tools.appendChild(sort); top.appendChild(tools);
+      [["alta", "Mais subiram"], ["baixa", "Mais baixaram"], ["gasto", "Mais gasto"], ["compras", "Mais comprados"], ["nome", "Nome"]].map(function (o) { return h("option", { value: o[0], selected: st.sort === o[0] ? "" : null, text: o[1] }); }));
+    var per = h("select", { "aria-label": "Período" }, h("option", { value: "", text: "Desde o início" }),
+      meses.map(function (k) { return h("option", { value: k, selected: st.pmes === k ? "" : null, text: mesNome(k).charAt(0).toUpperCase() + mesNome(k).slice(1) }); }));
+    tools.appendChild(q); tools.appendChild(per); tools.appendChild(sort); top.appendChild(tools);
     body.appendChild(top);
     var detail = h("div"); body.appendChild(detail);
     var list = h("div", { class: "panel" }); body.appendChild(list);
     function draw() {
-      var nq = norm(st.q);
-      var l = all.filter(function (p) { return !nq || norm(p.nome + " " + p.cat).indexOf(nq) >= 0; });
-      var ord = { alta: function (a, b) { return b.varTotal - a.varTotal; }, baixa: function (a, b) { return a.varTotal - b.varTotal; }, compras: function (a, b) { return b.compras.length - a.compras.length; }, nome: function (a, b) { return a.nome.localeCompare(b.nome); } }[st.sort];
+      var nq = norm(st.q), base = st.pmes ? produtos(rows.filter(function (x) { return x.mk === st.pmes; })) : all;
+      var l = base.filter(function (p) { return !nq || norm(p.nome + " " + p.cat).indexOf(nq) >= 0; });
+      var ord = { alta: function (a, b) { return b.varTotal - a.varTotal; }, baixa: function (a, b) { return a.varTotal - b.varTotal; }, compras: function (a, b) { return b.compras.length - a.compras.length; }, gasto: function (a, b) { return b.gasto - a.gasto; }, nome: function (a, b) { return a.nome.localeCompare(b.nome); } }[st.sort];
       l.sort(ord);
       list.innerHTML = "";
-      list.appendChild(h("p", { class: "sub", text: l.length + (l.length === 1 ? " produto" : " produtos") }));
-      list.appendChild(tabela(["Produto", "Último preço", "1º preço", "Variação", "Compras"], l.map(function (p) {
+      list.appendChild(h("p", { class: "sub", text: l.length + (l.length === 1 ? " produto" : " produtos") + (!l.length ? "" : " · " + money(sum(l, function (p) { return p.gasto; })) + " gastos" + (nq ? " nesses produtos" : "") + (st.pmes ? " em " + mesNome(st.pmes) : " desde " + dataBR(l.reduce(function (m, p) { return p.pri.data < m ? p.pri.data : m; }, "9999-12-31")))) }));
+      list.appendChild(tabela(["Produto", "Último preço", "1º preço", "Variação", "Compras", st.pmes ? "Gasto no mês" : "Total gasto"], l.map(function (p) {
         var b = h("button", { type: "button", class: "mkprod", text: p.nome }); b.onclick = function () { st.prod = p.nome; st.voltar = false; st.voltarY = null; showProd(); window.scrollTo({ top: 0, behavior: "smooth" }); };
-        return [h("span", null, b, h("span", { class: "sub", text: " · " + p.cat })), money(p.ult.valor_unitario) + (p.u === "kg" ? "/kg" : ""), money(p.pri.valor_unitario), varTag(p.compras.length > 1 ? p.varTotal : null), String(p.compras.length)];
+        return [h("span", null, b, h("span", { class: "sub", text: " · " + p.cat })), money(p.ult.valor_unitario) + (p.u === "kg" ? "/kg" : ""), money(p.pri.valor_unitario), varTag(p.compras.length > 1 ? p.varTotal : null), String(p.compras.length), h("b", { text: money(p.gasto) })];
       }), 1));
     }
     function showProd() {
@@ -399,6 +406,11 @@
       var p = all.filter(function (x) { return x.nome === st.prod; })[0];
       if (!p) return;
       var d = panel(p.nome, p.cat + " · " + p.compras.length + (p.compras.length === 1 ? " compra" : " compras") + " · preço " + (p.u === "kg" ? "por kg" : "por unidade"));
+      d.appendChild(h("div", { class: "kgasto" },
+        h("div", null, h("span", { class: "kl", text: "Total gasto desde " + dataBR(p.pri.data) }), h("b", { class: "kv", text: money(p.gasto) })),
+        h("div", null, h("span", { class: "kl", text: "Quantidade comprada" }), h("b", { class: "kv", text: fmtQtd(p.qtd, p.u) })),
+        h("div", null, h("span", { class: "kl", text: "Média por compra" }), h("b", { class: "kv", text: money(p.gasto / p.compras.length) })),
+        st.pmes ? h("div", null, h("span", { class: "kl", text: "Gasto em " + mesNome(st.pmes) }), h("b", { class: "kv", text: money(sum(p.compras.filter(function (x) { return x.mk === st.pmes; }), function (x) { return x.valor_total; })) })) : null));
       d.appendChild(lineChart(p));
       var porMerc = Object.entries(groupBy(p.compras, function (x) { return x.mercado; })).map(function (e) {
         var l = e[1].slice().sort(function (a, b) { return a.data.localeCompare(b.data); }), u = l[l.length - 1];
@@ -424,6 +436,7 @@
       draw();
     });
     sort.addEventListener("change", function () { st.sort = sort.value; draw(); });
+    per.addEventListener("change", function () { st.pmes = per.value; draw(); showProd(); });
     draw(); showProd();
   }
   function varTag(v) {

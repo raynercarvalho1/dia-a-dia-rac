@@ -128,7 +128,7 @@
     VIEWS.forEach(function (x) { if (x[0] !== "importar") tabs.appendChild(h("a", { href: "#mercado/" + x[0], "aria-current": x[0] === v ? "page" : null, text: x[1] })); });
     var add = h("a", { class: "mkadd", href: "#mercado/importar", "aria-current": v === "importar" ? "page" : null }, h("span", { "aria-hidden": "true", text: "+" }), " Adicionar nota");
     var out = h("button", { type: "button", class: "ghostbtn", text: "Sair" });
-    out.onclick = function () { sb.auth.signOut().then(function () { rows = null; render(v); }); };
+    out.onclick = function () { sb.auth.signOut().then(function () { location.reload(); }); };
     bar.appendChild(add); bar.appendChild(tabs); bar.appendChild(h("div", { class: "mkuser" }, h("span", { class: "sub", text: user.email }), out));
     r.appendChild(bar);
     var body = h("div", { class: "stack" }); r.appendChild(body);
@@ -945,5 +945,15 @@
     return s;
   }
 
-  window.RACmercado = { render: render };
+  /* Resumo para a tela inicial: gasto e compras do mês atual e a última compra */
+  function resumo() {
+    return client().then(function () { return loadRows(); }).then(function (l) {
+      var mk = new Date().toISOString().slice(0, 7), doMes = l.filter(function (x) { return x.mk === mk; });
+      var notas = groupBy(l, function (x) { return x.nota; }), ult = Object.values(notas).sort(function (a, b) { return b[0].data.localeCompare(a[0].data); })[0];
+      return { mes: mesNome(mk), total: sum(doMes, function (x) { return x.valor_total; }), compras: Object.keys(groupBy(doMes, function (x) { return x.nota; })).length,
+        ultima: ult ? { mercado: String(ult[0].mercado).replace(/\s*\(.*\)$/, ""), data: dataBR(ult[0].data), total: sum(ult, function (x) { return x.valor_total; }), itens: ult.length } : null };
+    });
+  }
+  /* O login do Mercado é o login do site todo: a página inteira usa este mesmo cliente */
+  window.RACmercado = { render: render, client: client, resumo: resumo, money: money };
 })();

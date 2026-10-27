@@ -32,7 +32,7 @@
   --good:#1E7A4C; --warn:#A5610B; --bad:#C8102E; --live:#E4002B;
   --on-img:#FFFFFF; --scrim:rgba(2,14,32,.82); --chip-bg:rgba(2,14,32,.66); --img-ground:#0E2240;
   --shadow:0 1px 2px rgba(0,30,70,.08),0 8px 24px rgba(0,30,70,.12);
-  --c-esportes:#005A9C; --c-vagas:#2E8BD8; --c-aniversarios:#D6283B; --c-embreve:#7B8CA3; --c-x:#1F2328; --c-mercado:#0E8A6A;
+  --c-esportes:#005A9C; --c-vagas:#2E8BD8; --c-aniversarios:#D6283B; --c-embreve:#7B8CA3; --c-x:#1F2328; --c-mercado:#0E8A6A; --c-inicio:#5B5BD6; --c-estudos:#B5641B;
   --f-ui:"Outfit","Hanken Grotesk",system-ui,sans-serif;
   --f-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
   --f-body:"Hanken Grotesk",system-ui,sans-serif;
@@ -43,14 +43,14 @@
   --side:#0D1A2C; --hover:#16263D; --glass:rgba(12,24,42,.78); --veil:linear-gradient(180deg,rgba(2,8,18,.45),rgba(2,8,18,.62));
   --accent:#6CB4F0; --accent-ink:#04182E; --brand:#005A9C; --brand-ink:#FFFFFF;
   --good:#55C08A; --warn:#E0A252; --bad:#FF7A85; --live:#FF5A5F;
-  --c-esportes:#6CB4F0; --c-vagas:#8CCBFF; --c-aniversarios:#FF7A85; --c-embreve:#B4C0D0; --c-x:#E7E9EA; --c-mercado:#4FD1A5;
+  --c-esportes:#6CB4F0; --c-vagas:#8CCBFF; --c-aniversarios:#FF7A85; --c-embreve:#B4C0D0; --c-x:#E7E9EA; --c-mercado:#4FD1A5; --c-inicio:#A5A6F6; --c-estudos:#F2A65A;
   --shadow:0 0 0 1px rgba(255,255,255,.06),0 8px 24px rgba(0,0,0,.3); color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#08111D; --surface:rgba(12,24,42,.86); --ink:#E7EEF7; --muted:#9AAAC0; --line:#22324A;
   --side:#0D1A2C; --hover:#16263D; --glass:rgba(12,24,42,.78); --veil:linear-gradient(180deg,rgba(2,8,18,.45),rgba(2,8,18,.62));
   --accent:#6CB4F0; --accent-ink:#04182E; --brand:#005A9C; --brand-ink:#FFFFFF;
   --good:#55C08A; --warn:#E0A252; --bad:#FF7A85; --live:#FF5A5F;
-  --c-esportes:#6CB4F0; --c-vagas:#8CCBFF; --c-aniversarios:#FF7A85; --c-embreve:#B4C0D0; --c-x:#E7E9EA; --c-mercado:#4FD1A5;
+  --c-esportes:#6CB4F0; --c-vagas:#8CCBFF; --c-aniversarios:#FF7A85; --c-embreve:#B4C0D0; --c-x:#E7E9EA; --c-mercado:#4FD1A5; --c-inicio:#A5A6F6; --c-estudos:#F2A65A;
   --shadow:0 0 0 1px rgba(255,255,255,.06),0 8px 24px rgba(0,0,0,.3); color-scheme:dark}
 /* A seção aberta empresta a sua cor para links, títulos e botões */
 :root[data-sec="vagas"]{--accent:var(--c-vagas)}
@@ -552,15 +552,78 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
 .ico b{font:700 12px var(--f-ui)}
 .cat{margin:12px 0 2px;font:700 13px var(--f-display);text-transform:uppercase;letter-spacing:.06em;color:var(--accent)}
 @media (prefers-reduced-motion: reduce){img.cover{transition:none}a.card:hover img.cover,a.hero:hover img.cover{transform:none}}
+/* Entrada e papéis: sem login só a tela de entrar; a esposa ("casa") vê só o Mercado */
+html:not(.logado) .app{display:none}
+.gate{min-height:100vh;display:grid;place-items:center;padding:16px;position:relative;z-index:1}
+.gate[hidden]{display:none}
+.gate .lockbox{width:min(380px,100%)}
+.gate input{width:100%}
+.whoami{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
+.whoami .sub{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgrp),html.casa #navgrp a.it:not([data-k="mercado"]),html.casa #bdalert{display:none}
+/* Tela inicial */
+.home{display:grid;gap:18px}
+.hi{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px;padding:6px 2px}
+.hi h2{font:700 clamp(28px,4vw,40px)/1.1 var(--f-display);margin:0;color:#fff;text-shadow:0 2px 14px rgba(0,0,0,.45)}
+.hi .sub{color:#fff;opacity:.9;text-shadow:0 1px 8px rgba(0,0,0,.5);margin:6px 0 0}
+.hi .clock{font:700 clamp(26px,3.4vw,36px) var(--f-display);color:#fff;text-shadow:0 2px 14px rgba(0,0,0,.45);text-align:right}
+.hgrid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:16px;align-items:start}
+.hgrid>.panel{grid-column:span 4;min-width:0}
+.hgrid>.w5{grid-column:span 5}.hgrid>.w3{grid-column:span 3}.hgrid>.w8{grid-column:span 8}
+@media(max-width:1180px){.hgrid>.panel,.hgrid>.w5,.hgrid>.w3,.hgrid>.w8{grid-column:span 6}}
+@media(max-width:760px){.hgrid>.panel,.hgrid>.w5,.hgrid>.w3,.hgrid>.w8{grid-column:1/-1}}
+.wh{display:flex;align-items:center;gap:10px;margin:0 0 12px}
+.wh h2{margin:0;font-size:18px}
+.wh .tag{margin-left:auto}
+.wh a.more{margin-left:auto;font:600 12.5px var(--f-ui);color:var(--accent);text-decoration:none;white-space:nowrap}
+.wh .ico{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;background:var(--ic);color:#fff;flex:none}
+.wh .ico svg{width:16px;height:16px}
+.wl{display:grid;gap:2px;margin:0;padding:0;list-style:none}
+.wl li{display:flex;align-items:center;gap:10px;padding:8px 6px;border-radius:8px;min-width:0}
+.wl li+li{border-top:1px solid var(--line)}
+.wl .grow{flex:1;min-width:0}
+.wl .grow b,.wl .grow a{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wl .grow .sub{display:block;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wl a{color:var(--ink);text-decoration:none}
+.wl a:hover{text-decoration:underline}
+.wl .lg{width:26px;height:26px;flex:none}
+.wl .end{font:700 14px var(--f-display);white-space:nowrap;text-align:right}
+.wbig{font:700 30px var(--f-display);margin:0}
+.bar{height:8px;border-radius:99px;background:var(--line);overflow:hidden}
+.bar>i{display:block;height:100%;background:var(--accent);border-radius:99px}
+.trilha{display:grid;gap:6px;padding:8px 0}
+.trilha+.trilha{border-top:1px solid var(--line)}
+.trilha .top{display:flex;justify-content:space-between;gap:8px;font:600 13.5px var(--f-ui)}
+.wform{display:grid;gap:8px}
+.wform label{display:grid;gap:3px;font:600 12px var(--f-ui);color:var(--muted)}
+.wform .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.exl{display:grid;gap:0}
+.exl label{display:flex;align-items:flex-start;gap:10px;padding:9px 4px;border-top:1px solid var(--line);cursor:pointer}
+.exl label:first-child{border-top:0}
+.exl input{margin-top:3px;width:18px;height:18px;flex:none}
+.exl .grow{flex:1;min-width:0}
+.exl .done b{text-decoration:line-through;opacity:.6}
 </style>
 </head>
 <body>
 
 <div class="bgimg" id="bgimg"></div>
+<!-- Entrada: o site inteiro é pessoal. Sem login não aparece nada; a esposa entra e vê só o Mercado. -->
+<div class="gate" id="gate" hidden>
+  <form class="panel lockbox" id="gate-form" autocomplete="on">
+    <div class="lockic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div>
+    <h2>Dia a Dia RAC</h2>
+    <p class="sub">Site pessoal. Entre com a sua conta.</p>
+    <input type="email" id="gate-email" placeholder="E-mail" aria-label="E-mail" autocomplete="username" required>
+    <input type="password" id="gate-pw" placeholder="Senha" aria-label="Senha" autocomplete="current-password" required>
+    <button type="submit" id="gate-enter">Entrar</button>
+    <p class="sub" id="gate-msg" role="status"></p>
+  </form>
+</div>
 <div class="app" id="app">
   <aside class="side" id="side" aria-label="Navegação">
     <div class="sidetop">
-      <a class="logo" href="#esportes" aria-label="Dia a Dia RAC, início"><span class="w">diaadia</span><span class="r">RAC</span></a>
+      <a class="logo" href="#inicio" aria-label="Dia a Dia RAC, início"><span class="w">diaadia</span><span class="r">RAC</span></a>
       <button type="button" class="iconbtn closebtn" id="closeside" aria-label="Fechar menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16"/></svg></button>
     </div>
     <div class="search">
@@ -570,11 +633,13 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
     <div class="results" id="results" role="list"></div>
     <nav class="grp" id="navgrp" aria-label="Seções">
       <h4>Painel</h4>
+      <a class="it" href="#inicio" data-k="inicio"><span class="ico" style="--ic:var(--c-inicio)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11l8-7 8 7v9a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1z"/></svg></span><span class="t">Início</span></a>
       <a class="it" href="#esportes" data-k="esportes"><span class="ico" style="--ic:var(--c-esportes)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M7.2 5.6c2 3.6 2 9.2 0 12.8M16.8 5.6c-2 3.6-2 9.2 0 12.8"/></svg></span><span class="t">Esportes</span><span class="cnt" id="cnt-esportes"></span></a>
       <a class="it" href="#vagas" data-k="vagas"><span class="ico" style="--ic:var(--c-vagas)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V4.5h6V7M3 13h18"/></svg></span><span class="t">Vagas</span><span class="cnt" id="cnt-vagas"></span></a>
       <a class="it" href="#mercado" data-k="mercado"><span class="ico" style="--ic:var(--c-mercado)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L21 8H6"/><circle cx="10" cy="20" r="1.2" fill="currentColor"/><circle cx="17" cy="20" r="1.2" fill="currentColor"/></svg></span><span class="t">Mercado</span></a>
       <a class="it" href="#aniversarios" data-k="aniversarios"><span class="ico" style="--ic:var(--c-aniversarios)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21h16v-8H4zM4 16.5c2.6 1.6 5.4 1.6 8 0 2.6 1.6 5.4 1.6 8 0M12 13V9.5"/><path d="M12 7a1.6 1.6 0 0 0 1.6-1.6C13.6 4.3 12 3 12 3s-1.6 1.3-1.6 2.4A1.6 1.6 0 0 0 12 7z" fill="currentColor"/></svg></span><span class="t">Aniversários</span><span class="cnt" id="cnt-aniv"></span></a>
       <a class="it" href="#x" data-k="x"><span class="ico" style="--ic:var(--c-x);color:var(--side)"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></span><span class="t">Perfis no X</span><span class="cnt" id="cnt-x"></span></a>
+      <a class="it" href="#estudos" data-k="estudos"><span class="ico" style="--ic:var(--c-estudos)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7l9-4 9 4-9 4z"/><path d="M7 9.5V15c0 1.4 2.2 3 5 3s5-1.6 5-3V9.5"/></svg></span><span class="t">Estudos</span><span class="cnt" id="cnt-estudos"></span></a>
       <a class="it" href="#em-breve" data-k="em-breve"><span class="ico" style="--ic:var(--c-embreve)"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3l2.7 5.6 6.2.9-4.5 4.4 1 6.1L12 17.1 6.6 20l1-6.1L3.1 9.5l6.2-.9z"/></svg></span><span class="t">Em breve</span><span class="cnt" id="cnt-breve"></span></a>
     </nav>
     <div class="grp">
@@ -586,6 +651,7 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
     </div>
     <div class="grp" id="grp-x"><h4>Listas do X</h4></div>
     <div class="sidefoot">
+      <div class="whoami"><span class="sub" id="quem"></span><button type="button" class="ghostbtn" id="sair">Sair</button></div>
       <div class="wx" id="tempo">Carregando o tempo em Sorocaba…</div>
       <div class="themes"><span>Tema</span><div class="seg" id="themepick" role="group" aria-label="Tema"><button type="button" data-t="light">Claro</button><button type="button" data-t="dark">Escuro</button><button type="button" data-t="auto">Auto</button></div></div>
       <div class="bgpick" id="bgpick"><span>Fundo</span></div>
@@ -602,6 +668,8 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
     <span class="date" id="hoje"></span>
   </div>
   <a class="alertbar" id="bdalert" href="#aniversarios" hidden></a>
+  <section id="inicio" hidden><div id="inicio-view"></div></section>
+  <section id="estudos" hidden><div id="estudos-view" class="stack"></div></section>
   <section id="esportes" hidden>
     <div id="sp-beisebol" hidden>
       <div class="pills" aria-label="Beisebol">
@@ -655,15 +723,6 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
   </section>
 
   <section id="aniversarios" hidden>
-    <form class="panel lockbox" id="bd-gate" autocomplete="off">
-      <div class="lockic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div>
-      <h2>Área restrita</h2>
-      <p class="sub">Digite a senha para ver a lista de aniversários.</p>
-      <input type="password" id="bd-pw" placeholder="Senha" aria-label="Senha" autocomplete="current-password" required>
-      <label class="chk"><input type="checkbox" id="bd-keep" checked> lembrar neste aparelho</label>
-      <button type="submit" id="bd-enter">Entrar</button>
-      <p class="sub" id="bd-pwmsg" role="status"></p>
-    </form>
     <div class="stack" id="bd-area">
       <div class="bdsum" id="bd-summary"></div>
       <div class="panel">
@@ -681,10 +740,9 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
           <label class="filebtn" for="bd-file">Importar do Facebook (CSV)</label>
           <input type="file" id="bd-file" accept=".csv,text/csv" hidden>
           <button type="button" class="ghostbtn" id="bd-clear">Apagar todos</button>
-          <button type="button" class="ghostbtn" id="bd-lock" title="Fecha a área restrita neste aparelho. A lista continua guardada.">Sair</button>
         </div>
         <p class="sub">Clique na ⭐ para marcar quem importa. Os marcados aparecem num aviso no topo do site na véspera e no dia. O calendário (.ics) leva dois alertas para cada marcado: às 9h da véspera e às 9h do dia; abra o arquivo no celular para os alertas chegarem mesmo com o site fechado.</p>
-        <p class="sub" id="bd-imp">A lista fica guardada só neste navegador. Para ter no celular, importe o arquivo lá também.</p>
+        <p class="sub" id="bd-imp">A lista fica guardada na sua conta e aparece em qualquer aparelho em que você entrar.</p>
         <form class="add" id="form" autocomplete="off">
           <input id="f-nome" name="nome" placeholder="Nome" required maxlength="60" aria-label="Nome">
           <input id="f-dia" name="dia" type="number" min="1" max="31" placeholder="Dia" required aria-label="Dia">
@@ -703,7 +761,6 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
     <div class="soonlist">
       <div class="panel"><h3>Alertas no Telegram</h3><p>Notícias novas em tempo real. Precisa de um bot seu, e eu guio a criação.</p></div>
       <div class="panel"><h3>Preços da Olivia</h3><p>Remédios, shampoos e cremes, com aviso quando baixar.</p></div>
-      <div class="panel"><h3>MBA</h3><p>Roteiro de estudos, onde você parou, e suas anotações juntas com as listas de exercícios do Google Drive.</p></div>
       <div class="panel"><h3>Tendências em dados</h3><p>O que o mercado de análise e ciência de dados está pedindo.</p></div>
     </div>
   </section>
@@ -722,7 +779,7 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
 
   /* Rotas por hash: #esportes/beisebol/liga, #esportes/beisebol/time-119, #esportes/beisebol/jogo-849805,
      #esportes/basquete/jogo-401909092, #x/jornalistas, #vagas ... */
-  var tabs=["esportes","vagas","mercado","aniversarios","em-breve","x"];
+  var tabs=["inicio","esportes","vagas","mercado","aniversarios","em-breve","x","estudos"];
   var sports=["beisebol","basquete","futebol-americano"];
   function mark(sel,attr,val){document.querySelectorAll(sel).forEach(function(a){
     if(a.dataset[attr]===val)a.setAttribute("aria-current","page");else a.removeAttribute("aria-current")})}
@@ -736,14 +793,19 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
     n.id="pico";$("#pico").replaceWith(n);
     $("#ptitle").textContent=hit?hit.querySelector(".t").textContent:"Dia a Dia RAC"}
   function route(){
+    if(!PAPEL)return;
     var parts=(location.hash||"").replace("#","").split("/");
-    var top=tabs.indexOf(parts[0])<0?"esportes":parts[0];
+    var top=tabs.indexOf(parts[0])<0?"inicio":parts[0];
+    /* a esposa entra direto no Mercado e não sai dele */
+    if(PAPEL==="casa"&&top!=="mercado"){top="mercado";parts=["mercado"]}
     tabs.forEach(function(t){document.getElementById(t).hidden=(t!==top)});
     document.documentElement.setAttribute("data-sec",top);
     setSide(false);
     window.scrollTo(0,0);
     if(top==="x"){var cat=xCats().some(function(c){return c.k===parts[1]})?parts[1]:"";sideMark(cat?"x/"+cat:"x","x");renderX(cat);return}
     if(top==="mercado"){sideMark("mercado","mercado");if(window.RACmercado)window.RACmercado.render(parts[1]||"");return}
+    if(top==="inicio"){sideMark("inicio","inicio");renderInicio();return}
+    if(top==="estudos"){sideMark("estudos","estudos");renderEstudos();return}
     if(top!=="esportes"){sideMark(top,top);return}
     var sp=sports.indexOf(parts[1])<0?"beisebol":parts[1];
     sports.forEach(function(x){document.getElementById("sp-"+x).hidden=(x!==sp)});
@@ -804,7 +866,7 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
   /* Links das Listas do X por categoria. Quando criar uma lista no X, cole o link aqui, ex.: amigos:"https://x.com/i/lists/123" */
   var XLISTS={};
   var AMIGOSLS="rac-x-amigos";
-  function lerAmigos(){try{return JSON.parse(localStorage.getItem(AMIGOSLS)||"[]")}catch(e){return []}}
+  function lerAmigos(){return PESSOAL["x-amigos"]||[]}
   /* Categorias que quem está vendo pode ver */
   function xCats(){var own=isOwner();
     return XCATS.filter(function(c){if(c.priv){c.h=own?lerAmigos():[];return own}return true})}
@@ -830,7 +892,7 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
     var acts=h("div",{class:"xacts"});
     /* sem perfis cadastrados a busca do X viria com posts de qualquer pessoa: leva para o cadastro */
     if(!c.h.length){
-      p.querySelector(".sub").textContent="Nenhum perfil cadastrado neste navegador ainda.";
+      p.querySelector(".sub").textContent="Nenhum perfil cadastrado ainda.";
       if(compact)acts.appendChild(h("a",{class:"pri",href:"#x/"+c.k,text:"Cadastrar os perfis"}));
       p.appendChild(acts);return p}
     acts.appendChild(x36link(c.h,"Posts das últimas 36h","pri"));
@@ -859,13 +921,12 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
     if(!XLISTS[c.k]&&!c.priv)root.appendChild(h("p",{class:"foot",text:"Ainda não há lista no X para "+c.n+". Crie a lista no X com estes perfis e me mande o link para eu colocar o botão aqui."}))}
   /* Editor dos perfis de Amigos: ficam guardados só neste navegador */
   function editarAmigos(c){
-    var p=panel("Só você vê esta categoria","Os perfis ficam guardados só neste navegador, nunca no site. Em outro aparelho, entre com a senha e cadastre de novo.");
+    var p=panel("Só você vê esta categoria","Os perfis ficam guardados na sua conta, nunca no código do site.");
     var inp=h("input",{type:"text",value:c.h.map(function(x){return "@"+x}).join(", "),placeholder:"@perfil1, @perfil2",autocomplete:"off","aria-label":"Perfis dos amigos"});
     var b=h("button",{type:"button",text:"Salvar perfis"});
     b.onclick=function(){
       var l=inp.value.split(/[\s,;]+/).map(function(x){return x.replace(/^@/,"").replace(/^https?:\/\/(www\.)?(x|twitter)\.com\//i,"").replace(/[^A-Za-z0-9_]/g,"")}).filter(Boolean);
-      try{localStorage.setItem(AMIGOSLS,JSON.stringify(l))}catch(e){}
-      montarSideX();renderX("amigos")};
+      pessoalGravar("x-amigos",l);montarSideX();renderX("amigos")};
     p.appendChild(h("div",{class:"vfil"},inp,b));
     return p}
   /* Categorias do X na barra lateral; refeito quando a senha é digitada ou o acesso é travado */
@@ -1808,44 +1869,59 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
       }).catch(function(e){box.innerHTML="";box.appendChild(h("div",{class:"panel"},failed(load,e)))})}
     load()}
 
-  /* Área restrita (Aniversários): aparece para todos, mas pede senha.
-     O site é estático, então a senha é conferida no navegador: o código guarda só um PBKDF2-SHA256
-     (600 mil rodadas, com sal) dela, nunca a senha. A lista em si nunca sai do navegador. */
-  var PW_SALT="0b70542847749db03f4b1afa9e1cbbd3",PW_HASH="a2a0c7726afe41d996f0ac9a5d88e4c4d752960b26cb0859010a5e6b354a881d",OWNERLS="rac-dono";
-  function isOwner(){
-    try{return localStorage.getItem(OWNERLS)===PW_HASH||sessionStorage.getItem(OWNERLS)===PW_HASH}catch(e){return false}}
-  function hexToBytes(x){var b=new Uint8Array(x.length/2);for(var i=0;i<b.length;i++)b[i]=parseInt(x.substr(i*2,2),16);return b}
-  function pbkdf2(pw){
-    return crypto.subtle.importKey("raw",new TextEncoder().encode(pw),"PBKDF2",false,["deriveBits"]).then(function(k){
-      return crypto.subtle.deriveBits({name:"PBKDF2",hash:"SHA-256",salt:hexToBytes(PW_SALT),iterations:600000},k,256)}).then(function(bits){
-      return Array.prototype.map.call(new Uint8Array(bits),function(x){return x.toString(16).padStart(2,"0")}).join("")})}
-  function applyOwner(){
-    var own=isOwner();
-    montarSideX();
-    $("#bd-gate").hidden=own;$("#bd-area").hidden=!own;
-    if(!own)$("#bdalert").hidden=true}
-  var tries=0;
-  $("#bd-gate").addEventListener("submit",function(e){
+  /* ===== Login do site =====
+     O site é pessoal: sem login só aparece a tela de entrar. Usa as mesmas contas do Mercado (Supabase).
+     Quem está na tabela "membros" (a esposa) é "casa" e vê só o Mercado; o dono vê tudo. */
+  var PAPEL=null,SB=null,EU=null,PESSOAL={},SEM_TABELA=false;
+  function isOwner(){return PAPEL==="dono"}
+  /* Dados pessoais: um JSON por chave na tabela "pessoal", que só a conta do dono lê e grava */
+  function pessoalCarregar(){
+    return SB.from("pessoal").select("chave,valor").then(function(r){
+      if(r.error)throw new Error(r.error.message);
+      (r.data||[]).forEach(function(x){PESSOAL[x.chave]=x.valor})})}
+  var gravando={};
+  function pessoalGravar(chave,valor){
+    PESSOAL[chave]=valor;
+    if(!SB||!isOwner()||SEM_TABELA)return;
+    clearTimeout(gravando[chave]);
+    gravando[chave]=setTimeout(function(){
+      SB.from("pessoal").upsert({user_id:EU.id,chave:chave,valor:valor,atualizado:new Date().toISOString()}).then(function(r){if(r.error)console.warn("pessoal:",r.error.message)})},400)}
+  /* O que estava guardado só no navegador (aniversários, amigos do X) sobe uma vez para a conta */
+  function migrarDoNavegador(){
+    if(SEM_TABELA)return;
+    var ant=lsRead();if(!PESSOAL.aniversarios&&ant.length)pessoalGravar("aniversarios",ant);
+    try{var am=JSON.parse(localStorage.getItem(AMIGOSLS)||"[]");if(!PESSOAL["x-amigos"]&&am.length)pessoalGravar("x-amigos",am)}catch(e){}}
+  function mostrarGate(texto){
+    document.documentElement.classList.remove("logado");
+    $("#gate").hidden=false;$("#gate-msg").textContent=texto||"";
+    setTimeout(function(){$("#gate-email").focus()},50)}
+  function entrar(){
+    window.RACmercado.client().then(function(sb){SB=sb;return sb.auth.getSession()}).then(function(r){
+      var ses=r.data&&r.data.session;
+      if(!ses){mostrarGate();return}
+      EU=ses.user;
+      return SB.from("membros").select("dono").eq("membro",EU.id).then(function(m){
+        PAPEL=m.data&&m.data.length?"casa":"dono";
+        if(PAPEL!=="dono")return;
+        return pessoalCarregar().catch(function(){SEM_TABELA=true}).then(migrarDoNavegador)
+      }).then(iniciar)
+    }).catch(function(e){mostrarGate("Não consegui conectar agora ("+(e.message||e)+"). Tente de novo.")})}
+  function iniciar(){
+    var html=document.documentElement;
+    html.classList.add("logado");html.classList.toggle("casa",PAPEL==="casa");
+    $("#gate").hidden=true;$("#quem").textContent=EU.email;
+    if(isOwner()){items=SEM_TABELA?lsRead():(PESSOAL.aniversarios||[]);render();montarSideX()}
+    else $("#bdalert").hidden=true;
+    route()}
+  $("#gate-form").addEventListener("submit",function(e){
     e.preventDefault();
-    var pw=$("#bd-pw").value,msg=$("#bd-pwmsg"),btn=$("#bd-enter");
-    if(!pw)return;
-    if(!window.crypto||!crypto.subtle){msg.textContent="Este navegador não consegue conferir a senha aqui. Abra o site pelo endereço https.";return}
-    btn.disabled=true;msg.textContent="Conferindo…";
-    pbkdf2(pw).then(function(hx){
-      if(hx===PW_HASH){
-        try{($("#bd-keep").checked?localStorage:sessionStorage).setItem(OWNERLS,PW_HASH)}catch(err){}
-        $("#bd-pw").value="";msg.textContent="";tries=0;applyOwner();render();btn.disabled=false}
-      else{
-        /* espera crescente a cada erro, para desencorajar tentativas */
-        tries++;var wait=Math.min(30,tries*2);
-        msg.textContent="Senha incorreta. Tente de novo em "+wait+" segundos.";
-        setTimeout(function(){btn.disabled=false;msg.textContent="Senha incorreta."},wait*1000)}
-    }).catch(function(){btn.disabled=false;msg.textContent="Não consegui conferir a senha agora."})});
-  $("#bd-lock").addEventListener("click",function(){
-    try{localStorage.removeItem(OWNERLS);sessionStorage.removeItem(OWNERLS)}catch(e){}
-    applyOwner()});
-  applyOwner();
-  route();
+    var b=$("#gate-enter"),m=$("#gate-msg");b.disabled=true;m.textContent="Entrando…";
+    window.RACmercado.client().then(function(sb){return sb.auth.signInWithPassword({email:$("#gate-email").value.trim(),password:$("#gate-pw").value})}).then(function(res){
+      b.disabled=false;
+      if(res.error){m.textContent=/invalid/i.test(res.error.message)?"E-mail ou senha incorretos.":"Não consegui entrar: "+res.error.message;return}
+      $("#gate-pw").value="";m.textContent="";entrar()
+    }).catch(function(err){b.disabled=false;m.textContent="Não consegui entrar agora ("+(err.message||err)+")."})});
+  $("#sair").addEventListener("click",function(){SB.auth.signOut().then(function(){location.reload()})});
 
   /* Vagas de Análise de Dados e BI (vagas.json, coletado do portal Mentora Dados).
      Remoto de qualquer lugar; presencial ou híbrido só em São Paulo ou Sorocaba. */
@@ -1889,8 +1965,9 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
     var list=base.filter(function(v){return !VG.mod||v.m===VG.mod});
     if(!list.length){box.appendChild(h("div",{class:"panel"},h("p",{class:"empty",text:"Nenhuma vaga com esse filtro."})));return}
     list.forEach(function(v){box.appendChild(vgCard(v))})}
+  var vgPronto;
   function vgLoad(){
-    getJson("vagas.json?v="+Date.now()).then(function(d){
+    vgPronto=getJson("vagas.json?v="+Date.now()).then(function(d){
       VG.all=(d.vagas||[]).slice().sort(function(a,b){return a.d-b.d});
       var nv=NIVEIS.filter(function(n){return VG.all.some(function(v){return v.nv===n})});
       nv.forEach(function(n){var o=document.createElement("option");o.value=n;o.textContent=n;$("#vg-nivel").appendChild(o)});
@@ -1898,7 +1975,7 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
       $("#vg-info").textContent=VG.all.length+" vagas publicadas há menos de 2 meses · remotas de qualquer lugar e presenciais ou híbridas em São Paulo e Sorocaba · atualizado em "+dt.toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"})+".";
       $("#cnt-vagas").textContent=VG.all.length;
       vgDraw()
-    }).catch(function(){$("#vg-info").textContent="Não consegui carregar as vagas agora."})}
+    });vgPronto.catch(function(){$("#vg-info").textContent="Não consegui carregar as vagas agora."})}
   $("#vg-nivel").addEventListener("change",function(e){VG.nivel=e.target.value;vgDraw()});
   $("#vg-q").addEventListener("input",function(e){VG.q=e.target.value;vgDraw()});
   $("#vg-hid").addEventListener("change",function(e){VG.verOcultas=e.target.checked;vgDraw()});
@@ -2010,7 +2087,7 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
     var out=["Nome,Ano,Mes,Dia,Perfil"].concat(marcados().map(function(x){return [q(x.nome),x.ano||"",x.mes,x.dia,q(x.link||"")].join(",")}));
     baixar("aniversarios-marcados.csv","text/csv;charset=utf-8","﻿"+out.join("\r\n"))});
   function lsRead(){try{return JSON.parse(localStorage.getItem(LS)||"[]")}catch(e){return[]}}
-  function lsWrite(){try{localStorage.setItem(LS,JSON.stringify(items))}catch(e){}}
+  function lsWrite(){if(SEM_TABELA){try{localStorage.setItem(LS,JSON.stringify(items))}catch(e){}}else pessoalGravar("aniversarios",items)}
   function bkey(x){return norm(x.nome)+"|"+x.dia+"|"+x.mes}
   function add(it){items.push(it);lsWrite();render()}
   function remove(id){items=items.filter(function(x){return x.id!==id});lsWrite();render()}
@@ -2058,7 +2135,7 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
     var rd=new FileReader();
     rd.onload=function(){
       try{var r=importCsv(String(rd.result));
-        msg.textContent="Importei "+r.added+(r.added===1?" aniversário":" aniversários")+(r.dup?" e pulei "+r.dup+(r.dup===1?" repetido":" repetidos"):"")+(r.bad?" ("+r.bad+(r.bad===1?" linha sem data)":" linhas sem data)"):"")+". Ficam guardados só neste navegador."}
+        msg.textContent="Importei "+r.added+(r.added===1?" aniversário":" aniversários")+(r.dup?" e pulei "+r.dup+(r.dup===1?" repetido":" repetidos"):"")+(r.bad?" ("+r.bad+(r.bad===1?" linha sem data)":" linhas sem data)"):"")+". Ficam guardados na sua conta."}
       catch(err){msg.textContent="Não consegui ler esse arquivo ("+err.message+"). Use o CSV de datas de nascimento exportado do Facebook."}
       e.target.value=""};
     rd.onerror=function(){msg.textContent="Não consegui abrir o arquivo."};
@@ -2070,9 +2147,197 @@ a.card:hover img.cover,a.hero:hover img.cover{transform:scale(1.04)}
     if(!clearArmed){clearArmed=true;b.textContent="Clique de novo para apagar os "+items.length;b.classList.add("danger");
       setTimeout(function(){clearArmed=false;b.textContent="Apagar todos";b.classList.remove("danger")},5000);return}
     clearArmed=false;b.textContent="Apagar todos";b.classList.remove("danger");
-    items=[];lsWrite();render();$("#bd-imp").textContent="Lista apagada deste navegador."});
+    items=[];lsWrite();render();$("#bd-imp").textContent="Lista apagada."});
 
-  items=lsRead();render();
+  /* ===== Tela inicial: a visão do dia num lugar só ===== */
+  var ICOS={
+    mail:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 6.5l8.5 7 8.5-7"/></svg>',
+    mba:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l9-4 9 4-9 4z"/><path d="M7 10.5V15c0 1.4 2.2 3 5 3s5-1.6 5-3v-4.5M21 8v6"/></svg>',
+    bola:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="8.5"/><path d="M7.2 5.6c2 3.6 2 9.2 0 12.8M16.8 5.6c-2 3.6-2 9.2 0 12.8"/></svg>',
+    carro:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L21 8H6"/><circle cx="10" cy="20" r="1.2" fill="currentColor"/><circle cx="17" cy="20" r="1.2" fill="currentColor"/></svg>',
+    jornal:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h13v14H6a2 2 0 0 1-2-2z"/><path d="M17 9h3v8a2 2 0 0 1-2 2M8 9h5M8 13h5M8 16h3"/></svg>',
+    bolo:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21h16v-8H4zM4 16.5c2.6 1.6 5.4 1.6 8 0 2.6 1.6 5.4 1.6 8 0M12 13V9.5"/></svg>',
+    mala:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V4.5h6V7M3 13h18"/></svg>',
+    livro:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M8 7h7M8 11h5"/></svg>',
+    x:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>'};
+  function wCard(title,ico,cor,more,cls){
+    var ic=h("span",{class:"ico",style:"--ic:"+cor});ic.innerHTML=ICOS[ico];
+    var p=h("div",{class:"panel "+(cls||"")},h("div",{class:"wh"},ic,h("h2",{text:title}),more?h("a",{class:"more",href:more[0],text:more[1]}):null));
+    return p}
+  function quando(d){return new Date(d).toLocaleString("pt-BR",{weekday:"short",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}).replace(",","")}
+  function saudacao(){var hr=new Date().getHours();return hr<5?"Boa noite":hr<12?"Bom dia":hr<18?"Boa tarde":"Boa noite"}
+  var relogio=null;
+  function renderInicio(){
+    var root=$("#inicio-view");root.innerHTML="";
+    var clock=h("div",{class:"clock"}),wx=h("p",{class:"sub",text:"Sorocaba"});
+    function tick(){clock.textContent=new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}
+    tick();clearInterval(relogio);relogio=setInterval(tick,15000);
+    root.appendChild(h("div",{class:"home"},
+      h("div",{class:"hi"},h("div",null,h("h2",{text:saudacao()+", Rayner"}),h("p",{class:"sub",text:new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long",year:"numeric"})})),h("div",null,clock,wx)),
+      h("div",{class:"hgrid"},wEmail(),wEsportes(),wMercado(),wMba(),wNoticias(),wAniv(),wVagas(),wEstudos(),wX())));
+    getJson("https://api.open-meteo.com/v1/forecast?latitude=-23.50&longitude=-47.46&current=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min&timezone=America%2FSao_Paulo&forecast_days=1").then(function(d){
+      wx.textContent=Math.round(d.current.temperature_2m)+"° agora em Sorocaba · "+WXTXT[wxKind(d.current.weather_code)]+" · máx. "+Math.round(d.daily.temperature_2m_max[0])+"°, mín. "+Math.round(d.daily.temperature_2m_min[0])+"°"}).catch(function(){})}
+
+  /* E-mail: atalhos para as quatro caixas; ler as mensagens aqui dentro é o próximo passo */
+  var EMAILS_PADRAO=[{n:"Gmail 1",u:"https://mail.google.com/mail/u/0/#inbox"},{n:"Gmail 2",u:"https://mail.google.com/mail/u/1/#inbox"},{n:"Outlook",u:"https://outlook.live.com/mail/0/"},{n:"iCloud",u:"https://www.icloud.com/mail/"}];
+  function wEmail(){
+    var p=wCard("E-mail","mail","#D93F2F"),contas=PESSOAL.emails||EMAILS_PADRAO;
+    var ul=h("ul",{class:"wl"});
+    contas.forEach(function(c){ul.appendChild(h("li",null,h("span",{class:"grow"},h("b",{text:c.n}),h("span",{class:"sub",text:c.e||"caixa de entrada"})),ext(c.u,"Abrir","ghostbtn")))});
+    p.appendChild(ul);
+    var ed=h("button",{type:"button",class:"ghostbtn",text:"Dar nomes às contas"});
+    ed.onclick=function(){
+      var f=h("div",{class:"wform"});
+      var ins=contas.map(function(c){var a=h("input",{type:"text",value:c.n,"aria-label":"Nome da conta"}),b=h("input",{type:"text",value:c.e||"",placeholder:"endereço (opcional)","aria-label":"Endereço"});f.appendChild(h("div",{class:"two"},a,b));return [a,b]});
+      var ok=h("button",{type:"button",text:"Salvar"});
+      ok.onclick=function(){pessoalGravar("emails",contas.map(function(c,i){return {n:ins[i][0].value.trim()||c.n,e:ins[i][1].value.trim(),u:c.u}}));renderInicio()};
+      f.appendChild(ok);ul.replaceWith(f);ed.remove()};
+    p.appendChild(h("p",{class:"note",text:"Mostrar os não lidos aqui dentro exige conectar cada conta (Google, Microsoft e iCloud). É o próximo passo."}));
+    p.appendChild(ed);
+    return p}
+
+  /* Esportes: último resultado e próximo jogo de cada time */
+  function wEsportes(){
+    var p=wCard("Esportes","bola","#005A9C",["#esportes","ver tudo"]),ul=h("ul",{class:"wl"},h("li",null,h("span",{class:"sub",text:"Carregando…"})));
+    p.appendChild(ul);
+    var hoje=Date.now(),ini=new Date(hoje-21*864e5).toISOString().slice(0,10),fim=new Date(hoje+45*864e5).toISOString().slice(0,10);
+    function linha(nome,logo,href,gs,meu){
+      var fin=gs.filter(function(g){return g.state==="post"}),nx=gs.filter(function(g){return g.state!=="post"})[0],u=fin[fin.length-1];
+      var txt="Sem jogos recentes";
+      if(u){var eu=meu(u.away)?u.away:u.home,ele=eu===u.away?u.home:u.away;
+        txt=(eu.winner?"V ":"D ")+eu.score+"–"+ele.score+(eu===u.away?" em ":" vs ")+(ele.abbr||ele.name)}
+      return h("li",null,img(logo,"lg"),h("span",{class:"grow"},h("a",{href:href,text:nome}),h("span",{class:"sub",text:txt})),
+        h("span",{class:"end"},nx?h("a",{href:nx.detail,text:nx.state==="live"?"Ao vivo":quando(nx.date)}):h("span",{class:"sub",text:"sem próximo jogo"})))}
+    Promise.all([
+      mlbSched("teamId=119&startDate="+ini+"&endDate="+fim).then(function(gs){return linha("Dodgers",logoUrl(119),"#esportes/beisebol/dodgers",gs,function(t){return t.id===119})}).catch(function(){return null}),
+      espnSchedule("nba").then(function(d){return linha("Lakers",espnLogo("nba",d.team),"#esportes/basquete",d.games,function(t){return t.abbr===d.team.abbreviation})}).catch(function(){return null}),
+      espnSchedule("nfl").then(function(d){return linha("Packers",espnLogo("nfl",d.team),"#esportes/futebol-americano",d.games,function(t){return t.abbr===d.team.abbreviation})}).catch(function(){return null})
+    ]).then(function(r){ul.innerHTML="";r.filter(Boolean).forEach(function(li){ul.appendChild(li)});if(!ul.children.length)ul.appendChild(h("li",null,h("span",{class:"sub",text:"Não consegui carregar os jogos agora."})))});
+    return p}
+
+  /* Mercado do mês */
+  function wMercado(){
+    var p=wCard("Mercado do mês","carro","#0E8A6A",["#mercado","abrir"]),b=h("div",null,h("p",{class:"sub",text:"Carregando…"}));p.appendChild(b);
+    window.RACmercado.resumo().then(function(r){var M=window.RACmercado.money;b.innerHTML="";
+      b.appendChild(h("p",{class:"wbig",text:M(r.total)}));
+      b.appendChild(h("p",{class:"sub",text:r.compras+(r.compras===1?" compra":" compras")+" em "+r.mes}));
+      if(r.ultima)b.appendChild(h("ul",{class:"wl"},h("li",null,h("span",{class:"grow"},h("b",{text:"Última compra: "+r.ultima.mercado}),h("span",{class:"sub",text:r.ultima.data+" · "+r.ultima.itens+" itens"})),h("span",{class:"end",text:M(r.ultima.total)}))))
+    }).catch(function(){b.innerHTML="";b.appendChild(h("p",{class:"sub",text:"Não consegui carregar o mercado agora."}))});
+    return p}
+
+  /* MBA: aulas, progresso, links e parte financeira (preenchidos por você, guardados na sua conta) */
+  function proxVenc(dia){if(!dia)return null;var t=new Date(),d=new Date(t.getFullYear(),t.getMonth(),dia);if(d<new Date(t.getFullYear(),t.getMonth(),t.getDate()))d=new Date(t.getFullYear(),t.getMonth()+1,dia);return d}
+  function wMba(){
+    var p=wCard("MBA","mba","#5B5BD6"),m=PESSOAL.mba;
+    function form(){
+      var v=m||{},f=h("div",{class:"wform"});
+      function campo(rot,k,tipo,ph){var i=h("input",{type:tipo||"text",value:v[k]!=null?v[k]:"",placeholder:ph||""});i.dataset.k=k;return h("label",null,rot,i)}
+      f.appendChild(campo("Curso e instituição","curso","text","MBA em …"));
+      f.appendChild(h("div",{class:"two"},campo("Link para assistir as aulas","aulas","url","https://…"),campo("Link do portal","portal","url","https://…")));
+      f.appendChild(h("div",{class:"two"},campo("Próxima aula (data e hora)","proxData","datetime-local"),campo("Tema da próxima aula","proxTema")));
+      f.appendChild(h("div",{class:"two"},campo("Disciplinas concluídas","feitas","number"),campo("Total de disciplinas","total","number")));
+      f.appendChild(h("div",{class:"two"},campo("Parcelas pagas","pagas","number"),campo("Total de parcelas","parcelas","number")));
+      f.appendChild(h("div",{class:"two"},campo("Valor da parcela (R$)","valor","text","0,00"),campo("Dia do vencimento","venc","number")));
+      var ok=h("button",{type:"button",text:"Salvar"});
+      ok.onclick=function(){var o={};f.querySelectorAll("input").forEach(function(i){o[i.dataset.k]=i.value.trim()});pessoalGravar("mba",o);renderInicio()};
+      f.appendChild(ok);return f}
+    if(!m||!m.curso){p.appendChild(h("p",{class:"sub",text:"Preencha uma vez e o quadro passa a mostrar aulas, progresso e parcelas."}));p.appendChild(form());return p}
+    var corpo=h("div");
+    corpo.appendChild(h("p",null,h("b",{text:m.curso})));
+    var acts=h("div",{class:"vfil"});if(m.aulas)acts.appendChild(ext(m.aulas,"Assistir aulas","ghostbtn pri"));if(m.portal)acts.appendChild(ext(m.portal,"Portal","ghostbtn"));corpo.appendChild(acts);
+    var ul=h("ul",{class:"wl"});
+    if(m.proxData)ul.appendChild(h("li",null,h("span",{class:"grow"},h("b",{text:"Próxima aula"}),h("span",{class:"sub",text:m.proxTema||""})),h("span",{class:"end",text:quando(m.proxData)})));
+    if(+m.total){var pc=Math.min(1,(+m.feitas||0)/+m.total);
+      ul.appendChild(h("li",null,h("span",{class:"grow"},h("b",{text:"Progresso: "+(+m.feitas||0)+" de "+m.total+" disciplinas"}),h("div",{class:"bar"},h("i",{style:"width:"+Math.round(pc*100)+"%"}))),h("span",{class:"end",text:Math.round(pc*100)+"%"})))}
+    if(+m.parcelas){var falta=(+m.parcelas)-(+m.pagas||0),vl=num2(m.valor),vc=proxVenc(+m.venc);
+      ul.appendChild(h("li",null,h("span",{class:"grow"},h("b",{text:"Financeiro: "+(+m.pagas||0)+" de "+m.parcelas+" parcelas pagas"}),
+        h("span",{class:"sub",text:(vl?"Faltam "+falta+" × "+BRL(vl)+" = "+BRL(falta*vl):"Faltam "+falta+" parcelas")+(vc&&falta>0?" · vence "+vc.toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"}):"")}))))}
+    corpo.appendChild(ul);
+    var ed=h("button",{type:"button",class:"ghostbtn",text:"Editar"});ed.onclick=function(){corpo.replaceWith(form());ed.remove()};
+    p.appendChild(corpo);p.appendChild(ed);
+    return p}
+  function num2(v){var s=String(v||"").replace(/[R$\s]/g,"");if(/,\d{1,2}$/.test(s))s=s.replace(/\./g,"").replace(",",".");return parseFloat(s)||0}
+  function BRL(v){return v.toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}
+
+  /* Notícias de Sorocaba (noticias.json, atualizado pelo robô do GitHub a cada 3 horas) */
+  function wNoticias(){
+    var p=wCard("Notícias de Sorocaba","jornal","#C2410C",null,"w5"),ul=h("ul",{class:"wl"},h("li",null,h("span",{class:"sub",text:"Carregando…"})));p.appendChild(ul);
+    getJson("noticias.json?v="+Date.now()).then(function(d){ul.innerHTML="";
+      (d.noticias||[]).slice(0,7).forEach(function(n){ul.appendChild(h("li",null,h("span",{class:"grow"},h("a",{href:n.u,target:"_blank",rel:"noopener",text:n.t}),h("span",{class:"sub",text:n.f+" · "+new Date(n.d).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}))))});
+      if(!ul.children.length)ul.appendChild(h("li",null,h("span",{class:"sub",text:"Nenhuma notícia nas últimas horas."})))
+    }).catch(function(){ul.innerHTML="";ul.appendChild(h("li",null,h("span",{class:"sub",text:"As notícias ainda não foram coletadas."})))});
+    return p}
+
+  function wAniv(){
+    var p=wCard("Aniversários","bolo","#D6283B",["#aniversarios","ver todos"],"w3");
+    var l=withDates().sort(function(a,b){return a.dias-b.dias||(b.fav?1:0)-(a.fav?1:0)}).slice(0,5);
+    if(!l.length){p.appendChild(h("p",{class:"sub",text:"Nenhum aniversário cadastrado ainda."}));return p}
+    p.appendChild(h("ul",{class:"wl"},l.map(function(x){return h("li",null,h("span",{class:"grow"},h("b",{text:(x.fav?"⭐ ":"")+x.nome}),h("span",{class:"sub",text:dd(x.dia)+"/"+dd(x.mes)})),h("span",{class:"end",text:countTxt(x)}))})));
+    return p}
+
+  function wVagas(){
+    var p=wCard("Vagas","mala","#2E8BD8",["#vagas","ver todas"]),b=h("div",null,h("p",{class:"sub",text:"Carregando…"}));p.appendChild(b);
+    vgPronto.then(function(){b.innerHTML="";
+      var l=VG.all.filter(function(v){return !vgHidden[v.id]}),novas=l.filter(function(v){return v.d<=3});
+      b.appendChild(h("p",{class:"sub",text:l.length+" vagas abertas · "+novas.length+(novas.length===1?" nova":" novas")+" nos últimos 3 dias"}));
+      b.appendChild(h("ul",{class:"wl"},l.slice(0,4).map(function(v){return h("li",null,h("span",{class:"grow"},h("a",{href:vgLink(v)[0],target:"_blank",rel:"noopener",text:v.t}),h("span",{class:"sub",text:(v.e||"Empresa não informada")+" · "+v.m})),v.d<=3?h("span",{class:"vp new",text:"Nova"}):null)})))
+    }).catch(function(){b.innerHTML="";b.appendChild(h("p",{class:"sub",text:"Não consegui carregar as vagas agora."}))});
+    return p}
+
+  function wX(){
+    var p=wCard("Perfis no X","x","#1F2328",["#x","abrir"],"w3");
+    p.appendChild(h("ul",{class:"wl"},xCats().filter(function(c){return c.h.length}).map(function(c){return h("li",null,catIco(c),h("span",{class:"grow"},h("a",{href:"#x/"+c.k,text:c.n})),x36link(c.h,"36h","ghostbtn"))})));
+    return p}
+
+  /* ===== Estudos: listas de exercícios para analista de dados (SQL, BI e Python) ===== */
+  var TRILHAS=[
+    {k:"sql",n:"SQL",c:"#2E8BD8",itens:[
+      ["sqlbolt","SQLBolt: as 18 lições interativas","Do SELECT básico a JOINs e agregações, direto no navegador.","https://sqlbolt.com/"],
+      ["murder","SQL Murder Mystery","Resolver um crime só com consultas. Ótimo para treinar JOIN e filtro.","https://mystery.knightlab.com/"],
+      ["selectstar","Select Star SQL","Livro interativo com dados reais; vai até subconsultas.","https://selectstarsql.com/"],
+      ["hackerrank-sql","HackerRank: trilha de SQL","Exercícios do básico ao avançado, com correção automática.","https://www.hackerrank.com/domains/sql"],
+      ["mode","Mode: SQL Tutorial (window functions)","A parte avançada: funções de janela, CTEs e performance.","https://mode.com/sql-tutorial/"],
+      ["leetcode-sql50","LeetCode: Top SQL 50","As 50 questões de SQL mais pedidas em entrevista.","https://leetcode.com/studyplan/top-sql-50/"],
+      ["datalemur","DataLemur: perguntas de entrevista","Questões reais de empresas, com nível de dificuldade.","https://datalemur.com/questions"],
+      ["pgexercises","PostgreSQL Exercises","Treino com um banco de clube esportivo, do fácil ao difícil.","https://pgexercises.com/"]]},
+    {k:"bi",n:"BI",c:"#E8A317",itens:[
+      ["pl300","Microsoft Learn: trilha de Analista de Dados (Power BI)","A trilha oficial da certificação PL-300, em português.","https://learn.microsoft.com/pt-br/training/career-paths/data-analyst"],
+      ["daxguide","DAX Guide","Referência de todas as funções DAX, com exemplos.","https://dax.guide/"],
+      ["maven","Maven Analytics: Data Playground","Bases prontas para montar dashboards de portfólio.","https://mavenanalytics.io/data-playground"],
+      ["workout","Workout Wednesday","Um desafio de dashboard por semana para recriar.","https://workout-wednesday.com/"],
+      ["swd","Storytelling with Data: desafios","Treino de visualização e de contar a história dos dados.","https://community.storytellingwithdata.com/challenges"],
+      ["kaggle-ds","Kaggle Datasets: um dashboard completo","Escolha uma base e monte um painel do zero até publicar.","https://www.kaggle.com/datasets"]]},
+    {k:"python",n:"Python",c:"#3776AB",itens:[
+      ["kaggle-py","Kaggle Learn: Python","O básico da linguagem em exercícios curtos.","https://www.kaggle.com/learn/python"],
+      ["kaggle-pandas","Kaggle Learn: Pandas","Ler, filtrar, agrupar e juntar tabelas.","https://www.kaggle.com/learn/pandas"],
+      ["kaggle-viz","Kaggle Learn: Data Visualization","Gráficos com seaborn.","https://www.kaggle.com/learn/data-visualization"],
+      ["pandas-ex","Pandas Exercises (guipsamora)","Exercícios práticos de pandas com bases reais.","https://github.com/guipsamora/pandas_exercises"],
+      ["pandas100","100 Pandas Puzzles","Cem desafios curtos para fixar o pandas.","https://github.com/ajcr/100-pandas-puzzles"],
+      ["hackerrank-py","HackerRank: trilha de Python","Lógica e estruturas de dados com correção automática.","https://www.hackerrank.com/domains/python"],
+      ["exercism","Exercism: trilha de Python","Exercícios com mentoria gratuita.","https://exercism.org/tracks/python"],
+      ["kaggle-ml","Kaggle Learn: Intro to Machine Learning","O primeiro passo depois da análise.","https://www.kaggle.com/learn/intro-to-machine-learning"]]}];
+  function feitos(){return PESSOAL.exercicios||{}}
+  function wEstudos(){
+    var p=wCard("Estudos de dados","livro","#B5641B",["#estudos","lista completa"],"w5"),f=feitos();
+    TRILHAS.forEach(function(t){
+      var n=t.itens.filter(function(i){return f[i[0]]}).length,prox=t.itens.filter(function(i){return !f[i[0]]})[0];
+      p.appendChild(h("div",{class:"trilha"},h("div",{class:"top"},h("span",{text:t.n}),h("span",{class:"sub",text:n+" de "+t.itens.length})),
+        h("div",{class:"bar"},h("i",{style:"width:"+Math.round(n/t.itens.length*100)+"%;background:"+t.c})),
+        prox?h("span",{class:"sub"},"Próximo: ",ext(prox[3],prox[1])):h("span",{class:"sub",text:"Trilha concluída 🎉"})))});
+    return p}
+  function renderEstudos(){
+    var root=$("#estudos-view");root.innerHTML="";var f=feitos();
+    $("#cnt-estudos").textContent=Object.keys(f).length;
+    root.appendChild(h("p",{class:"sub",style:"color:#fff;text-shadow:0 1px 8px rgba(0,0,0,.5);margin:0",text:"Marque o que já terminou. O progresso fica guardado na sua conta e aparece na tela inicial."}));
+    TRILHAS.forEach(function(t){
+      var n=t.itens.filter(function(i){return f[i[0]]}).length,p=panel(t.n,n+" de "+t.itens.length+" concluídos");
+      var l=h("div",{class:"exl"});
+      t.itens.forEach(function(i){var cb=h("input",{type:"checkbox"});cb.checked=!!f[i[0]];
+        cb.onchange=function(){var o=Object.assign({},feitos());if(cb.checked)o[i[0]]=new Date().toISOString().slice(0,10);else delete o[i[0]];pessoalGravar("exercicios",o);renderEstudos()};
+        l.appendChild(h("label",{class:cb.checked?"done":null},cb,h("span",{class:"grow"},h("b",{text:i[1]}),h("span",{class:"sub",style:"display:block",text:i[2]})),ext(i[3],"Abrir","ghostbtn")))});
+      p.appendChild(l);root.appendChild(p)})}
+
+  entrar();
   /* App instalável (ícone RAC na tela inicial). O service worker busca sempre a versão nova na rede. */
   if("serviceWorker" in navigator&&(location.protocol==="https:"||location.hostname==="localhost")){
     navigator.serviceWorker.register("sw.js").catch(function(){})}

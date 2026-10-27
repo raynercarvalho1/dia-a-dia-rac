@@ -669,6 +669,33 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
 .famarq{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
 .famarq img{width:110px;height:110px;object-fit:cover;border-radius:10px;display:block}
 .famarq video{width:min(320px,100%);border-radius:10px;background:#000}
+.famav{width:72px;height:72px;border-radius:50%;object-fit:cover;flex:none;box-shadow:0 2px 10px rgba(0,0,0,.18)}
+.famacoes{margin-top:0}
+.famvista{margin-bottom:2px}
+.famagora li{align-items:flex-start}
+.famagora .grow .sub,.famagora .grow b,.fammeds .grow .sub,.fammeds .grow b{white-space:normal;overflow:visible}
+.famagora li.alerta{box-shadow:inset 3px 0 0 var(--bad);padding-left:10px}
+.famagora li.bom{box-shadow:inset 3px 0 0 var(--good);padding-left:10px}
+.famagora .end{font-weight:700;white-space:nowrap}
+.famtabw{overflow-x:auto;margin-top:6px}
+.famtab{border-collapse:collapse;width:100%;font:13px var(--f-ui);font-variant-numeric:tabular-nums}
+.famtab th,.famtab td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.famtab th{font-weight:700;color:var(--muted);white-space:nowrap}
+.famtab td.alto,.famtab td.baixo{color:var(--bad);font-weight:700}
+.famtab tr.famg td{font-weight:700;background:var(--hover);color:var(--muted)}
+.famus td{min-width:220px}
+.famus td.alto{font-weight:400;color:var(--ink);box-shadow:inset 3px 0 0 var(--bad)}
+.famus td:first-child{min-width:110px}
+.famres{background:var(--hover);border-radius:10px;padding:8px 10px}
+.fammeds li{flex-wrap:wrap;row-gap:2px}
+.fammeds .grow{min-width:min(100%,220px)}
+.fammeds .end{font:600 12.5px var(--f-ui);color:var(--muted);white-space:normal}
+.fammeds li.ativo{box-shadow:inset 3px 0 0 var(--accent);padding-left:10px}
+.famori{margin:6px 0;padding-left:20px}
+.famori li{margin:3px 0}
+.famori li.alto b{color:var(--bad)}
+.famvals{margin-top:8px}
+.famvals summary{cursor:pointer;font:600 14px var(--f-ui);color:var(--accent)}
 </style>
 </head>
 <body>
@@ -2498,11 +2525,13 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
   /* ===== Eddie e Olivia: linha do tempo com exames, vacinas, consultas, peso e momentos, com fotos, PDFs e vídeos.
      Tabela "registros" e cofre de arquivos "familia" no Supabase (004_familia.sql); o Rayner e a esposa veem juntos. ===== */
   var FAM={eddie:{n:"Eddie",peso:true},olivia:{n:"Olivia",peso:true}};
-  var TIPOS=[["exame","Exame","Ex.: Hemograma completo","Resultado"],["vacina","Vacina","Ex.: V10, Antirrábica, Hepatite B","Dose"],["consulta","Consulta","Ex.: Consulta de rotina","Profissional"],
-    ["peso","Peso","Ex.: Pesagem","Peso (kg)"],["momento","Momento","Ex.: Primeiro passeio na praia","Onde"],["midia","Fotos e vídeos","Ex.: Fotos do aniversário",""],
+  var TIPOS=[["exame","Exame","Ex.: Hemograma completo","Resultado"],["consulta","Consulta","Ex.: Consulta de rotina","Profissional"],["tratamento","Receita / tratamento","Ex.: Receita da endocrinologista","Profissional"],
+    ["sintoma","Sintomas","Ex.: Diarreia e vômito",""],["vacina","Vacina","Ex.: V10, Antirrábica, Hepatite B","Dose"],["preventivo","Antipulgas / vermífugo","Ex.: Bravecto","Produto"],
+    ["peso","Peso","Ex.: Pesagem","Peso (kg)"],["alimentacao","Alimentação","Ex.: Troca de ração","Ração"],["pedido","Pedido de exames","Ex.: Exames de controle",""],
+    ["momento","Momento","Ex.: Primeiro passeio na praia","Onde"],["midia","Fotos e vídeos","Ex.: Fotos do aniversário",""],
     ["nascimento","Nascimento","Ex.: Nascimento","Onde"],["outro","Outro","",""]];
   function tipoInfo(k){return TIPOS.filter(function(t){return t[0]===k})[0]||TIPOS[TIPOS.length-1]}
-  var famFiltro={eddie:"",olivia:""};
+  var famFiltro={eddie:"",olivia:""},famVista={eddie:"resumo",olivia:"resumo"};
   function hojeISO(){var d=new Date();return d.getFullYear()+"-"+dd(d.getMonth()+1)+"-"+dd(d.getDate())}
   function dataBR(iso){var p=String(iso).split("-");return p[2]+"/"+p[1]+"/"+p[0]}
   function idadeTxt(iso){
@@ -2529,35 +2558,215 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
         return SB.storage.from("familia").upload(path,g,{contentType:g.type||"application/octet-stream",upsert:false}).then(function(r){
           if(r.error)throw new Error(r.error.message);out.push({path:path,nome:f.name,tipo:g.type,tamanho:g.size})})})})},Promise.resolve()).then(function(){return out})}
 
+  /* ----- leitura dos dados de saúde guardados em registros.dados (005_registros_dados.sql) ----- */
+  function fmtN(v){return typeof v==="number"?v.toLocaleString("pt-BR",{maximumFractionDigits:2}):String(v)}
+  function refTxt(it){return it.min!=null&&it.max!=null?fmtN(it.min)+" a "+fmtN(it.max)+(it.u?" "+it.u:""):""}
+  function foraRef(it){return it.max!=null&&it.v>it.max?"alto":it.min!=null&&it.v<it.min?"baixo":""}
+  function pesoNum(r){var v=parseFloat(String(r.valor||"").replace(",","."));return isFinite(v)?v:null}
+  function maisDias(iso,n){var d=new Date(iso+"T12:00:00");d.setDate(d.getDate()+n);return d.getFullYear()+"-"+dd(d.getMonth()+1)+"-"+dd(d.getDate())}
+  function brl(v){return v.toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}
+  function dadosDe(r){return r.dados||{}}
+  /* remédios de todas as receitas, com início, fim e se está em uso hoje */
+  function famMeds(regs){
+    var hoje=hojeISO(),out=[];
+    regs.forEach(function(r){(dadosDe(r).meds||[]).forEach(function(m){
+      var ini=m.inicio||r.data,fim=m.continuo?null:maisDias(ini,Math.max(1,m.dias||1)-1);
+      out.push({m:m,r:r,ini:ini,fim:fim,ativo:ini<=hoje&&(m.continuo||fim>=hoje)})})});
+    return out.sort(function(a,b){return b.ini.localeCompare(a.ini)})}
+  function medLinha(x){
+    var m=x.m,quando=m.continuo?"uso contínuo desde "+dataBR(x.ini):dataBR(x.ini)+(x.fim!==x.ini?" a "+dataBR(x.fim):"")+(m.dias?" ("+m.dias+(m.dias===1?" dia)":" dias)"):"");
+    return h("li",{class:x.ativo?"ativo":null},h("span",{class:"grow"},h("b",{text:m.nome}),h("span",{class:"sub",text:[m.dose,m.como].filter(Boolean).join(" · ")})),h("span",{class:"end sub",text:quando}))}
+  function famSangue(regs){return regs.filter(function(r){return r.tipo==="exame"&&(dadosDe(r).laudo||[]).length}).sort(function(a,b){return a.data.localeCompare(b.data)})}
+  function famUS(regs){return regs.filter(function(r){return r.tipo==="exame"&&(dadosDe(r).orgaos||[]).length}).sort(function(a,b){return a.data.localeCompare(b.data)})}
+  function seta(it){var f=foraRef(it);return f==="alto"?" ↑":f==="baixo"?" ↓":""}
+
+  /* "Como está agora": diagnóstico, peso, último exame comparado ao anterior, remédios em uso e o que venceu */
+  function famAgora(quem,regs){
+    var p=panel("Como "+(quem==="olivia"?"a ":"o ")+FAM[quem].n+" está agora"),ul=h("ul",{class:"wl famagora"}),hoje=hojeISO();
+    function item(rot,val,sub,cls){ul.appendChild(h("li",{class:cls||null},h("span",{class:"grow"},h("b",{text:rot}),sub?h("span",{class:"sub",text:sub}):null),val?h("span",{class:"end",text:val}):null))}
+    var dg=regs.filter(function(r){return dadosDe(r).diagnostico}).sort(function(a,b){return b.data.localeCompare(a.data)})[0];
+    if(dg)item("Diagnóstico mais recente",dg.dados.diagnostico,dataBR(dg.data)+(dg.dados.vet?" · "+dg.dados.vet:""));
+    var ps=regs.filter(function(r){return r.tipo==="peso"&&pesoNum(r)!=null}).sort(function(a,b){return b.data.localeCompare(a.data)});
+    if(ps.length){var d=ps[1]?pesoNum(ps[0])-pesoNum(ps[1]):0;
+      item("Peso",fmtN(pesoNum(ps[0]))+" kg","em "+dataBR(ps[0].data)+(ps[1]?" · "+(d>0?"+":"")+fmtN(Math.round(d*10)/10)+" kg desde "+dataBR(ps[1].data)+" ("+(d>0?"+":"")+Math.round(d/pesoNum(ps[1])*100)+"%)":""),Math.abs(d)>=0.05*pesoNum(ps[1]||ps[0])?"alerta":null)}
+    var sg=famSangue(regs),ult=sg[sg.length-1],ant=sg[sg.length-2];
+    if(ult){
+      var fora=ult.dados.laudo.filter(foraRef);
+      item("Exame de sangue de "+dataBR(ult.data),fora.length?fora.length+" fora da referência":"tudo na referência",fora.map(function(it){return it.n+" "+fmtN(it.v)+seta(it)}).join(" · "),fora.length?"alerta":null);
+      if(ant){var antes={};ant.dados.laudo.forEach(function(it){antes[it.k]=it});
+        var melhor=[],pior=[];
+        function longe(it){return foraRef(it)==="alto"?it.v-it.max:it.min-it.v}
+        ult.dados.laudo.forEach(function(it){var a=antes[it.k];if(!a)return;
+          if(foraRef(a)&&!foraRef(it))melhor.push(it.n+" ("+fmtN(a.v)+" → "+fmtN(it.v)+")");
+          else if(!foraRef(a)&&foraRef(it))pior.push(it.n+" ("+fmtN(a.v)+" → "+fmtN(it.v)+")");
+          /* fora nas duas datas: melhorou se chegou mais perto da faixa de referência */
+          else if(foraRef(a)&&foraRef(it))(longe(it)<longe(a)?melhor:pior).push(it.n+" ("+fmtN(a.v)+" → "+fmtN(it.v)+")")});
+        if(melhor.length)item("Melhorou ou voltou ao normal desde "+dataBR(ant.data),"",melhor.join(" · "),"bom");
+        if(pior.length)item("Piorou ou saiu da referência desde "+dataBR(ant.data),"",pior.join(" · "),"alerta")}}
+    var us=famUS(regs),uu=us[us.length-1];
+    if(uu)item("Ultrassom de "+dataBR(uu.data),"",uu.dados.resumo||uu.dados.orgaos.filter(function(o){return o.a}).map(function(o){return o.o}).join(", "));
+    var ativos=famMeds(regs).filter(function(x){return x.ativo});
+    item("Remédios em uso",ativos.length?String(ativos.length):"nenhum",ativos.map(function(x){return x.m.nome+(x.m.continuo?" (contínuo)":" até "+dataBR(x.fim))}).join(" · "));
+    /* vacina ou antipulgas cuja próxima dose passou sem nenhum registro novo do mesmo tipo */
+    regs.filter(function(r){return /^(vacina|preventivo)$/.test(r.tipo)&&r.proxima&&r.proxima<hoje&&!regs.some(function(o){return o.tipo===r.tipo&&o.data>r.data})})
+      .forEach(function(r){item(r.titulo,"atrasado","a próxima dose era em "+dataBR(r.proxima)+" e não há dose nova registrada","alerta")});
+    var prox=regs.filter(function(r){return r.proxima&&r.proxima>=hoje}).sort(function(a,b){return a.proxima.localeCompare(b.proxima)});
+    prox.forEach(function(r){item(r.titulo,dataBR(r.proxima),tipoInfo(r.tipo)[1]+" · próxima data")});
+    p.appendChild(ul);
+    p.appendChild(h("p",{class:"note",text:"Resumo montado a partir dos laudos e receitas. Quem interpreta é o veterinário."}));
+    return p}
+
+  /* Peso ao longo do tempo (linha simples, mesmo estilo do gráfico de preços do Mercado) */
+  function famPeso(regs){
+    var pts=regs.filter(function(r){return r.tipo==="peso"&&pesoNum(r)!=null}).sort(function(a,b){return a.data.localeCompare(b.data)});
+    if(pts.length<2)return null;
+    var W=640,H=200,L=46,R=18,T=22,B=28,NS="http://www.w3.org/2000/svg";
+    function t(r){return new Date(r.data+"T12:00:00").getTime()}
+    var t0=t(pts[0]),t1=t(pts[pts.length-1]),vs=pts.map(pesoNum),lo=Math.min.apply(null,vs)-0.5,hi=Math.max.apply(null,vs)+0.5;
+    function X(r){return L+(t(r)-t0)/((t1-t0)||1)*(W-L-R)}function Y(v){return T+(1-(v-lo)/(hi-lo))*(H-T-B)}
+    function s(tag,a,txt){var e=document.createElementNS(NS,tag);Object.keys(a).forEach(function(k){e.setAttribute(k,a[k])});if(txt)e.textContent=txt;return e}
+    var g=s("svg",{viewBox:"0 0 "+W+" "+H,class:"lchart",role:"img","aria-label":"Peso ao longo do tempo"});
+    [lo+0.5,(lo+hi)/2,hi-0.5].forEach(function(v){g.appendChild(s("line",{x1:L,x2:W-R,y1:Y(v),y2:Y(v),class:"lgrid"}));g.appendChild(s("text",{x:L-6,y:Y(v)+4,"text-anchor":"end",class:"lax"},fmtN(Math.round(v*10)/10)+" kg"))});
+    g.appendChild(s("polyline",{points:pts.map(function(r){return X(r).toFixed(1)+","+Y(pesoNum(r)).toFixed(1)}).join(" "),class:"lline"}));
+    pts.forEach(function(r,i){var c=s("circle",{cx:X(r),cy:Y(pesoNum(r)),r:4.5,class:"lpt"});c.appendChild(s("title",{},dataBR(r.data)+" · "+fmtN(pesoNum(r))+" kg"));g.appendChild(c);
+      g.appendChild(s("text",{x:X(r),y:Y(pesoNum(r))-9,"text-anchor":i===0?"start":i===pts.length-1?"end":"middle",class:"llab"},fmtN(pesoNum(r))));
+      if(i===0||i===pts.length-1)g.appendChild(s("text",{x:X(r),y:H-8,"text-anchor":i===0?"start":"end",class:"lax"},dataBR(r.data)))});
+    var p=panel("Peso",pts.length+" pesagens, de "+dataBR(pts[0].data)+" a "+dataBR(pts[pts.length-1].data));
+    p.appendChild(h("div",{class:"lwrap"},g));return p}
+
+  /* Exames de sangue lado a lado: cada linha um indicador, cada coluna uma data */
+  function famComparaSangue(regs){
+    var sg=famSangue(regs);if(!sg.length)return null;
+    var ordem=[],por={};
+    sg.forEach(function(r){r.dados.laudo.forEach(function(it){if(!por[it.k]){por[it.k]={n:it.n,g:it.g,u:it.u,v:{}};ordem.push(it.k)}por[it.k].v[r.id]=it})});
+    var p=panel("Exames de sangue: como estava × como está",sg.length===1?"Um exame até agora.":"Valores de "+sg.map(function(r){return dataBR(r.data)}).join(", ")+". Vermelho: fora da referência do laboratório.");
+    var tb=h("table",{class:"famtab"}),hd=h("tr",null,h("th",{text:"Indicador"}),sg.map(function(r){return h("th",{text:dataBR(r.data)})}),h("th",{text:"Referência"}),sg.length>1?h("th",{text:"Mudança"}):null);
+    tb.appendChild(h("thead",null,hd));var bd=h("tbody");tb.appendChild(bd);var grupo=null;
+    ordem.forEach(function(k){var x=por[k];
+      if(x.g!==grupo){grupo=x.g;bd.appendChild(h("tr",{class:"famg"},h("td",{colspan:String(sg.length+3),text:grupo||"Outros"})))}
+      var ult=null,pri=null;sg.forEach(function(r){var it=x.v[r.id];if(it){if(!pri)pri=it;ult=it}});
+      var mud=pri&&ult&&pri!==ult&&pri.v?Math.round((ult.v-pri.v)/Math.abs(pri.v)*100):null;
+      bd.appendChild(h("tr",null,h("td",null,h("b",{text:x.n})),
+        sg.map(function(r){var it=x.v[r.id];return h("td",{class:it?foraRef(it)||null:null,title:it?refTxt(it):null,text:it?fmtN(it.v)+seta(it):"—"})}),
+        h("td",{class:"sub",text:ult?refTxt(ult):""}),
+        sg.length>1?h("td",{class:"sub",text:mud==null?"":(mud>0?"+":"")+mud+"%"}):null))});
+    p.appendChild(h("div",{class:"famtabw"},tb));return p}
+
+  /* Ultrassons lado a lado: cada linha um órgão */
+  function famComparaUS(regs){
+    var us=famUS(regs);if(!us.length)return null;
+    var ordem=[],por={};
+    us.forEach(function(r){r.dados.orgaos.forEach(function(o){if(!por[o.o]){por[o.o]={};ordem.push(o.o)}por[o.o][r.id]=o})});
+    var p=panel("Ultrassons: como estava × como está","⚠ marca o que o laudo apontou como alterado.");
+    var tb=h("table",{class:"famtab famus"});
+    tb.appendChild(h("thead",null,h("tr",null,h("th",{text:"Órgão"}),us.map(function(r){return h("th",{text:dataBR(r.data)})}))));
+    var bd=h("tbody");tb.appendChild(bd);
+    ordem.forEach(function(k){bd.appendChild(h("tr",null,h("td",null,h("b",{text:k})),us.map(function(r){var o=por[k][r.id];return h("td",{class:o&&o.a?"alto":null,text:o?(o.a?"⚠ ":"")+o.r:"—"})})))});
+    p.appendChild(h("div",{class:"famtabw"},tb));return p}
+
+  function famTratamentos(regs){
+    var ms=famMeds(regs);if(!ms.length)return null;
+    var p=panel("Remédios e tratamentos","Do mais recente para o mais antigo. Em destaque, o que está em uso hoje."),ativos=ms.filter(function(x){return x.ativo});
+    if(ativos.length){p.appendChild(h("h3",{class:"dayh",text:"Em uso agora"}));p.appendChild(h("ul",{class:"wl fammeds"},ativos.map(medLinha)))}
+    var porReg=[],vis={};ms.forEach(function(x){if(!vis[x.r.id]){vis[x.r.id]=1;porReg.push(x.r)}});
+    porReg.forEach(function(r){var d=dadosDe(r);
+      p.appendChild(h("h3",{class:"dayh",text:dataBR(r.data)+" · "+r.titulo}));
+      if(d.vet||d.diagnostico)p.appendChild(h("p",{class:"sub",text:[d.diagnostico?"Diagnóstico: "+d.diagnostico:"",d.vet].filter(Boolean).join(" · ")}));
+      p.appendChild(h("ul",{class:"wl fammeds"},ms.filter(function(x){return x.r===r}).map(medLinha)));
+      if((d.orientacoes||[]).length)p.appendChild(h("ul",{class:"famori"},d.orientacoes.map(function(o){return h("li",{text:o})})))});
+    return p}
+
+  function famGastos(regs){
+    var cs=regs.filter(function(r){return typeof dadosDe(r).custo==="number"}).sort(function(a,b){return b.data.localeCompare(a.data)});if(!cs.length)return null;
+    var anos={};cs.forEach(function(r){var a=r.data.slice(0,4);anos[a]=(anos[a]||0)+r.dados.custo});
+    var p=panel("Gastos com veterinário",Object.keys(anos).sort().reverse().map(function(a){return a+": "+brl(anos[a])}).join(" · "));
+    p.appendChild(h("ul",{class:"wl"},cs.map(function(r){return h("li",null,h("span",{class:"grow"},h("b",{text:r.titulo}),h("span",{class:"sub",text:dataBR(r.data)+(r.dados.clinica?" · "+r.dados.clinica:"")})),h("span",{class:"end",text:brl(r.dados.custo)}))})));
+    return p}
+
+  /* O que o registro traz além do texto: profissional, diagnóstico, resumo, remédios, valores do exame, órgãos e custo */
+  function famDetalhe(card,r,regs){
+    var d=dadosDe(r);
+    var quem=[d.clinica,d.vet].filter(Boolean).join(" · ");if(quem)card.appendChild(h("p",{class:"sub",text:quem}));
+    if(d.motivo)card.appendChild(h("p",null,h("b",{text:"Motivo: "}),d.motivo));
+    if(d.diagnostico)card.appendChild(h("p",null,h("b",{text:"Diagnóstico: "}),d.diagnostico));
+    if(d.resumo)card.appendChild(h("p",{class:"famres",text:d.resumo}));
+    if((d.meds||[]).length)card.appendChild(h("ul",{class:"wl fammeds"},famMeds([r]).map(medLinha)));
+    if((d.orientacoes||[]).length)card.appendChild(h("ul",{class:"famori"},d.orientacoes.map(function(o){return h("li",{text:o})})));
+    if((d.laudo||[]).length){
+      var ant=famSangue(regs).filter(function(x){return x.data<r.data}).pop(),antes={};if(ant)ant.dados.laudo.forEach(function(it){antes[it.k]=it});
+      var fora=d.laudo.filter(foraRef).length,tb=h("table",{class:"famtab"});
+      tb.appendChild(h("thead",null,h("tr",null,h("th",{text:"Indicador"}),h("th",{text:"Resultado"}),h("th",{text:"Referência"}),ant?h("th",{text:"Em "+dataBR(ant.data)}):null)));
+      tb.appendChild(h("tbody",null,d.laudo.map(function(it){var a=antes[it.k];
+        return h("tr",null,h("td",{text:it.n}),h("td",{class:foraRef(it)||null,text:fmtN(it.v)+(it.u?" "+it.u:"")+seta(it)}),h("td",{class:"sub",text:refTxt(it)}),ant?h("td",{class:a?foraRef(a)||"sub":"sub",text:a?fmtN(a.v)+seta(a):"—"}):null)})));
+      card.appendChild(h("details",{class:"famvals"},h("summary",{text:"Ver os "+d.laudo.length+" valores"+(fora?" ("+fora+" fora da referência)":"")}),h("div",{class:"famtabw"},tb)))}
+    if((d.orgaos||[]).length)card.appendChild(h("details",{class:"famvals"},h("summary",{text:"Ver o laudo por órgão"}),
+      h("ul",{class:"famori"},d.orgaos.map(function(o){return h("li",{class:o.a?"alto":null},h("b",{text:(o.a?"⚠ ":"")+o.o+": "}),o.r)}))));
+    if(typeof d.custo==="number")card.appendChild(h("details",{class:"famvals"},h("summary",{text:"Custo: "+brl(d.custo)}),
+      h("ul",{class:"famori"},(d.itensCusto||[]).map(function(x){return h("li",{text:x[0]+": "+brl(x[1])})}))))}
+
+  /* Importar histórico: um .json (montado a partir dos laudos) junto com os PDFs e fotos citados nele.
+     O que já existe (mesmo tipo, data e título) é pulado, então dá para importar de novo sem duplicar. */
+  function famImportar(quem,regs,pronto,fechar){
+    var p=panel("Importar histórico","Escolha de uma vez o arquivo .json do histórico e os PDFs e fotos que ele cita (estão na mesma pasta).");
+    var inp=h("input",{type:"file",multiple:"",accept:".json,application/json,image/*,video/*,application/pdf"}),st=h("p",{class:"sub",role:"status"});
+    var ok=h("button",{type:"button",text:"Importar"}),canc=h("button",{type:"button",class:"ghostbtn",text:"Fechar"});canc.onclick=fechar;
+    ok.onclick=function(){
+      var fs=Array.prototype.slice.call(inp.files||[]),js=fs.filter(function(f){return /\.json$/i.test(f.name)})[0];
+      if(!js){st.textContent="Inclua o arquivo .json do histórico.";return}
+      var porNome={};fs.forEach(function(f){porNome[norm(f.name.normalize("NFC"))]=f});
+      ok.disabled=true;st.textContent="Lendo o histórico…";
+      js.text().then(function(t){
+        var j=JSON.parse(t),lista=(j.registros||[]).filter(function(r){return r.tipo&&r.data&&r.titulo});
+        if(j.quem&&j.quem!==quem)throw new Error("esse histórico é de "+j.quem);
+        var existe={};regs.forEach(function(r){existe[r.tipo+"|"+r.data+"|"+norm(r.titulo)]=1});
+        var novos=lista.filter(function(r){return !existe[r.tipo+"|"+r.data+"|"+norm(r.titulo)]}),faltam=[],feitos=0;
+        if(!novos.length){st.textContent="Tudo desse histórico já está aqui.";ok.disabled=false;return}
+        return novos.reduce(function(pr,r){return pr.then(function(){
+          feitos++;st.textContent="Salvando "+feitos+" de "+novos.length+": "+r.titulo+"…";
+          var dados={quem:quem,tipo:r.tipo,data:r.data,titulo:r.titulo,valor:r.valor||null,proxima:r.proxima||null,detalhes:r.detalhes||null};
+          if(r.dados)dados.dados=r.dados;
+          return SB.from("registros").insert(dados).select("id,arquivos").single().then(sbOk).then(function(row){
+            var arqs=(r.arquivos||[]).map(function(n){var f=porNome[norm(String(n).normalize("NFC"))];if(!f)faltam.push(n);return f}).filter(Boolean);
+            if(!arqs.length)return;
+            return enviarArquivos(quem,row.id,arqs,function(x){st.textContent=r.titulo+": "+x.toLowerCase()}).then(function(up){return SB.from("registros").update({arquivos:up}).eq("id",row.id).then(sbOk)})})})},Promise.resolve())
+          .then(function(){st.textContent="✓ "+novos.length+" registros importados"+(lista.length>novos.length?" ("+(lista.length-novos.length)+" já estavam aqui)":"")+"."+(faltam.length?" Faltaram estes arquivos: "+faltam.join(", ")+". Importe de novo escolhendo-os junto com o .json, ou anexe pelo Editar.":"");
+            setTimeout(pronto,faltam.length?6000:1200)})
+      }).catch(function(e){ok.disabled=false;
+        st.textContent=/dados/.test(e.message)&&/column|schema/i.test(e.message)?"Falta rodar o supabase/005_registros_dados.sql no Supabase (uma vez) para guardar os valores dos exames.":"Não consegui importar: "+e.message})};
+    p.appendChild(h("div",{class:"wform"},inp,h("div",{class:"vfil"},ok,canc),st));return p}
+
   function renderFamilia(quem){
     var root=$("#"+quem+"-view"),F=FAM[quem];root.innerHTML="";
     root.appendChild(h("div",{class:"panel"},loading()));
     SB.from("registros").select("*").eq("quem",quem).order("data",{ascending:false}).order("criado_em",{ascending:false}).then(sbOk).then(function(regs){
+      var paths=[];regs.forEach(function(r){(r.arquivos||[]).forEach(function(a){paths.push(a.path)})});
+      var urls={};
+      return (paths.length?SB.storage.from("familia").createSignedUrls(paths,3600).then(function(r){(r.data||[]).forEach(function(x){if(x.signedUrl)urls[x.path]=x.signedUrl})}):Promise.resolve()).then(function(){desenhar(regs,urls)})
+    }).catch(function(e){root.innerHTML="";root.appendChild(h("div",{class:"panel"},h("p",{class:"empty",text:/registros|relation|schema cache/i.test(e.message)?"Falta rodar o supabase/004_familia.sql no Supabase para ligar esta área.":"Não consegui carregar ("+e.message+")."})))});
+
+    function desenhar(regs,urls){
       root.innerHTML="";
       var nasc=regs.filter(function(r){return r.tipo==="nascimento"})[0],ultPeso=regs.filter(function(r){return r.tipo==="peso"&&r.valor})[0];
-      var add=h("button",{type:"button",class:"mkadd",text:"+ Adicionar registro"});
-      var topo=h("div",{class:"panel famhead"},h("div",{class:"grow"},h("h2",{text:F.n}),
-        h("p",{class:"sub",text:[nasc?idadeTxt(nasc.data)+" (nasceu em "+dataBR(nasc.data)+")":"Adicione um registro “Nascimento” para mostrar a idade",ultPeso?"último peso "+ultPeso.valor+" kg em "+dataBR(ultPeso.data):""].filter(Boolean).join(" · ")})),add);
+      var foto=regs.filter(function(r){return dadosDe(r).perfil&&(r.arquivos||[]).some(function(a){return urls[a.path]&&/^image\//.test(a.tipo)})})[0];
+      var add=h("button",{type:"button",class:"mkadd",text:"+ Adicionar registro"}),imp=h("button",{type:"button",class:"ghostbtn",text:"Importar histórico"});
+      var topo=h("div",{class:"panel famhead"},foto?h("img",{class:"famav",src:urls[foto.arquivos.filter(function(a){return /^image\//.test(a.tipo)})[0].path],alt:F.n}):null,
+        h("div",{class:"grow"},h("h2",{text:F.n}),
+        h("p",{class:"sub",text:[nasc?idadeTxt(nasc.data)+" (nasceu em "+dataBR(nasc.data)+")":"Adicione um registro “Nascimento” para mostrar a idade",ultPeso?"último peso "+ultPeso.valor+" kg em "+dataBR(ultPeso.data):""].filter(Boolean).join(" · ")})),
+        h("div",{class:"vfil famacoes"},add,imp));
       root.appendChild(topo);
       var formBox=h("div");root.appendChild(formBox);
       add.onclick=function(){abrirForm(null)};
+      imp.onclick=function(){formBox.innerHTML="";formBox.appendChild(famImportar(quem,regs,function(){renderFamilia(quem)},function(){formBox.innerHTML=""}));formBox.scrollIntoView({behavior:"smooth",block:"start"})};
       function abrirForm(reg){formBox.innerHTML="";formBox.appendChild(famForm(quem,reg,function(){renderFamilia(quem)},function(){formBox.innerHTML=""}));formBox.scrollIntoView({behavior:"smooth",block:"start"})}
-      /* próximas doses e retornos */
-      var hoje=hojeISO(),prox=regs.filter(function(r){return r.proxima&&r.proxima>=hoje}).sort(function(a,b){return a.proxima.localeCompare(b.proxima)});
-      if(prox.length){var pp=panel("Próximas doses e retornos");
-        pp.appendChild(h("ul",{class:"wl"},prox.map(function(r){return h("li",null,h("span",{class:"grow"},h("b",{text:r.titulo}),h("span",{class:"sub",text:tipoInfo(r.tipo)[1]})),h("span",{class:"end",text:dataBR(r.proxima)}))})));
-        root.appendChild(pp)}
-      if(!regs.length){root.appendChild(h("div",{class:"panel"},h("p",{class:"empty",text:"Nada registrado ainda. Toque em “Adicionar registro” para lançar o primeiro exame, vacina ou foto."})));return}
-      /* filtro por tipo */
-      var usados=TIPOS.filter(function(t){return regs.some(function(r){return r.tipo===t[0]})});
-      var seg=h("div",{class:"seg famseg",role:"group","aria-label":"Tipo"});
-      [["","Tudo"]].concat(usados).forEach(function(t){var b=h("button",{type:"button","aria-pressed":famFiltro[quem]===t[0]?"true":"false",text:t[1]});b.onclick=function(){famFiltro[quem]=t[0];renderFamilia(quem)};seg.appendChild(b)});
-      root.appendChild(seg);
-      var lista=regs.filter(function(r){return !famFiltro[quem]||r.tipo===famFiltro[quem]});
-      var paths=[];lista.forEach(function(r){(r.arquivos||[]).forEach(function(a){paths.push(a.path)})});
-      var urls={};
-      (paths.length?SB.storage.from("familia").createSignedUrls(paths,3600).then(function(r){(r.data||[]).forEach(function(x){if(x.signedUrl)urls[x.path]=x.signedUrl})}):Promise.resolve()).then(function(){
-        var ano=null,box=h("div",{class:"stack"});root.appendChild(box);
+      if(!regs.length){root.appendChild(h("div",{class:"panel"},h("p",{class:"empty",text:"Nada registrado ainda. Toque em “Adicionar registro” para lançar o primeiro exame, vacina ou foto, ou em “Importar histórico”."})));return}
+      /* quatro jeitos de ver: resumo, exames, remédios e a linha do tempo completa */
+      var temSaude=regs.some(function(r){var d=dadosDe(r);return d.laudo||d.orgaos||d.meds});
+      var vistas=[["resumo","Resumo"],["exames","Exames"],["remedios","Remédios"],["linha","Linha do tempo"]];
+      if(!temSaude)famVista[quem]="linha";
+      var vista=famVista[quem],seg=h("div",{class:"seg famseg famvista",role:"group","aria-label":"Ver"});
+      if(temSaude){vistas.forEach(function(v){var b=h("button",{type:"button","aria-pressed":vista===v[0]?"true":"false",text:v[1]});b.onclick=function(){famVista[quem]=v[0];desenhar(regs,urls)};seg.appendChild(b)});root.appendChild(seg)}
+      function cards(lista,box){
+        var ano=null;
         lista.forEach(function(r){
           var a=r.data.slice(0,4);if(a!==ano){ano=a;box.appendChild(h("h2",{class:"sec",text:a}))}
           var ti=tipoInfo(r.tipo),card=h("article",{class:"panel famcard"});
@@ -2565,12 +2774,13 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
           card.appendChild(h("h3",{text:r.titulo}));
           if(r.valor)card.appendChild(h("p",null,h("b",{text:(ti[3]||"Valor")+": "}),r.valor+(r.tipo==="peso"&&/^[\d.,]+$/.test(r.valor)?" kg":"")));
           if(r.detalhes)card.appendChild(h("p",{class:"famdet",text:r.detalhes}));
+          famDetalhe(card,r,regs);
           var arqs=r.arquivos||[];
           if(arqs.length){var g=h("div",{class:"famarq"});
             arqs.forEach(function(x){var u=urls[x.path];if(!u){g.appendChild(h("span",{class:"sub",text:x.nome}));return}
               if(/^image\//.test(x.tipo))g.appendChild(h("a",{href:u,target:"_blank",rel:"noopener",title:x.nome},h("img",{src:u,alt:x.nome,loading:"lazy"})));
               else if(/^video\//.test(x.tipo))g.appendChild(h("video",{src:u,controls:"",preload:"metadata",playsinline:""}));
-              else g.appendChild(ext(u,"📄 "+x.nome,"ghostbtn"))});
+              else g.appendChild(ext(u,"📄 Abrir "+(/pdf$/i.test(x.nome)?"o PDF":x.nome),"ghostbtn"))});
             card.appendChild(g)}
           var ed=h("button",{type:"button",class:"ghostbtn",text:"Editar"});ed.onclick=function(){abrirForm(r)};
           var del=h("button",{type:"button",class:"ghostbtn",text:"Apagar"}),armado=false;
@@ -2581,8 +2791,19 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
             (ps.length?SB.storage.from("familia").remove(ps):Promise.resolve()).then(function(){return SB.from("registros").delete().eq("id",r.id).then(sbOk)}).then(function(){renderFamilia(quem)})
               .catch(function(e){del.disabled=false;del.textContent="Não apagou ("+e.message+")"})};
           card.appendChild(h("div",{class:"vfoot"},ed,del));
-          box.appendChild(card)})})
-    }).catch(function(e){root.innerHTML="";root.appendChild(h("div",{class:"panel"},h("p",{class:"empty",text:/registros|relation|schema cache/i.test(e.message)?"Falta rodar o supabase/004_familia.sql no Supabase para ligar esta área.":"Não consegui carregar ("+e.message+")."})))})}
+          box.appendChild(card)})}
+      var box=h("div",{class:"stack"});root.appendChild(box);
+      if(vista==="resumo"){[famAgora(quem,regs),famPeso(regs),famGastos(regs)].forEach(function(x){if(x)box.appendChild(x)});return}
+      if(vista==="exames"){[famComparaSangue(regs),famComparaUS(regs)].forEach(function(x){if(x)box.appendChild(x)});
+        cards(regs.filter(function(r){return r.tipo==="exame"||r.tipo==="pedido"}),box);return}
+      if(vista==="remedios"){var t=famTratamentos(regs);if(t)box.appendChild(t);return}
+      /* linha do tempo: filtro por tipo */
+      var usados=TIPOS.filter(function(t){return regs.some(function(r){return r.tipo===t[0]})});
+      var fseg=h("div",{class:"seg famseg",role:"group","aria-label":"Tipo"});
+      [["","Tudo"]].concat(usados).forEach(function(t){var b=h("button",{type:"button","aria-pressed":famFiltro[quem]===t[0]?"true":"false",text:t[1]});b.onclick=function(){famFiltro[quem]=t[0];desenhar(regs,urls)};fseg.appendChild(b)});
+      box.appendChild(fseg);
+      cards(regs.filter(function(r){return !famFiltro[quem]||r.tipo===famFiltro[quem]}),box)}
+  }
 
   /* Formulário de registro: tipo, data, título, valor, próxima data, detalhes e arquivos */
   function famForm(quem,reg,pronto,cancelar){
@@ -2594,7 +2815,7 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
     var arq=h("input",{type:"file",multiple:"",accept:"image/*,video/*,application/pdf"});
     var lValor=h("label",null,h("span"),valor),lProx=h("label",null,h("span"),prox);
     function ajustar(){var t=tipoInfo(tipo.value);titulo.placeholder=t[2]||"Título";lValor.firstChild.textContent=t[3]||"Valor (opcional)";lValor.hidden=!t[3];
-      lProx.firstChild.textContent=tipo.value==="vacina"?"Próxima dose (reforço)":"Retorno (opcional)";lProx.hidden=!/^(vacina|consulta|exame)$/.test(tipo.value)}
+      lProx.firstChild.textContent=/^(vacina|preventivo)$/.test(tipo.value)?"Próxima dose":"Retorno (opcional)";lProx.hidden=!/^(vacina|consulta|exame|preventivo|tratamento)$/.test(tipo.value)}
     tipo.addEventListener("change",ajustar);ajustar();
     f.appendChild(h("div",{class:"two"},h("label",null,"Tipo",tipo),h("label",null,"Data",data)));
     f.appendChild(h("label",null,"Título",titulo));

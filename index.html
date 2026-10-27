@@ -2282,13 +2282,14 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
     getJson("https://api.open-meteo.com/v1/forecast?latitude=-23.50&longitude=-47.46&current=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min&timezone=America%2FSao_Paulo&forecast_days=1").then(function(d){
       wx.textContent=Math.round(d.current.temperature_2m)+"° agora em Sorocaba · "+WXTXT[wxKind(d.current.weather_code)]+" · máx. "+Math.round(d.daily.temperature_2m_max[0])+"°, mín. "+Math.round(d.daily.temperature_2m_min[0])+"°"}).catch(function(){})}
 
-  /* E-mail: atalhos para as quatro caixas; ler as mensagens aqui dentro é o próximo passo */
+  /* E-mail: os Gmails e o Outlook mostram a caixa de entrada aqui; o iCloud é só atalho */
   var EMAILS_PADRAO=[{n:"Rayner Carvalho",u:"https://mail.google.com/mail/u/0/#inbox"},{n:"Raynim Carvalho",u:"https://mail.google.com/mail/u/1/#inbox"},{n:"Outlook",u:"https://outlook.live.com/mail/0/"},{n:"iCloud",u:"https://www.icloud.com/mail/"}];
   function wEmail(){
     var p=wCard("E-mail","mail","#D93F2F"),contas=(PESSOAL.emails||EMAILS_PADRAO).map(function(c){var n={"Gmail 1":"Rayner Carvalho","Gmail 2":"Raynim Carvalho"}[c.n];return n?Object.assign({},c,{n:n}):c});
     var ul=h("div");
     contas.forEach(function(c,i){
       if(/mail\.google\.com/.test(c.u)){ul.appendChild(gmailBloco(contas,i));return}
+      if(/outlook\.(live|office)\.com/.test(c.u)){ul.appendChild(outlookBloco(contas,i));return}
       ul.appendChild(h("ul",{class:"wl"},h("li",null,h("span",{class:"grow"},h("b",{text:c.n}),h("span",{class:"sub",text:c.e||"caixa de entrada"})),ext(c.u,"Abrir","ghostbtn"))))});
     p.appendChild(ul);
     var ed=h("button",{type:"button",class:"ghostbtn",text:"Dar nomes às contas"});
@@ -2298,7 +2299,7 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
       var ok=h("button",{type:"button",text:"Salvar"});
       ok.onclick=function(){pessoalGravar("emails",contas.map(function(c,i){return {n:ins[i][0].value.trim()||c.n,e:ins[i][1].value.trim(),u:c.u}}));renderInicio()};
       f.appendChild(ok);ul.replaceWith(f);ed.remove()};
-    p.appendChild(h("p",{class:"note",text:"Gmail: conecte cada conta uma vez; depois é só tocar em Atualizar (o Google pede de novo a cada hora). Outlook e iCloud ainda são só atalhos."}));
+    p.appendChild(h("p",{class:"note",text:"Gmail: conecte cada conta uma vez; depois é só tocar em Atualizar (o Google pede de novo a cada hora). Outlook: conecte uma vez e ele se renova sozinho. iCloud é só atalho (a Apple não deixa ler de um site)."}));
     p.appendChild(ed);
     return p}
 
@@ -2361,6 +2362,61 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
     if(!GOOGLE_CLIENT_ID){cabecalho(c.e||"falta configurar o acesso do Google");return box}
     var tk=gmToken(slot);
     if(tk)carregar(tk);else cabecalho(c.e?c.e+" · toque para ver os e-mails":"ainda não conectado",botao(c.e?"Atualizar":"Conectar"));
+    return box}
+
+  /* ===== Outlook: lê a caixa de entrada pelo Microsoft Graph (MSAL no navegador, só leitura).
+     O login abre numa janelinha que volta para ms.html; o acesso se renova sozinho e fica só neste aparelho. ===== */
+  var MS_CLIENT_ID="";
+  var MSAL_JS="https://cdn.jsdelivr.net/npm/@azure/msal-browser@4.30.0/lib/msal-browser.min.js",MS_SCOPES=["Mail.Read"];
+  var msApp=null;
+  function msPronto(){
+    if(!msApp){msApp=carregarScript(MSAL_JS).then(function(){
+      var a=new msal.PublicClientApplication({auth:{clientId:MS_CLIENT_ID,authority:"https://login.microsoftonline.com/common",redirectUri:location.origin+location.pathname.replace(/[^/]*$/,"")+"ms.html"},
+        cache:{cacheLocation:"localStorage"}});
+      return a.initialize().then(function(){return a})});
+      msApp.catch(function(){msApp=null})}
+    return msApp}
+  function msConta(a,email){var l=a.getAllAccounts();return l.filter(function(x){return email&&x.username.toLowerCase()===email.toLowerCase()})[0]||l[0]||null}
+  /* silencioso=true: só tenta sem abrir janela (ao abrir o site) */
+  function msToken(email,silencioso){
+    return msPronto().then(function(a){
+      var conta=msConta(a,email);
+      var pedir=function(){if(silencioso)throw new Error("precisa conectar");return a.acquireTokenPopup({scopes:MS_SCOPES,loginHint:email||undefined,prompt:email?undefined:"select_account"})};
+      return (conta?a.acquireTokenSilent({scopes:MS_SCOPES,account:conta}).catch(pedir):pedir()).then(function(r){return r.accessToken})})}
+  function msApi(tk,path){return fetch("https://graph.microsoft.com/v1.0/me/"+path,{headers:{Authorization:"Bearer "+tk}}).then(function(r){
+    if(r.status===401)throw new Error("expirou");if(!r.ok)throw new Error("Outlook respondeu "+r.status);return r.json()})}
+  function msErro(e){return /user_cancelled|popup_window_error/.test(e.errorCode||"")?"janela fechada":e.errorCode||e.message}
+  function outlookBloco(contas,i){
+    var c=contas[i],slot="o"+i,box=h("div",{class:"gmbox"});
+    var head=h("div",{class:"gmhead"}),corpo=h("ul",{class:"wl"});
+    box.appendChild(head);box.appendChild(corpo);
+    var chMin="rac-gm-min-"+slot,min=false;try{min=localStorage.getItem(chMin)==="1"}catch(e){}
+    function aplicarMin(){box.classList.toggle("min",min);tg.setAttribute("aria-expanded",String(!min));tg.title=min?"Mostrar os e-mails":"Encolher"}
+    var tg=h("button",{type:"button",class:"gmtg"});
+    tg.onclick=function(){min=!min;try{localStorage.setItem(chMin,min?"1":"0")}catch(e){}aplicarMin()};
+    aplicarMin();
+    function cabecalho(txt,botao){head.innerHTML="";head.appendChild(tg);head.appendChild(h("span",{class:"grow"},h("b",{text:c.n}),h("span",{class:"sub",text:txt})));if(botao)head.appendChild(botao);head.appendChild(ext(c.u,"Abrir","ghostbtn"))}
+    function botao(rot){var b=h("button",{type:"button",class:"ghostbtn pri",text:rot});
+      b.onclick=function(){b.disabled=true;msToken(c.e,false).then(carregar).catch(function(e){b.disabled=false;cabecalho("Não conectou ("+msErro(e)+")",b)})};return b}
+    function carregar(tk){
+      cabecalho("Carregando…");
+      return Promise.all([msApi(tk,""),msApi(tk,"mailFolders/inbox"),msApi(tk,"mailFolders/inbox/messages?$top=6&$select=subject,from,receivedDateTime,isRead,webLink&$orderby=receivedDateTime%20desc")]).then(function(r){
+        var email=r[0].mail||r[0].userPrincipalName,naoLidos=r[1].unreadItemCount||0,ms=r[2].value||[];
+        /* guarda o endereço para a Microsoft já sugerir a conta certa da próxima vez */
+        if(email&&c.e!==email){var l=contas.map(function(x,k){return k===i?Object.assign({},x,{e:email}):x});pessoalGravar("emails",l);c.e=email}
+        cabecalho(email+" · "+naoLidos+(naoLidos===1?" não lido":" não lidos"),botao("Atualizar"));
+        corpo.innerHTML="";
+        ms.forEach(function(m){var d=new Date(m.receivedDateTime),hojeMsg=d.toDateString()===new Date().toDateString(),de=m.from&&m.from.emailAddress||{};
+          corpo.appendChild(h("li",{class:m.isRead?null:"gmnl"},h("span",{class:"grow"},
+            h("a",{href:m.webLink||c.u,target:"_blank",rel:"noopener",text:m.subject||"(sem assunto)"}),
+            h("span",{class:"sub",text:de.name||de.address||""})),
+            h("span",{class:"end sub",text:hojeMsg?d.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"}):d.toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"})})))});
+        if(!ms.length)corpo.appendChild(h("li",null,h("span",{class:"sub",text:"Caixa de entrada vazia."})))
+      }).catch(function(e){cabecalho(e.message==="expirou"?"O acesso expirou":"Não consegui ler ("+e.message+")",botao(e.message==="expirou"?"Atualizar":"Tentar de novo"))})}
+    if(!MS_CLIENT_ID){cabecalho(c.e||"falta configurar o acesso da Microsoft");return box}
+    cabecalho(c.e||"ainda não conectado");
+    /* ao abrir o site tenta sem janela; se a Microsoft pedir login, mostra o botão */
+    msToken(c.e,true).then(carregar).catch(function(){cabecalho(c.e?c.e+" · toque para ver os e-mails":"ainda não conectado",botao(c.e?"Atualizar":"Conectar"))});
     return box}
 
   /* Esportes: último resultado e próximo jogo de cada time */

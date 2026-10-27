@@ -578,7 +578,7 @@
 
   /* ---------- Nota pela foto do cupom ----------
      A Fazenda de SP não deixa robôs nem outros sites abrirem a nota, e ler a letra de matriz do cupom no navegador
-     erra demais. Então a pessoa manda a foto para o Claude ou o ChatGPT (grátis no app), cola a resposta aqui e confere.
+     erra demais. Então a pessoa manda a foto para o Claude, cola a resposta aqui e confere.
      CPF e demais dados do consumidor são ignorados. */
   var ABREV = { refrig: "refrigerante", min: "mineral", fgo: "frango", frgo: "frango", ling: "linguica", tosc: "toscana", rep: "refil", liq: "liquido", cong: "congelado", choc: "chocolate", bisc: "biscoito", qj: "queijo", mus: "mussarela", mussar: "mussarela", pres: "presunto", sab: "sabonete", amac: "amaciante", deterg: "detergente", lav: "lava", pao: "pao", fr: "frances", trad: "tradicional", integ: "integral", desn: "desnatado", sach: "sache", bov: "bovino", sui: "suino", peit: "peito", file: "file", agua: "agua", cerv: "cerveja", lt: "lata" };
   var CATS_PALAVRAS = [
@@ -633,7 +633,7 @@
     maior.desc_rateio = Math.round((maior.desc_rateio + resto) * 100) / 100;
   }
 
-  /* Pedido que a pessoa cola no Claude ou no ChatGPT junto com a foto; a resposta (JSON) é colada de volta aqui */
+  /* Pedido que a pessoa cola no Claude junto com a foto; a resposta (JSON) é colada de volta aqui */
   /* itens em lista curta ([descrição, qtd, un, unitário, total, desconto]): resposta menor, que o app termina rápido e copia inteira */
   var PEDIDO = "Leia a foto deste cupom fiscal de supermercado e responda SOMENTE com um bloco de código JSON, sem comentários, neste formato:\n" +
     '{"mercado":"nome do mercado","cnpj":"só números","data":"AAAA-MM-DD","numero":"","serie":"","chave":"44 dígitos da chave de acesso, sem espaços","pagamento":"forma de pagamento","total_pago":0.00,"desconto_nota":0.00,' +
@@ -789,19 +789,39 @@
   }
 
   function painelFoto(body) {
-    var p = panel("Nota pela foto", "O Claude ou o ChatGPT lê a foto do cupom de graça; você cola a resposta aqui e confere antes de salvar.");
+    var p = panel("Nota pela foto", "O Claude lê a foto do cupom; você cola a resposta aqui e confere antes de salvar.");
     var ia = h("div", { class: "qrstep" });
     var cmsg = h("p", { class: "sub", role: "status" });
     var pedTxt = h("textarea", { class: "qrpaste", rows: "4", readonly: "", hidden: "", "aria-label": "Pedido para copiar" }); pedTxt.value = PEDIDO;
-    /* o link abre o app e, no mesmo toque, copia o pedido: lá é só anexar a foto e colar */
-    function abrirIA(nome, url) {
-      var a = h("a", { class: "filebtn", href: url, target: "_blank", rel: "noopener", text: "Abrir o " + nome });
-      a.onclick = function () {
-        try { navigator.clipboard.writeText(PEDIDO).then(function () { cmsg.textContent = "✓ Pedido copiado. No " + nome + ": anexe a foto do cupom, cole o pedido e envie."; }, function () { pedTxt.hidden = false; }); } catch (e) { pedTxt.hidden = false; }
-      };
-      return a;
+    /* o botão abre a conversa (ou projeto) do Claude que a pessoa usa para as notas, guardada neste aparelho,
+       e no mesmo toque copia o pedido: lá é só anexar a foto e colar */
+    var CH_LINK = "rac-claude-notas";
+    function linkClaude() { try { return localStorage.getItem(CH_LINK) || ""; } catch (e) { return ""; } }
+    var abrir = h("a", { class: "filebtn", target: "_blank", rel: "noopener", text: "Abrir o Claude" });
+    abrir.onclick = function () {
+      try { navigator.clipboard.writeText(PEDIDO).then(function () { cmsg.textContent = "✓ Pedido copiado. No Claude: anexe a foto do cupom, cole o pedido e envie."; }, function () { pedTxt.hidden = false; }); } catch (e) { pedTxt.hidden = false; }
+    };
+    var trocar = h("button", { type: "button", class: "ghostbtn" });
+    var lform = h("div", { class: "vfil", hidden: "" }), lin = h("input", { type: "url", placeholder: "https://claude.ai/project/… ou /chat/…", "aria-label": "Link da conversa do Claude", autocomplete: "off" });
+    var lok = h("button", { type: "button", text: "Salvar" }), lmsg = h("p", { class: "sub", role: "status" });
+    function mostrarLink() {
+      var l = linkClaude();
+      abrir.href = l || "https://claude.ai/new";
+      abrir.textContent = l ? "Abrir o Claude (sua conversa das notas)" : "Abrir o Claude";
+      trocar.textContent = l ? "Trocar a conversa" : "Usar a minha conversa das notas";
     }
-    var resp = h("textarea", { class: "qrpaste", rows: "3", placeholder: "…ou cole aqui a resposta", "aria-label": "Resposta do Claude ou ChatGPT" });
+    trocar.onclick = function () { lform.hidden = !lform.hidden; lin.value = linkClaude(); lmsg.textContent = ""; if (!lform.hidden) lin.focus(); };
+    lok.onclick = function () {
+      var v = lin.value.trim();
+      if (/claude\.ai\/share\//.test(v)) { lmsg.textContent = "Esse é o link de compartilhar, que abre só uma cópia para leitura. Abra a conversa (ou o projeto) no claude.ai pelo navegador e copie o endereço da barra: começa com claude.ai/chat/ ou claude.ai/project/."; return; }
+      if (v && !/^https:\/\/claude\.ai\/(chat|project)\/[\w-]+/.test(v)) { lmsg.textContent = "O link precisa começar com https://claude.ai/chat/ ou https://claude.ai/project/."; return; }
+      try { if (v) localStorage.setItem(CH_LINK, v); else localStorage.removeItem(CH_LINK); } catch (e) { }
+      lform.hidden = true; lmsg.textContent = v ? "✓ Pronto: o botão agora abre a sua conversa das notas." : "Voltou a abrir uma conversa nova.";
+      mostrarLink();
+    };
+    lform.appendChild(lin); lform.appendChild(lok);
+    mostrarLink();
+    var resp = h("textarea", { class: "qrpaste", rows: "3", placeholder: "…ou cole aqui a resposta", "aria-label": "Resposta do Claude" });
     var colar = h("button", { type: "button", text: "Colar a resposta" });
     colar.onclick = function () {
       if (!navigator.clipboard || !navigator.clipboard.readText) { resp.focus(); return; }
@@ -809,10 +829,11 @@
     };
     var rmsg = h("p", { class: "sub", role: "status" });
     ia.appendChild(h("ol", { class: "how" },
-      h("li", null, "Toque em um dos botões. O pedido já vai copiado."),
+      h("li", null, "Toque em Abrir o Claude. O pedido já vai copiado."),
       h("li", null, "No app, anexe a foto do cupom, cole o pedido e envie."),
       h("li", null, "Copie a resposta inteira (ícone de copiar logo abaixo dela), volte aqui e toque em ", h("b", { text: "Colar a resposta" }), ".")));
-    ia.appendChild(h("div", { class: "vfil" }, abrirIA("Claude", "https://claude.ai/new"), abrirIA("ChatGPT", "https://chatgpt.com/")));
+    ia.appendChild(h("div", { class: "vfil" }, abrir, trocar));
+    ia.appendChild(lform); ia.appendChild(lmsg);
     ia.appendChild(cmsg); ia.appendChild(pedTxt);
     ia.appendChild(h("div", { class: "vfil" }, colar)); ia.appendChild(resp); ia.appendChild(rmsg);
     /* antes de tudo, a chave de acesso: se essa nota já está na conta, avisa e para aqui (mesmo com a resposta cortada) */

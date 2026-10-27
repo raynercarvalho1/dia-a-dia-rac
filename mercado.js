@@ -320,7 +320,7 @@
       var ord = { alta: function (a, b) { return b.varTotal - a.varTotal; }, baixa: function (a, b) { return a.varTotal - b.varTotal; }, compras: function (a, b) { return b.compras.length - a.compras.length; }, nome: function (a, b) { return a.nome.localeCompare(b.nome); } }[st.sort];
       l.sort(ord);
       list.innerHTML = "";
-      list.appendChild(h("p", { class: "sub", text: l.length + " produtos" }));
+      list.appendChild(h("p", { class: "sub", text: l.length + (l.length === 1 ? " produto" : " produtos") }));
       list.appendChild(tabela(["Produto", "Último preço", "1º preço", "Variação", "Compras"], l.map(function (p) {
         var b = h("button", { type: "button", class: "mkprod", text: p.nome }); b.onclick = function () { st.prod = p.nome; st.voltar = false; st.voltarY = null; showProd(); window.scrollTo({ top: 0, behavior: "smooth" }); };
         return [h("span", null, b, h("span", { class: "sub", text: " · " + p.cat })), money(p.ult.valor_unitario) + (p.u === "kg" ? "/kg" : ""), money(p.pri.valor_unitario), varTag(p.compras.length > 1 ? p.varTotal : null), String(p.compras.length)];
@@ -349,7 +349,12 @@
       d.appendChild(h("div", { class: "vfoot" }, fechar));
       detail.appendChild(d);
     }
-    q.addEventListener("input", function () { st.q = q.value; draw(); });
+    /* pesquisar fecha o gráfico aberto (ex.: o que veio do painel) para a lista ficar logo abaixo da busca */
+    q.addEventListener("input", function () {
+      st.q = q.value;
+      if (st.prod) { st.prod = null; st.voltar = false; st.voltarY = null; detail.innerHTML = ""; }
+      draw();
+    });
     sort.addEventListener("change", function () { st.sort = sort.value; draw(); });
     draw(); showProd();
   }

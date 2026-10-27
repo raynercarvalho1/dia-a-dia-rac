@@ -614,6 +614,7 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
 .gmhead .grow b,.gmhead .grow .sub{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .gmbox .wl li{padding:6px}
 .gmbox.min .wl{display:none}
+.amsg{margin:8px 0 0}.amsg.erro{color:#C0392B}
 .gmtg{flex:none;width:30px;height:30px;border:1px solid var(--line);border-radius:8px;background:transparent;color:var(--muted);cursor:pointer;display:grid;place-items:center}
 .gmtg::before{content:"";width:7px;height:7px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:translateY(-2px) rotate(45deg);transition:transform .15s}
 .gmbox.min .gmtg::before{transform:rotate(-45deg)}
@@ -955,15 +956,20 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
       return h("div",{class:"panel xp"},avatar(x,"av big"),h("b",{text:"@"+x}),
         h("div",{class:"xacts"},x36link([x],"Últimas 36h","pri"),ext("https://x.com/"+x,"Perfil",""),ext("https://x.com/intent/post?text="+encodeURIComponent("@"+x+" "),"Mencionar","")))})));
     if(!XLISTS[c.k]&&!c.priv)root.appendChild(h("p",{class:"foot",text:"Ainda não há lista no X para "+c.n+". Crie a lista no X com estes perfis e me mande o link para eu colocar o botão aqui."}))}
-  /* Editor dos perfis de Amigos: ficam guardados só neste navegador */
+  /* Editor dos perfis de Amigos: ficam na sua conta (e numa cópia neste aparelho), nunca no código */
   function editarAmigos(c){
     var p=panel("Só você vê esta categoria","Os perfis ficam guardados na sua conta, nunca no código do site.");
     var inp=h("input",{type:"text",value:c.h.map(function(x){return "@"+x}).join(", "),placeholder:"@perfil1, @perfil2",autocomplete:"off","aria-label":"Perfis dos amigos"});
     var b=h("button",{type:"button",text:"Salvar perfis"});
     b.onclick=function(){
       var l=inp.value.split(/[\s,;]+/).map(function(x){return x.replace(/^@/,"").replace(/^https?:\/\/(www\.)?(x|twitter)\.com\//i,"").replace(/[^A-Za-z0-9_]/g,"")}).filter(Boolean);
-      pessoalGravar("x-amigos",l);montarSideX();renderX("amigos")};
-    p.appendChild(h("div",{class:"vfil"},inp,b));
+      if(!l.length&&c.h.length&&!confirm("Apagar todos os perfis dos amigos?"))return;
+      b.disabled=true;msg.textContent="Salvando…";
+      pessoalGravar("x-amigos",l,function(erro){
+        montarSideX();renderX("amigos");
+        var m=$("#x-view .amsg");if(m){m.textContent=erro||"Salvo na sua conta.";m.classList.toggle("erro",!!erro)}})};
+    var msg=h("p",{class:"sub amsg",role:"status"});
+    p.appendChild(h("div",{class:"vfil"},inp,b));p.appendChild(msg);
     return p}
   /* Categorias do X na barra lateral; refeito quando a senha é digitada ou o acesso é travado */
   function montarSideX(){
@@ -1911,22 +1917,41 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
   var PAPEL=null,SB=null,EU=null,DONO=null,PESSOAL={},SEM_TABELA=false;
   function isOwner(){return PAPEL==="dono"}
   /* Dados pessoais: um JSON por chave na tabela "pessoal", que só a conta do dono lê e grava */
+  /* Cópia de segurança neste aparelho: se a conta falhar ou vier sem o dado, nada se perde.
+     Cada chave guarda {v:valor, t:quando mudou, ok:já chegou na conta} */
+  function copiaLer(chave){try{return JSON.parse(localStorage.getItem("rac-p-"+chave)||"null")}catch(e){return null}}
+  function copiaGravar(chave,valor,ok){try{localStorage.setItem("rac-p-"+chave,JSON.stringify({v:valor,t:Date.now(),ok:!!ok}))}catch(e){}}
+  function vazio(v){return v==null||(Array.isArray(v)&&!v.length)}
   function pessoalCarregar(){
-    return SB.from("pessoal").select("chave,valor").then(function(r){
+    return SB.from("pessoal").select("chave,valor,atualizado").then(function(r){
       if(r.error)throw new Error(r.error.message);
-      (r.data||[]).forEach(function(x){PESSOAL[x.chave]=x.valor})})}
+      var naConta={};
+      (r.data||[]).forEach(function(x){naConta[x.chave]=x;PESSOAL[x.chave]=x.valor;copiaGravar(x.chave,x.valor,true)});
+      /* o que mudou aqui e não chegou na conta (ou a conta perdeu) sobe de novo */
+      for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);if(k.indexOf("rac-p-")!==0)continue;
+        var ch=k.slice(6),cp=copiaLer(ch),cc=naConta[ch];
+        if(!cp||vazio(cp.v))continue;
+        if(!cc||vazio(cc.valor)||(!cp.ok&&cp.t>Date.parse(cc.atualizado))){PESSOAL[ch]=cp.v;pessoalGravar(ch,cp.v)}}})}
+  /* sem a conta (falha de rede ou tabela), usa o que este aparelho guardou */
+  function pessoalDaCopia(){for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);if(k.indexOf("rac-p-")===0){var cp=copiaLer(k.slice(6));if(cp)PESSOAL[k.slice(6)]=cp.v}}}
   var gravando={};
-  function pessoalGravar(chave,valor){
-    PESSOAL[chave]=valor;
-    if(!SB||!isOwner()||SEM_TABELA)return;
+  function pessoalGravar(chave,valor,pronto){
+    PESSOAL[chave]=valor;copiaGravar(chave,valor,false);
+    if(!SB||!isOwner()||SEM_TABELA){if(pronto)pronto("Guardado só neste aparelho (a conta não respondeu).");return}
     clearTimeout(gravando[chave]);
-    gravando[chave]=setTimeout(function(){
-      SB.from("pessoal").upsert({user_id:EU.id,chave:chave,valor:valor,atualizado:new Date().toISOString()}).then(function(r){if(r.error)console.warn("pessoal:",r.error.message)})},400)}
+    gravando[chave]=setTimeout(function tentar(n){
+      SB.from("pessoal").upsert({user_id:EU.id,chave:chave,valor:valor,atualizado:new Date().toISOString()}).then(function(r){
+        if(r.error)throw new Error(r.error.message);
+        copiaGravar(chave,valor,true);if(pronto)pronto("")
+      }).catch(function(e){console.warn("pessoal:",e.message);
+        if((n||0)<2)setTimeout(function(){tentar((n||0)+1)},3000);
+        else if(pronto)pronto("Não salvou na conta ("+e.message+"). Ficou guardado neste aparelho e sobe sozinho na próxima vez.")})},400)}
   /* O que estava guardado só no navegador (aniversários, amigos do X) sobe uma vez para a conta */
   function migrarDoNavegador(){
     if(SEM_TABELA)return;
+    try{var velha=JSON.parse(localStorage.getItem(AMIGOSLS)||"[]");if(vazio(PESSOAL["x-amigos"])&&velha.length)pessoalGravar("x-amigos",velha)}catch(e){}
     var ant=lsRead();if(!PESSOAL.aniversarios&&ant.length)pessoalGravar("aniversarios",ant);
-    try{var am=JSON.parse(localStorage.getItem(AMIGOSLS)||"[]");if(!PESSOAL["x-amigos"]&&am.length)pessoalGravar("x-amigos",am)}catch(e){}}
+  }
   function mostrarGate(texto){
     document.documentElement.classList.remove("logado");
     $("#gate").hidden=false;$("#gate-msg").textContent=texto||"";
@@ -1940,7 +1965,7 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
         PAPEL=m.data&&m.data.length?"casa":"dono";
         DONO=PAPEL==="casa"?m.data[0].dono:EU.id;
         if(PAPEL!=="dono")return;
-        return pessoalCarregar().catch(function(){SEM_TABELA=true}).then(migrarDoNavegador)
+        return pessoalCarregar().catch(function(){SEM_TABELA=true;pessoalDaCopia()}).then(migrarDoNavegador)
       }).then(iniciar)
     }).catch(function(e){mostrarGate("Não consegui conectar agora ("+(e.message||e)+"). Tente de novo.")})}
   function iniciar(){
@@ -1958,7 +1983,10 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
       if(res.error){m.textContent=/invalid/i.test(res.error.message)?"E-mail ou senha incorretos.":"Não consegui entrar: "+res.error.message;return}
       $("#gate-pw").value="";m.textContent="";entrar()
     }).catch(function(err){b.disabled=false;m.textContent="Não consegui entrar agora ("+(err.message||err)+")."})});
-  $("#sair").addEventListener("click",function(){SB.auth.signOut().then(function(){location.reload()})});
+  /* ao sair, apaga deste aparelho as cópias que já estão salvas na conta */
+  $("#sair").addEventListener("click",function(){
+    Object.keys(localStorage).forEach(function(k){if(k.indexOf("rac-p-")===0){var cp=copiaLer(k.slice(6));if(cp&&cp.ok)localStorage.removeItem(k)}});
+    SB.auth.signOut().then(function(){location.reload()})});
 
   /* Vagas de Análise de Dados e BI (vagas.json, coletado do portal Mentora Dados).
      Remoto de qualquer lugar; presencial ou híbrido só em São Paulo ou Sorocaba. */

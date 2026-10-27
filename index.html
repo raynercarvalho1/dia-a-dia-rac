@@ -2232,7 +2232,7 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
 
   /* ===== Gmail: lê a caixa de entrada direto do navegador (Google Identity Services + Gmail API, só leitura).
      Nada passa por servidor nosso; o acesso dura 1 hora e fica só neste aparelho. ===== */
-  var GOOGLE_CLIENT_ID="";
+  var GOOGLE_CLIENT_ID="266486773468-3nndrpaqv0q25ea3s3llpjv5ibvav20l.apps.googleusercontent.com";
   var GSI_JS="https://accounts.google.com/gsi/client",GM_SCOPE="https://www.googleapis.com/auth/gmail.readonly";
   function carregarScript(src){return new Promise(function(res,rej){if(document.querySelector('script[src="'+src+'"]')){res();return}
     var sc=document.createElement("script");sc.src=src;sc.onload=res;sc.onerror=function(){rej(new Error("não carregou "+src))};document.head.appendChild(sc)})}

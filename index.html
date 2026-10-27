@@ -607,6 +607,14 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
 .exl input{margin-top:3px;width:18px;height:18px;flex:none}
 .exl .grow{flex:1;min-width:0}
 .exl .done b{text-decoration:line-through;opacity:.6}
+.gmbox{padding:6px 0}
+.gmbox+.gmbox,.gmbox+.wl,.wl+.gmbox{border-top:1px solid var(--line)}
+.gmhead{display:flex;align-items:center;gap:8px;padding:6px;min-width:0}
+.gmhead .grow{flex:1;min-width:0}
+.gmhead .grow b,.gmhead .grow .sub{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gmbox .wl li{padding:6px}
+.gmbox .wl li.gmnl a{font-weight:800}
+.gmbox .wl li.gmnl::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--accent);flex:none}
 </style>
 </head>
 <body>
@@ -2186,8 +2194,10 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
   var EMAILS_PADRAO=[{n:"Gmail 1",u:"https://mail.google.com/mail/u/0/#inbox"},{n:"Gmail 2",u:"https://mail.google.com/mail/u/1/#inbox"},{n:"Outlook",u:"https://outlook.live.com/mail/0/"},{n:"iCloud",u:"https://www.icloud.com/mail/"}];
   function wEmail(){
     var p=wCard("E-mail","mail","#D93F2F"),contas=PESSOAL.emails||EMAILS_PADRAO;
-    var ul=h("ul",{class:"wl"});
-    contas.forEach(function(c){ul.appendChild(h("li",null,h("span",{class:"grow"},h("b",{text:c.n}),h("span",{class:"sub",text:c.e||"caixa de entrada"})),ext(c.u,"Abrir","ghostbtn")))});
+    var ul=h("div");
+    contas.forEach(function(c,i){
+      if(/mail\.google\.com/.test(c.u)){ul.appendChild(gmailBloco(contas,i));return}
+      ul.appendChild(h("ul",{class:"wl"},h("li",null,h("span",{class:"grow"},h("b",{text:c.n}),h("span",{class:"sub",text:c.e||"caixa de entrada"})),ext(c.u,"Abrir","ghostbtn"))))});
     p.appendChild(ul);
     var ed=h("button",{type:"button",class:"ghostbtn",text:"Dar nomes às contas"});
     ed.onclick=function(){
@@ -2196,9 +2206,64 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
       var ok=h("button",{type:"button",text:"Salvar"});
       ok.onclick=function(){pessoalGravar("emails",contas.map(function(c,i){return {n:ins[i][0].value.trim()||c.n,e:ins[i][1].value.trim(),u:c.u}}));renderInicio()};
       f.appendChild(ok);ul.replaceWith(f);ed.remove()};
-    p.appendChild(h("p",{class:"note",text:"Mostrar os não lidos aqui dentro exige conectar cada conta (Google, Microsoft e iCloud). É o próximo passo."}));
+    p.appendChild(h("p",{class:"note",text:"Gmail: conecte cada conta uma vez; depois é só tocar em Atualizar (o Google pede de novo a cada hora). Outlook e iCloud ainda são só atalhos."}));
     p.appendChild(ed);
     return p}
+
+  /* ===== Gmail: lê a caixa de entrada direto do navegador (Google Identity Services + Gmail API, só leitura).
+     Nada passa por servidor nosso; o acesso dura 1 hora e fica só neste aparelho. ===== */
+  var GOOGLE_CLIENT_ID="";
+  var GSI_JS="https://accounts.google.com/gsi/client",GM_SCOPE="https://www.googleapis.com/auth/gmail.readonly";
+  function carregarScript(src){return new Promise(function(res,rej){if(document.querySelector('script[src="'+src+'"]')){res();return}
+    var sc=document.createElement("script");sc.src=src;sc.onload=res;sc.onerror=function(){rej(new Error("não carregou "+src))};document.head.appendChild(sc)})}
+  if(GOOGLE_CLIENT_ID)carregarScript(GSI_JS).catch(function(){});
+  function gmToken(slot){try{var t=JSON.parse(localStorage.getItem("rac-gm-"+slot)||"null");return t&&t.exp>Date.now()+60000?t.tk:null}catch(e){return null}}
+  function gmApi(tk,path){return fetch("https://gmail.googleapis.com/gmail/v1/users/me/"+path,{headers:{Authorization:"Bearer "+tk}}).then(function(r){
+    if(r.status===401)throw new Error("expirou");if(!r.ok)throw new Error("Gmail respondeu "+r.status);return r.json()})}
+  /* Pede o acesso (precisa de um toque: o Google abre uma janelinha) */
+  function gmConectar(slot,email){
+    return carregarScript(GSI_JS).then(function(){return new Promise(function(res,rej){
+      var cli=google.accounts.oauth2.initTokenClient({client_id:GOOGLE_CLIENT_ID,scope:GM_SCOPE,login_hint:email||undefined,
+        callback:function(r){if(r.error){rej(new Error(r.error));return}
+          try{localStorage.setItem("rac-gm-"+slot,JSON.stringify({tk:r.access_token,exp:Date.now()+(+r.expires_in||3600)*1000}))}catch(e){}
+          res(r.access_token)},
+        error_callback:function(e){rej(new Error(e&&e.type==="popup_closed"?"janela fechada":"não abriu a janela do Google"))}});
+      cli.requestAccessToken({prompt:email?"":"select_account"})})})}
+  function cab(m,n){var x=(m.payload&&m.payload.headers||[]).filter(function(y){return y.name.toLowerCase()===n})[0];return x?x.value:""}
+  function remetente(v){var m=/^\s*"?([^"<]+?)"?\s*<.*>\s*$/.exec(v);return (m?m[1]:v).trim()}
+  function gmailBloco(contas,i){
+    var c=contas[i],slot="g"+i,box=h("div",{class:"gmbox"});
+    var head=h("div",{class:"gmhead"}),corpo=h("ul",{class:"wl"});
+    box.appendChild(head);box.appendChild(corpo);
+    function cabecalho(txt,botao){head.innerHTML="";head.appendChild(h("span",{class:"grow"},h("b",{text:c.n}),h("span",{class:"sub",text:txt})));if(botao)head.appendChild(botao);head.appendChild(ext(c.u,"Abrir","ghostbtn"))}
+    function botao(rot){var b=h("button",{type:"button",class:"ghostbtn pri",text:rot});
+      b.onclick=function(){b.disabled=true;gmConectar(slot,c.e).then(function(tk){return carregar(tk)}).catch(function(e){b.disabled=false;cabecalho("Não conectou ("+e.message+")",b)})};return b}
+    function carregar(tk){
+      cabecalho("Carregando…");
+      return Promise.all([gmApi(tk,"profile"),gmApi(tk,"labels/INBOX"),gmApi(tk,"messages?labelIds=INBOX&maxResults=6")]).then(function(r){
+        var email=r[0].emailAddress,naoLidos=r[1].messagesUnread||0;
+        /* guarda o endereço para o Google já sugerir a conta certa da próxima vez */
+        if(email&&c.e!==email){var l=contas.map(function(x,k){return k===i?Object.assign({},x,{e:email}):x});pessoalGravar("emails",l);c.e=email}
+        var link="https://mail.google.com/mail/?authuser="+encodeURIComponent(email);
+        c.u=link+"#inbox";
+        var at=h("button",{type:"button",class:"ghostbtn",text:"Atualizar"});at.onclick=function(){var t=gmToken(slot);if(t)carregar(t);else botao("Atualizar").click()};
+        cabecalho(email+" · "+naoLidos+(naoLidos===1?" não lido":" não lidos"),at);
+        return Promise.all((r[2].messages||[]).map(function(m){return gmApi(tk,"messages/"+m.id+"?format=metadata&metadataHeaders=From&metadataHeaders=Subject")})).then(function(ms){
+          corpo.innerHTML="";
+          ms.forEach(function(m){var nl=(m.labelIds||[]).indexOf("UNREAD")>=0,d=new Date(+m.internalDate);
+            var hojeMsg=d.toDateString()===new Date().toDateString();
+            corpo.appendChild(h("li",{class:nl?"gmnl":null},h("span",{class:"grow"},
+              h("a",{href:link+"#inbox/"+m.threadId,target:"_blank",rel:"noopener",text:cab(m,"subject")||"(sem assunto)"}),
+              h("span",{class:"sub",text:remetente(cab(m,"from"))})),
+              h("span",{class:"end sub",text:hojeMsg?d.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"}):d.toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"})})))});
+          if(!ms.length)corpo.appendChild(h("li",null,h("span",{class:"sub",text:"Caixa de entrada vazia."})))})
+      }).catch(function(e){
+        if(e.message==="expirou"){try{localStorage.removeItem("rac-gm-"+slot)}catch(x){}cabecalho("O acesso expirou",botao("Atualizar"))}
+        else cabecalho("Não consegui ler ("+e.message+")",botao("Tentar de novo"))})}
+    if(!GOOGLE_CLIENT_ID){cabecalho(c.e||"falta configurar o acesso do Google");return box}
+    var tk=gmToken(slot);
+    if(tk)carregar(tk);else cabecalho(c.e?c.e+" · toque para ver os e-mails":"ainda não conectado",botao(c.e?"Atualizar":"Conectar"));
+    return box}
 
   /* Esportes: último resultado e próximo jogo de cada time */
   function wEsportes(){

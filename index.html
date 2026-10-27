@@ -718,6 +718,11 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
 .tbl th.ordcol.on{color:var(--accent)}
 .tbl th .ordseta{font-size:.9em;opacity:.55}
 .tbl th.on .ordseta{opacity:1}
+/* lista de Preços: o nome do produto quebra linha e os títulos podem ir em duas linhas, para tudo caber sem rolar para o lado */
+.tblprec .tbl td:first-child{white-space:normal;min-width:140px}
+.tblprec .tbl th{white-space:normal;vertical-align:bottom;line-height:1.25;letter-spacing:.03em}
+.tblprec .tbl th,.tblprec .tbl td{padding-right:6px}
+.tblprec .tbl th.num,.tblprec .tbl td.num{padding-left:6px;font-size:calc(13px + var(--fz) / 2)}
 </style>
 </head>
 <body>

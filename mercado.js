@@ -374,7 +374,7 @@
   }
   /* Ordenação da lista: clicando no cabeçalho (como no Excel) ou pelos atalhos do seletor. d: 1 = menor para maior, -1 = maior para menor */
   var ATALHOS = [["alta", "Mais subiram", "var", -1], ["baixa", "Mais baixaram", "var", 1], ["gasto", "Mais gasto", "gasto", -1], ["compras", "Mais comprados", "compras", -1], ["nome", "Nome (A a Z)", "nome", 1]];
-  var COLS = [["nome", "Produto"], ["ult", "Último preço"], ["pri", "1º preço"], ["min", "Menor preço"], ["var", "Variação"], ["compras", "Compras"], ["gasto", "Total gasto"]];
+  var COLS = [["nome", "Produto"], ["ult", "Último preço"], ["min", "Menor preço"], ["var", "Variação"], ["compras", "Compras"], ["gasto", "Total gasto"]];
   function valorCol(p, k) { return k === "ult" ? p.ult.valor_unitario : k === "pri" ? p.pri.valor_unitario : k === "min" ? p.min : k === "var" ? (p.compras.length > 1 ? p.varTotal : null) : k === "compras" ? p.compras.length : k === "gasto" ? p.gasto : p.nome; }
   /* menor preço já pago; passando o mouse mostra quando e onde */
   function menorPreco(p) {
@@ -414,7 +414,7 @@
       list.appendChild(h("p", { class: "sub", text: l.length + (l.length === 1 ? " produto" : " produtos") + (!l.length ? "" : " · " + money(sum(l, function (p) { return p.gasto; })) + " gastos" + (nq ? " nesses produtos" : "") + (st.pmes ? " em " + mesNome(st.pmes) : " desde " + dataBR(l.reduce(function (m, p) { return p.pri.data < m ? p.pri.data : m; }, "9999-12-31")))) }));
       var tb = tabela(COLS.map(function (c) { return c[0] === "gasto" && st.pmes ? "Gasto no mês" : c[1]; }), l.map(function (p) {
         var b = h("button", { type: "button", class: "mkprod", text: p.nome }); b.onclick = function () { st.prod = p.nome; st.voltar = false; st.voltarY = null; showProd(); window.scrollTo({ top: 0, behavior: "smooth" }); };
-        return [h("span", null, b, h("span", { class: "sub", text: " · " + p.cat })), money(p.ult.valor_unitario) + (p.u === "kg" ? "/kg" : ""), money(p.pri.valor_unitario), menorPreco(p), varTag(p.compras.length > 1 ? p.varTotal : null), String(p.compras.length), h("b", { text: money(p.gasto) })];
+        return [h("span", null, b, h("span", { class: "sub", text: " · " + p.cat })), money(p.ult.valor_unitario) + (p.u === "kg" ? "/kg" : ""), menorPreco(p), varTag(p.compras.length > 1 ? p.varTotal : null), String(p.compras.length), h("b", { text: money(p.gasto) })];
       }), 1);
       /* cabeçalhos clicáveis: 1º clique do menor para o maior (nome de A a Z), o 2º inverte */
       tb.querySelectorAll("th").forEach(function (th, i) {
@@ -426,6 +426,7 @@
         function ordenar() { st.ord = { k: c, d: ativo ? -d : 1 }; marcarAtalho(); draw(); }
         th.onclick = ordenar; th.onkeydown = function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); ordenar(); } };
       });
+      tb.classList.add("tblprec");
       list.appendChild(tb);
     }
     function showProd() {

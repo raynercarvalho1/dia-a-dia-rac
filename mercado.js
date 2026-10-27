@@ -421,7 +421,8 @@
         var c = COLS[i][0], ativo = c === k;
         th.classList.add("ordcol"); if (ativo) th.classList.add("on");
         th.setAttribute("aria-sort", ativo ? (d === 1 ? "ascending" : "descending") : "none");
-        th.tabIndex = 0; th.title = "Ordenar por " + th.textContent.toLowerCase();
+        th.tabIndex = 0; th.title = "Ordenar por " + th.textContent.toLowerCase() +
+          (c === "var" ? ". Variação do 1º ao último preço " + (st.pmes ? "de " + mesNome(st.pmes) : "desde a primeira compra") : "");
         th.appendChild(h("span", { class: "ordseta", "aria-hidden": "true", text: ativo ? (d === 1 ? " ▲" : " ▼") : " ↕" }));
         function ordenar() { st.ord = { k: c, d: ativo ? -d : 1 }; marcarAtalho(); draw(); }
         th.onclick = ordenar; th.onkeydown = function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); ordenar(); } };

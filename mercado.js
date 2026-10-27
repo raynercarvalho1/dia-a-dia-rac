@@ -12,7 +12,7 @@
   var PCT = new Intl.NumberFormat("pt-BR", { style: "percent", maximumFractionDigits: 1 });
 
   var sb = null, user = null, rows = null, loadingRows = null;
-  var st = { mes: null, q: "", prod: null, sort: "alta", pmes: "" };
+  var st = { mes: null, q: "", prod: null, ord: { k: "var", d: -1 }, pmes: "" };
 
   /* ---------- utilidades ---------- */
   function h(tag, attrs) {
@@ -372,6 +372,10 @@
         gasto: sum(l, function (x) { return x.valor_total; }), qtd: sum(l, function (x) { return x.quantidade; }) };
     });
   }
+  /* Ordenação da lista: clicando no cabeçalho (como no Excel) ou pelos atalhos do seletor. d: 1 = menor para maior, -1 = maior para menor */
+  var ATALHOS = [["alta", "Mais subiram", "var", -1], ["baixa", "Mais baixaram", "var", 1], ["gasto", "Mais gasto", "gasto", -1], ["compras", "Mais comprados", "compras", -1], ["nome", "Nome (A a Z)", "nome", 1]];
+  var COLS = [["nome", "Produto"], ["ult", "Último preço"], ["pri", "1º preço"], ["var", "Variação"], ["compras", "Compras"], ["gasto", "Total gasto"]];
+  function valorCol(p, k) { return k === "ult" ? p.ult.valor_unitario : k === "pri" ? p.pri.valor_unitario : k === "var" ? (p.compras.length > 1 ? p.varTotal : null) : k === "compras" ? p.compras.length : k === "gasto" ? p.gasto : p.nome; }
   function viewPrecos(body) {
     /* "all" é sempre o histórico inteiro (gráfico); a lista usa o período escolhido */
     var all = produtos(), meses = Object.keys(groupBy(rows, function (x) { return x.mk; })).sort().reverse();
@@ -382,7 +386,9 @@
     var tools = h("div", { class: "vfil" });
     var q = h("input", { type: "search", placeholder: "Buscar produto", "aria-label": "Buscar produto", value: st.q, autocomplete: "off" });
     var sort = h("select", { "aria-label": "Ordenar" },
-      [["alta", "Mais subiram"], ["baixa", "Mais baixaram"], ["gasto", "Mais gasto"], ["compras", "Mais comprados"], ["nome", "Nome"]].map(function (o) { return h("option", { value: o[0], selected: st.sort === o[0] ? "" : null, text: o[1] }); }));
+      [["", "Pela coluna escolhida"]].concat(ATALHOS).map(function (o) { return h("option", { value: o[0], text: o[1] }); }));
+    function marcarAtalho() { var a = ATALHOS.filter(function (o) { return o[2] === st.ord.k && o[3] === st.ord.d; })[0]; sort.value = a ? a[0] : ""; sort.options[0].hidden = !!a; }
+    marcarAtalho();
     var per = h("select", { "aria-label": "Período" }, h("option", { value: "", text: "Desde o início" }),
       meses.map(function (k) { return h("option", { value: k, selected: st.pmes === k ? "" : null, text: mesNome(k).charAt(0).toUpperCase() + mesNome(k).slice(1) }); }));
     tools.appendChild(q); tools.appendChild(per); tools.appendChild(sort); top.appendChild(tools);
@@ -392,14 +398,30 @@
     function draw() {
       var nq = norm(st.q), base = st.pmes ? produtos(rows.filter(function (x) { return x.mk === st.pmes; })) : all;
       var l = base.filter(function (p) { return !nq || norm(p.nome + " " + p.cat).indexOf(nq) >= 0; });
-      var ord = { alta: function (a, b) { return b.varTotal - a.varTotal; }, baixa: function (a, b) { return a.varTotal - b.varTotal; }, compras: function (a, b) { return b.compras.length - a.compras.length; }, gasto: function (a, b) { return b.gasto - a.gasto; }, nome: function (a, b) { return a.nome.localeCompare(b.nome); } }[st.sort];
-      l.sort(ord);
+      var k = st.ord.k, d = st.ord.d;
+      /* quem não tem valor (variação de produto comprado uma vez só) fica sempre no fim */
+      l.sort(function (a, b) {
+        var x = valorCol(a, k), y = valorCol(b, k);
+        if (x === null || y === null) return x === y ? 0 : x === null ? 1 : -1;
+        return (typeof x === "string" ? x.localeCompare(y) : x - y) * d || a.nome.localeCompare(b.nome);
+      });
       list.innerHTML = "";
       list.appendChild(h("p", { class: "sub", text: l.length + (l.length === 1 ? " produto" : " produtos") + (!l.length ? "" : " · " + money(sum(l, function (p) { return p.gasto; })) + " gastos" + (nq ? " nesses produtos" : "") + (st.pmes ? " em " + mesNome(st.pmes) : " desde " + dataBR(l.reduce(function (m, p) { return p.pri.data < m ? p.pri.data : m; }, "9999-12-31")))) }));
-      list.appendChild(tabela(["Produto", "Último preço", "1º preço", "Variação", "Compras", st.pmes ? "Gasto no mês" : "Total gasto"], l.map(function (p) {
+      var tb = tabela(COLS.map(function (c) { return c[0] === "gasto" && st.pmes ? "Gasto no mês" : c[1]; }), l.map(function (p) {
         var b = h("button", { type: "button", class: "mkprod", text: p.nome }); b.onclick = function () { st.prod = p.nome; st.voltar = false; st.voltarY = null; showProd(); window.scrollTo({ top: 0, behavior: "smooth" }); };
         return [h("span", null, b, h("span", { class: "sub", text: " · " + p.cat })), money(p.ult.valor_unitario) + (p.u === "kg" ? "/kg" : ""), money(p.pri.valor_unitario), varTag(p.compras.length > 1 ? p.varTotal : null), String(p.compras.length), h("b", { text: money(p.gasto) })];
-      }), 1));
+      }), 1);
+      /* cabeçalhos clicáveis: 1º clique do menor para o maior (nome de A a Z), o 2º inverte */
+      tb.querySelectorAll("th").forEach(function (th, i) {
+        var c = COLS[i][0], ativo = c === k;
+        th.classList.add("ordcol"); if (ativo) th.classList.add("on");
+        th.setAttribute("aria-sort", ativo ? (d === 1 ? "ascending" : "descending") : "none");
+        th.tabIndex = 0; th.title = "Ordenar por " + th.textContent.toLowerCase();
+        th.appendChild(h("span", { class: "ordseta", "aria-hidden": "true", text: ativo ? (d === 1 ? " ▲" : " ▼") : " ↕" }));
+        function ordenar() { st.ord = { k: c, d: ativo ? -d : 1 }; marcarAtalho(); draw(); }
+        th.onclick = ordenar; th.onkeydown = function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); ordenar(); } };
+      });
+      list.appendChild(tb);
     }
     function showProd() {
       detail.innerHTML = "";
@@ -435,7 +457,7 @@
       if (st.prod) { st.prod = null; st.voltar = false; st.voltarY = null; detail.innerHTML = ""; }
       draw();
     });
-    sort.addEventListener("change", function () { st.sort = sort.value; draw(); });
+    sort.addEventListener("change", function () { var a = ATALHOS.filter(function (o) { return o[0] === sort.value; })[0]; if (a) { st.ord = { k: a[2], d: a[3] }; marcarAtalho(); draw(); } });
     per.addEventListener("change", function () { st.pmes = per.value; draw(); showProd(); });
     draw(); showProd();
   }

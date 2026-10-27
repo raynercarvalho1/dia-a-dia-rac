@@ -589,6 +589,10 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
 .wl .lg{width:26px;height:26px;flex:none}
 .wl .end{font:700 14px var(--f-display);white-space:nowrap;text-align:right}
 .wbig{font:700 30px var(--f-display);margin:0}
+.wl .tn{display:inline-flex;align-items:center;gap:5px}
+.wl .tn .lg{width:20px;height:20px}
+.wl .tn.win{font-weight:800}
+.hgrid .cat:first-of-type{margin-top:0}
 .bar{height:8px;border-radius:99px;background:var(--line);overflow:hidden}
 .bar>i{display:block;height:100%;background:var(--accent);border-radius:99px}
 .trilha{display:grid;gap:6px;padding:8px 0}
@@ -2174,7 +2178,7 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
     tick();clearInterval(relogio);relogio=setInterval(tick,15000);
     root.appendChild(h("div",{class:"home"},
       h("div",{class:"hi"},h("div",null,h("h2",{text:saudacao()+", Rayner"}),h("p",{class:"sub",text:new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long",year:"numeric"})})),h("div",null,clock,wx)),
-      h("div",{class:"hgrid"},wEmail(),wEsportes(),wMercado(),wMba(),wNoticias(),wAniv(),wVagas(),wEstudos(),wX())));
+      h("div",{class:"hgrid"},wEmail(),wEsportes(),wNoticias(),wX(),wMercado(),wMba(),wAniv(),wVagas(),wEstudos())));
     getJson("https://api.open-meteo.com/v1/forecast?latitude=-23.50&longitude=-47.46&current=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min&timezone=America%2FSao_Paulo&forecast_days=1").then(function(d){
       wx.textContent=Math.round(d.current.temperature_2m)+"° agora em Sorocaba · "+WXTXT[wxKind(d.current.weather_code)]+" · máx. "+Math.round(d.daily.temperature_2m_max[0])+"°, mín. "+Math.round(d.daily.temperature_2m_min[0])+"°"}).catch(function(){})}
 
@@ -2198,18 +2202,34 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
 
   /* Esportes: último resultado e próximo jogo de cada time */
   function wEsportes(){
-    var p=wCard("Esportes","bola","#005A9C",["#esportes","ver tudo"]),ul=h("ul",{class:"wl"},h("li",null,h("span",{class:"sub",text:"Carregando…"})));
-    p.appendChild(ul);
+    var p=wCard("Esportes","bola","#005A9C",["#esportes","ver tudo"]);
+    /* MLB primeiro: os jogos mais recentes da liga (e o que está rolando ou vem a seguir) */
+    var mlb=h("ul",{class:"wl"},h("li",null,h("span",{class:"sub",text:"Carregando a MLB…"})));
+    p.appendChild(h("div",{class:"cat",text:"MLB"}));p.appendChild(mlb);
+    var ul=h("ul",{class:"wl"});
+    p.appendChild(h("div",{class:"cat",text:"Meus times"}));p.appendChild(ul);
     var hoje=Date.now(),ini=new Date(hoje-21*864e5).toISOString().slice(0,10),fim=new Date(hoje+45*864e5).toISOString().slice(0,10);
-    function linha(nome,logo,href,gs,meu){
+    function curto(n){var w=n.split(" ");return /^(Sox|Jays)$/.test(w[w.length-1])?w.slice(-2).join(" "):w[w.length-1]}
+    function placar(g){
+      var a=g.away,b=g.home,fim=g.state==="post";
+      function lado(t){return h("span",{class:"tn"+(fim&&t.winner?" win":"")},logoImg(t.id,"sm"),curto(t.name)+(g.state!=="pre"?" "+t.score:""))}
+      return h("li",null,h("span",{class:"grow"},h("a",{href:g.detail},lado(a)," × ",lado(b)),
+        h("span",{class:"sub",text:[g.label,g.state==="live"?"ao vivo":g.state==="pre"?quando(g.date):new Date(g.date).toLocaleDateString("pt-BR",{weekday:"short",day:"2-digit",month:"2-digit"})].filter(Boolean).join(" · ")})))}
+    mlbSched("startDate="+new Date(hoje-4*864e5).toISOString().slice(0,10)+"&endDate="+new Date(hoje+2*864e5).toISOString().slice(0,10)).then(function(gs){
+      var fin=gs.filter(function(g){return g.state==="post"}).reverse().slice(0,3),agora=gs.filter(function(g){return g.state!=="post"}).slice(0,2);
+      mlb.innerHTML="";fin.concat(agora.slice(0,1)).forEach(function(g){mlb.appendChild(placar(g))});
+      if(!mlb.children.length)mlb.appendChild(h("li",null,h("span",{class:"sub",text:"Nenhum jogo da MLB nos últimos dias."})))
+    }).catch(function(){mlb.innerHTML="";mlb.appendChild(h("li",null,h("span",{class:"sub",text:"Não consegui carregar a MLB agora."})))});
+    function linha(nome,logo,href,gs,meu,soComJogo){
       var fin=gs.filter(function(g){return g.state==="post"}),nx=gs.filter(function(g){return g.state!=="post"})[0],u=fin[fin.length-1];
+      if(soComJogo&&!nx)return null;
       var txt="Sem jogos recentes";
       if(u){var eu=meu(u.away)?u.away:u.home,ele=eu===u.away?u.home:u.away;
         txt=(eu.winner?"V ":"D ")+eu.score+"–"+ele.score+(eu===u.away?" em ":" vs ")+(ele.abbr||ele.name)}
       return h("li",null,img(logo,"lg"),h("span",{class:"grow"},h("a",{href:href,text:nome}),h("span",{class:"sub",text:txt})),
         h("span",{class:"end"},nx?h("a",{href:nx.detail,text:nx.state==="live"?"Ao vivo":quando(nx.date)}):h("span",{class:"sub",text:"sem próximo jogo"})))}
     Promise.all([
-      mlbSched("teamId=119&startDate="+ini+"&endDate="+fim).then(function(gs){return linha("Dodgers",logoUrl(119),"#esportes/beisebol/dodgers",gs,function(t){return t.id===119})}).catch(function(){return null}),
+      mlbSched("teamId=119&startDate="+ini+"&endDate="+fim).then(function(gs){return linha("Dodgers",logoUrl(119),"#esportes/beisebol/dodgers",gs,function(t){return t.id===119},true)}).catch(function(){return null}),
       espnSchedule("nba").then(function(d){return linha("Lakers",espnLogo("nba",d.team),"#esportes/basquete",d.games,function(t){return t.abbr===d.team.abbreviation})}).catch(function(){return null}),
       espnSchedule("nfl").then(function(d){return linha("Packers",espnLogo("nfl",d.team),"#esportes/futebol-americano",d.games,function(t){return t.abbr===d.team.abbreviation})}).catch(function(){return null})
     ]).then(function(r){ul.innerHTML="";r.filter(Boolean).forEach(function(li){ul.appendChild(li)});if(!ul.children.length)ul.appendChild(h("li",null,h("span",{class:"sub",text:"Não consegui carregar os jogos agora."})))});
@@ -2261,7 +2281,7 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
 
   /* Notícias de Sorocaba (noticias.json, atualizado pelo robô do GitHub a cada 3 horas) */
   function wNoticias(){
-    var p=wCard("Notícias de Sorocaba","jornal","#C2410C",null,"w5"),ul=h("ul",{class:"wl"},h("li",null,h("span",{class:"sub",text:"Carregando…"})));p.appendChild(ul);
+    var p=wCard("Notícias de Sorocaba","jornal","#C2410C",null),ul=h("ul",{class:"wl"},h("li",null,h("span",{class:"sub",text:"Carregando…"})));p.appendChild(ul);
     getJson("noticias.json?v="+Date.now()).then(function(d){ul.innerHTML="";
       (d.noticias||[]).slice(0,7).forEach(function(n){ul.appendChild(h("li",null,h("span",{class:"grow"},h("a",{href:n.u,target:"_blank",rel:"noopener",text:n.t}),h("span",{class:"sub",text:n.f+" · "+new Date(n.d).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}))))});
       if(!ul.children.length)ul.appendChild(h("li",null,h("span",{class:"sub",text:"Nenhuma notícia nas últimas horas."})))

@@ -354,6 +354,21 @@ h2.sec small{font:500 13px/1.4 var(--f-ui);color:rgba(255,255,255,.9);letter-spa
 .foot{background:var(--glass);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-radius:12px;padding:10px 14px;color:var(--muted);font-size:13px;margin-top:20px}
 .dayh{margin:18px 0 6px;font:700 15px var(--f-display);text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
 .dayh:first-child{margin-top:0}
+.dayh{display:flex;align-items:center;gap:8px}
+.dayh .cnt{font:600 12px var(--f-ui);letter-spacing:0;color:var(--muted);background:var(--hover);border-radius:99px;padding:1px 8px}
+.dayh.agora{color:var(--accent)}
+.bdmodo{flex:0 0 auto;min-width:190px}
+.bdmeses{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 4px}
+.bdmeses button{display:flex;align-items:center;gap:6px;border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:99px;padding:4px 10px;font:600 13px var(--f-ui);cursor:pointer}
+.bdmeses button span{color:var(--muted);font-weight:500;font-variant-numeric:tabular-nums}
+.bdmeses button.agora{border-color:var(--accent)}
+.bdmeses button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.bdmeses button[aria-pressed="true"] span{color:inherit;opacity:.75}
+.when.dia{display:flex;flex-direction:column;line-height:1.05}
+.when.dia b{font:700 18px var(--f-display);font-variant-numeric:tabular-nums}
+.when.dia small{font:500 11px var(--f-ui);color:var(--muted);text-transform:lowercase}
+.bdrow.mesmo{border-top:0;padding-top:0}
+.bdrow.hojerow .who{color:var(--good);font-weight:700}
 .lg{width:24px;height:24px;object-fit:contain;flex:none;background:#fff;border-radius:50%;padding:2px}
 .lg.sm{width:18px;height:18px;padding:1px;vertical-align:-4px;margin-right:4px}
 .lg.big{width:56px;height:56px;padding:6px}
@@ -764,7 +779,8 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
         <h2>Todos os aniversários</h2>
         <div class="bdtools">
           <input id="bd-busca" type="search" placeholder="Filtrar por nome" aria-label="Filtrar aniversários por nome" autocomplete="off">
-          <select id="bd-mes" aria-label="Filtrar por mês"><option value="0">Todos os meses</option></select>
+          <select id="bd-mes" aria-label="Filtrar por mês" hidden><option value="0">Todos os meses</option></select>
+          <div class="seg bdmodo" id="bd-modo" role="group" aria-label="Como mostrar"><button type="button" data-m="mes">Por mês</button><button type="button" data-m="prox">Próximos</button></div>
           <label class="chk"><input type="checkbox" id="bd-fav"> só os marcados</label>
         </div>
         <div class="bdtools">
@@ -784,6 +800,7 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
           <select id="f-mes" name="mes" aria-label="Mês"></select>
           <button type="submit">Adicionar</button>
         </form>
+        <div class="bdmeses" id="bd-meses" role="group" aria-label="Escolher o mês"></div>
         <div id="bdays"></div>
         <p class="note" id="bnote"></p>
       </div>
@@ -809,6 +826,7 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
 (function(){
   var MESES=["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
   var $=function(s){return document.querySelector(s)};
+  var $$=function(s){return Array.prototype.slice.call(document.querySelectorAll(s))};
   var now=new Date();
   $("#hoje").textContent=now.toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long"});
 
@@ -2068,10 +2086,9 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
     var c=h("div",{class:"panel bdcard "+cls},h("h3",null,title,h("span",{class:"cnt",text:String(list.length)})));
     if(!list.length){c.appendChild(h("p",{class:"sub",text:emptyTxt}));return c}
     var ul=h("ul",{class:"bdmini"});
-    list.slice(0,8).forEach(function(x){var a=idade(x);
+    list.forEach(function(x){var a=idade(x);
       ul.appendChild(h("li",null,fbLink(x,"who"),h("span",{class:"sub",text:dd(x.dia)+"/"+dd(x.mes)+(a?" · faz "+a:"")})))});
     c.appendChild(ul);
-    if(list.length>8)c.appendChild(h("p",{class:"sub",text:"e mais "+(list.length-8)+" na lista abaixo."}));
     return c}
   function withDates(){return items.map(function(x){var n=nextDate(x.dia,x.mes);return Object.assign({},x,{dias:n.days,prox:n.year})})}
   /* Aviso no topo do site: marcados que fazem aniversário hoje ou amanhã */
@@ -2104,22 +2121,40 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
       $("#bnote").textContent="";return}
     var q=norm($("#bd-busca").value.trim()),mes=+$("#bd-mes").value,soFav=$("#bd-fav").checked;
     var shown=list.filter(function(x){return (!q||norm(x.nome).indexOf(q)>=0)&&(!mes||x.mes===mes)&&(!soFav||x.fav)});
+    /* "Por mês": janeiro a dezembro, separado por dia; "Próximos": a partir de hoje */
+    if(bdModo==="mes")shown.sort(function(a,b){return a.mes-b.mes||a.dia-b.dia||(b.fav?1:0)-(a.fav?1:0)||a.nome.localeCompare(b.nome)});
+    $$("#bd-modo button").forEach(function(b){b.setAttribute("aria-pressed",String(b.dataset.m===bdModo))});
+    /* atalhos dos meses com a quantidade de cada um */
+    var chips=$("#bd-meses");chips.innerHTML="";
+    var base=list.filter(function(x){return (!q||norm(x.nome).indexOf(q)>=0)&&(!soFav||x.fav)});
+    [0].concat(MESES.map(function(m,i){return i+1})).forEach(function(n){
+      var qt=n?base.filter(function(x){return x.mes===n}).length:base.length;
+      var b=h("button",{type:"button",class:n===now.getMonth()+1?"agora":null,"aria-pressed":String(n===mes)},n?MESES[n-1].slice(0,3):"Todos",h("span",{text:String(qt)}));
+      b.onclick=function(){$("#bd-mes").value=String(n);render()};
+      chips.appendChild(b)});
     visiveis=shown;
     if(!shown.length){box.appendChild(h("p",{class:"empty",text:soFav&&!nfav?"Você ainda não marcou ninguém. Clique na ⭐ ao lado do nome.":"Ninguém com esse filtro."}))}
-    var lastMes=null;
+    var lastMes=null,lastDia=null;
     shown.forEach(function(x){
-      if(x.mes!==lastMes){lastMes=x.mes;box.appendChild(h("h3",{class:"dayh",text:MESES[x.mes-1]}))}
+      var grupo=bdModo==="mes"?x.mes:x.mes+"-"+x.prox;
+      if(grupo!==lastMes){lastMes=grupo;lastDia=null;
+        var noMes=shown.filter(function(y){return y.mes===x.mes}).length;
+        box.appendChild(h("h3",{class:"dayh"+(x.mes===now.getMonth()+1?" agora":"")},MESES[x.mes-1]+(bdModo!=="mes"&&x.prox!==now.getFullYear()?" "+x.prox:""),h("span",{class:"cnt",text:String(noMes)})))}
+      var mesmoDia=lastDia===x.dia;lastDia=x.dia;
+      var sem=new Date(x.prox,x.mes-1,x.dia).toLocaleDateString("pt-BR",{weekday:"short"}).replace(".","");
       var a=idade(x),b=h("button",{type:"button",class:"ghost","aria-label":"Remover "+x.nome,text:"remover"});
       b.onclick=function(){remove(x.id)};
       var st=h("button",{type:"button",class:"star","aria-pressed":x.fav?"true":"false","aria-label":(x.fav?"Desmarcar ":"Marcar ")+x.nome,title:x.fav?"Desmarcar":"Marcar como importante",text:"★"});
       st.onclick=function(){toggleFav(x.id)};
-      box.appendChild(h("div",{class:"bdrow"+(x.fav?" fav":"")},st,
-        h("span",{class:"when",text:dd(x.dia)+"/"+dd(x.mes)}),
+      box.appendChild(h("div",{class:"bdrow"+(x.fav?" fav":"")+(mesmoDia?" mesmo":"")+(x.dias===0?" hojerow":"")},st,
+        bdModo==="mes"?h("span",{class:"when dia"},mesmoDia?null:h("b",{text:dd(x.dia)}),mesmoDia?null:h("small",{text:sem})):h("span",{class:"when",text:dd(x.dia)+"/"+dd(x.mes)}),
         h("span",{class:"bdn"},fbLink(x,"who"),a?h("span",{class:"sub",text:" faz "+a}):null),
         h("span",{class:"count"+(x.dias===0?" hoje":x.dias<=7?" soon":""),text:countTxt(x)}),b))});
     var doMes=list.filter(function(x){return x.mes===now.getMonth()+1}).length;
     $("#bnote").textContent=items.length+" aniversários guardados · "+doMes+" em "+MESES[now.getMonth()].toLowerCase()+"."}
-  var visiveis=[];
+  var visiveis=[],bdModo="mes";
+  try{bdModo=localStorage.getItem("rac-bd-modo")||"mes"}catch(e){}
+  $$("#bd-modo button").forEach(function(b){b.onclick=function(){bdModo=b.dataset.m;try{localStorage.setItem("rac-bd-modo",bdModo)}catch(e){}render()}});
   function toggleFav(id){items.forEach(function(x){if(x.id===id)x.fav=!x.fav});lsWrite();render()}
   MESES.forEach(function(m,i){var o=document.createElement("option");o.value=i+1;o.textContent=m;$("#bd-mes").appendChild(o)});
   $("#bd-mes").addEventListener("change",render);

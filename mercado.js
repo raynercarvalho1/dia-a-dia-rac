@@ -728,9 +728,22 @@
       it.duvida = !desc || Math.abs(bruto - v) > 0.05;
       nota.itens.push(it);
     });
+    /* lista curta, sem quantidade: "1. Uva Verde 500g — R$ 12,98 (desconto R$ 1,68)". Cada item entra como 1 unidade
+       e o valor da lista é o que foi pago (o desconto, se vier, é somado de volta para o total da linha) */
+    if (!nota.itens.length) ls.forEach(function (l) {
+      var m = /^(?:\d{1,3}[.)]|[-•*])\s*(.+?)\s*(?:[—–:]|\s-)\s*R\$\s*(\d+(?:\.\d{3})*[.,]\d{2})(.*)$/.exec(l);
+      if (!m || /^(sub)?total|^desconto|^troco|^valor pago/i.test(m[1])) return;
+      var pago = num(m[2]), dm = /desconto[^\d]{0,15}(\d+[.,]\d{2})/i.exec(m[3]), d = dm ? num(dm[1]) : 0;
+      var vt = Math.round((pago + d) * 100) / 100;
+      nota.itens.push({ desc: m[1].trim(), qtd: 1, un: "un", vu: vt, vt: vt, descItem: d, semQtd: true });
+    });
+    nota.semQtd = nota.itens.some(function (x) { return x.semQtd; });
     var t = ls.join("\n");
     var em = /(\d{2})\/(\d{2})\/(20\d{2})/.exec(t); nota.data = em ? em[3] + "-" + em[2] + "-" + em[1] : "";
-    var tp = /total\s*(?:de|pago|:)?\s*R\$\s*(\d+[.,]\d{2})/i.exec(t);
+    /* "nota de 25/10", sem o ano: este ano (ou o passado, se a data ainda não chegou) */
+    var ed = !em && /\b([0-3]\d)\/([01]\d)\b(?!\/)/.exec(t);
+    if (ed) { var ano = new Date().getFullYear(), d0 = ano + "-" + ed[2] + "-" + ed[1]; nota.data = d0 > new Date().toISOString().slice(0, 10) ? (ano - 1) + d0.slice(4) : d0; }
+    var tp = /total\s*(?:de|pago|:)?\s*R\$\s*(\d+[.,]\d{2})/i.exec(t) || /total[^R\n]{0,30}\(?R\$\s*(\d+[.,]\d{2})/i.exec(t);
     nota.desconto = Math.round(sum(nota.itens, function (x) { return x.descItem || 0; }) * 100) / 100;
     nota.pago = tp ? num(tp[1]) : Math.round((sum(nota.itens, function (x) { return x.vt; }) - nota.desconto) * 100) / 100;
     var mm = /((?:[Ss]uper|[Hh]iper)?[Mm]ercados?|[Aa]tacad[ãa]o|[Aa]tacarejo)\s+([A-ZÀ-Ú][\wÀ-ú'&-]+(?:\s+[A-ZÀ-Ú][\wÀ-ú'&-]+)?)/.exec(t);
@@ -777,7 +790,8 @@
       var nota = lerResposta(resp.value);
       if (!nota || !nota.itens.length) nota = lerTextoLivre(resp.value);
       if (!nota || !nota.itens.length) { rmsg.textContent = "Não achei os itens nesse texto. Copie a resposta inteira (ícone de copiar logo abaixo dela) e tente de novo."; return; }
-      rmsg.textContent = "✓ Resposta lida: " + nota.itens.length + " itens. Confira abaixo e salve.";
+      rmsg.textContent = "✓ Resposta lida: " + nota.itens.length + " itens. Confira abaixo e salve." +
+        (nota.semQtd ? " A resposta não trouxe quantidade nem preço por kg, então os itens entram como 1 unidade. Para o preço por kg sair certo, use o pedido do botão (ele já vai copiado)." : "");
       conferir(nota);
       passo2.scrollIntoView({ behavior: "smooth", block: "start" });
     }

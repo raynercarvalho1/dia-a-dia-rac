@@ -32,7 +32,7 @@
   --good:#1E7A4C; --warn:#A5610B; --bad:#C8102E; --live:#E4002B;
   --on-img:#FFFFFF; --scrim:rgba(2,14,32,.82); --chip-bg:rgba(2,14,32,.66); --img-ground:#0E2240;
   --shadow:0 1px 2px rgba(0,30,70,.08),0 8px 24px rgba(0,30,70,.12);
-  --c-esportes:#005A9C; --c-vagas:#2E8BD8; --c-aniversarios:#D6283B; --c-embreve:#7B8CA3; --c-x:#1F2328; --c-mercado:#0E8A6A; --c-inicio:#5B5BD6; --c-estudos:#B5641B;
+  --c-esportes:#005A9C; --c-vagas:#2E8BD8; --c-aniversarios:#D6283B; --c-embreve:#7B8CA3; --c-x:#1F2328; --c-mercado:#0E8A6A; --c-inicio:#5B5BD6; --c-estudos:#B5641B; --c-eddie:#8A5A2B; --c-olivia:#D9468F;
   --f-ui:"Outfit","Hanken Grotesk",system-ui,sans-serif;
   --f-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
   --f-body:"Hanken Grotesk",system-ui,sans-serif;
@@ -43,14 +43,14 @@
   --side:#0D1A2C; --hover:#16263D; --glass:rgba(12,24,42,.78); --veil:linear-gradient(180deg,rgba(2,8,18,.45),rgba(2,8,18,.62));
   --accent:#6CB4F0; --accent-ink:#04182E; --brand:#005A9C; --brand-ink:#FFFFFF;
   --good:#55C08A; --warn:#E0A252; --bad:#FF7A85; --live:#FF5A5F;
-  --c-esportes:#6CB4F0; --c-vagas:#8CCBFF; --c-aniversarios:#FF7A85; --c-embreve:#B4C0D0; --c-x:#E7E9EA; --c-mercado:#4FD1A5; --c-inicio:#A5A6F6; --c-estudos:#F2A65A;
+  --c-esportes:#6CB4F0; --c-vagas:#8CCBFF; --c-aniversarios:#FF7A85; --c-embreve:#B4C0D0; --c-x:#E7E9EA; --c-mercado:#4FD1A5; --c-inicio:#A5A6F6; --c-estudos:#F2A65A; --c-eddie:#D9A066; --c-olivia:#F58BC0;
   --shadow:0 0 0 1px rgba(255,255,255,.06),0 8px 24px rgba(0,0,0,.3); color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#08111D; --surface:rgba(12,24,42,.86); --ink:#E7EEF7; --muted:#9AAAC0; --line:#22324A;
   --side:#0D1A2C; --hover:#16263D; --glass:rgba(12,24,42,.78); --veil:linear-gradient(180deg,rgba(2,8,18,.45),rgba(2,8,18,.62));
   --accent:#6CB4F0; --accent-ink:#04182E; --brand:#005A9C; --brand-ink:#FFFFFF;
   --good:#55C08A; --warn:#E0A252; --bad:#FF7A85; --live:#FF5A5F;
-  --c-esportes:#6CB4F0; --c-vagas:#8CCBFF; --c-aniversarios:#FF7A85; --c-embreve:#B4C0D0; --c-x:#E7E9EA; --c-mercado:#4FD1A5; --c-inicio:#A5A6F6; --c-estudos:#F2A65A;
+  --c-esportes:#6CB4F0; --c-vagas:#8CCBFF; --c-aniversarios:#FF7A85; --c-embreve:#B4C0D0; --c-x:#E7E9EA; --c-mercado:#4FD1A5; --c-inicio:#A5A6F6; --c-estudos:#F2A65A; --c-eddie:#D9A066; --c-olivia:#F58BC0;
   --shadow:0 0 0 1px rgba(255,255,255,.06),0 8px 24px rgba(0,0,0,.3); color-scheme:dark}
 /* A seção aberta empresta a sua cor para links, títulos e botões */
 :root[data-sec="vagas"]{--accent:var(--c-vagas)}
@@ -560,7 +560,7 @@ html:not(.logado) .app{display:none}
 .gate input{width:100%}
 .whoami{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
 .whoami .sub{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgrp),html.casa #navgrp a.it:not([data-k="mercado"]),html.casa #bdalert{display:none}
+html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgrp),html.casa #navgrp a.it:not([data-k="mercado"]):not([data-k="eddie"]):not([data-k="olivia"]),html.casa #bdalert{display:none}
 /* Tela inicial */
 .home{display:grid;gap:18px}
 .hi{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px;padding:6px 2px}
@@ -615,6 +615,19 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
 .gmbox .wl li{padding:6px}
 .gmbox .wl li.gmnl a{font-weight:800}
 .gmbox .wl li.gmnl::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--accent);flex:none}
+.wform label[hidden]{display:none}
+.wform textarea{width:100%;font:14px var(--f-body);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px;resize:vertical}
+.famhead{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+.famhead .grow{flex:1;min-width:200px}
+.famhead h2{margin:0}
+.famseg{max-width:100%;overflow-x:auto}
+.famseg button{white-space:nowrap;padding:7px 10px;font-size:13px}
+.famcard h3{margin:6px 0 4px}
+.famcard p{margin:4px 0}
+.famdet{white-space:pre-wrap;color:var(--muted)}
+.famarq{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.famarq img{width:110px;height:110px;object-fit:cover;border-radius:10px;display:block}
+.famarq video{width:min(320px,100%);border-radius:10px;background:#000}
 </style>
 </head>
 <body>
@@ -649,6 +662,8 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
       <a class="it" href="#esportes" data-k="esportes"><span class="ico" style="--ic:var(--c-esportes)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M7.2 5.6c2 3.6 2 9.2 0 12.8M16.8 5.6c-2 3.6-2 9.2 0 12.8"/></svg></span><span class="t">Esportes</span><span class="cnt" id="cnt-esportes"></span></a>
       <a class="it" href="#vagas" data-k="vagas"><span class="ico" style="--ic:var(--c-vagas)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V4.5h6V7M3 13h18"/></svg></span><span class="t">Vagas</span><span class="cnt" id="cnt-vagas"></span></a>
       <a class="it" href="#mercado" data-k="mercado"><span class="ico" style="--ic:var(--c-mercado)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L21 8H6"/><circle cx="10" cy="20" r="1.2" fill="currentColor"/><circle cx="17" cy="20" r="1.2" fill="currentColor"/></svg></span><span class="t">Mercado</span></a>
+      <a class="it" href="#eddie" data-k="eddie"><span class="ico" style="--ic:var(--c-eddie)"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><ellipse cx="6" cy="10" rx="2" ry="2.6"/><ellipse cx="10" cy="5.8" rx="2" ry="2.6"/><ellipse cx="14.5" cy="5.8" rx="2" ry="2.6"/><ellipse cx="18.5" cy="10" rx="2" ry="2.6"/><path d="M12 11.5c-3 0-6 4.2-6 6.4 0 1.6 1.3 2.4 2.8 2.4 1.2 0 2-.6 3.2-.6s2 .6 3.2.6c1.5 0 2.8-.8 2.8-2.4 0-2.2-3-6.4-6-6.4z"/></svg></span><span class="t">Eddie</span></a>
+      <a class="it" href="#olivia" data-k="olivia"><span class="ico" style="--ic:var(--c-olivia)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M9 10.5h.01M15 10.5h.01M9.5 15c1.4 1.2 3.6 1.2 5 0M12 3.5c-1 1.2-1 2.6 0 3.5"/></svg></span><span class="t">Olivia</span></a>
       <a class="it" href="#aniversarios" data-k="aniversarios"><span class="ico" style="--ic:var(--c-aniversarios)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21h16v-8H4zM4 16.5c2.6 1.6 5.4 1.6 8 0 2.6 1.6 5.4 1.6 8 0M12 13V9.5"/><path d="M12 7a1.6 1.6 0 0 0 1.6-1.6C13.6 4.3 12 3 12 3s-1.6 1.3-1.6 2.4A1.6 1.6 0 0 0 12 7z" fill="currentColor"/></svg></span><span class="t">Aniversários</span><span class="cnt" id="cnt-aniv"></span></a>
       <a class="it" href="#x" data-k="x"><span class="ico" style="--ic:var(--c-x);color:var(--side)"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></span><span class="t">Perfis no X</span><span class="cnt" id="cnt-x"></span></a>
       <a class="it" href="#estudos" data-k="estudos"><span class="ico" style="--ic:var(--c-estudos)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7l9-4 9 4-9 4z"/><path d="M7 9.5V15c0 1.4 2.2 3 5 3s5-1.6 5-3V9.5"/></svg></span><span class="t">Estudos</span><span class="cnt" id="cnt-estudos"></span></a>
@@ -682,6 +697,8 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
   <a class="alertbar" id="bdalert" href="#aniversarios" hidden></a>
   <section id="inicio" hidden><div id="inicio-view"></div></section>
   <section id="estudos" hidden><div id="estudos-view" class="stack"></div></section>
+  <section id="eddie" hidden><div id="eddie-view" class="stack"></div></section>
+  <section id="olivia" hidden><div id="olivia-view" class="stack"></div></section>
   <section id="esportes" hidden>
     <div id="sp-beisebol" hidden>
       <div class="pills" aria-label="Beisebol">
@@ -791,7 +808,8 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
 
   /* Rotas por hash: #esportes/beisebol/liga, #esportes/beisebol/time-119, #esportes/beisebol/jogo-849805,
      #esportes/basquete/jogo-401909092, #x/jornalistas, #vagas ... */
-  var tabs=["inicio","esportes","vagas","mercado","aniversarios","em-breve","x","estudos"];
+  var tabs=["inicio","esportes","vagas","mercado","aniversarios","em-breve","x","estudos","eddie","olivia"];
+  var DA_CASA=["mercado","eddie","olivia"];
   var sports=["beisebol","basquete","futebol-americano"];
   function mark(sel,attr,val){document.querySelectorAll(sel).forEach(function(a){
     if(a.dataset[attr]===val)a.setAttribute("aria-current","page");else a.removeAttribute("aria-current")})}
@@ -808,8 +826,8 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
     if(!PAPEL)return;
     var parts=(location.hash||"").replace("#","").split("/");
     var top=tabs.indexOf(parts[0])<0?"inicio":parts[0];
-    /* a esposa entra direto no Mercado e não sai dele */
-    if(PAPEL==="casa"&&top!=="mercado"){top="mercado";parts=["mercado"]}
+    /* a esposa vê o Mercado, o Eddie e a Olivia; o resto leva ao Mercado */
+    if(PAPEL==="casa"&&DA_CASA.indexOf(top)<0){top="mercado";parts=["mercado"]}
     tabs.forEach(function(t){document.getElementById(t).hidden=(t!==top)});
     document.documentElement.setAttribute("data-sec",top);
     setSide(false);
@@ -818,6 +836,7 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
     if(top==="mercado"){sideMark("mercado","mercado");if(window.RACmercado)window.RACmercado.render(parts[1]||"");return}
     if(top==="inicio"){sideMark("inicio","inicio");renderInicio();return}
     if(top==="estudos"){sideMark("estudos","estudos");renderEstudos();return}
+    if(top==="eddie"||top==="olivia"){sideMark(top,top);renderFamilia(top);return}
     if(top!=="esportes"){sideMark(top,top);return}
     var sp=sports.indexOf(parts[1])<0?"beisebol":parts[1];
     sports.forEach(function(x){document.getElementById("sp-"+x).hidden=(x!==sp)});
@@ -1884,7 +1903,7 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
   /* ===== Login do site =====
      O site é pessoal: sem login só aparece a tela de entrar. Usa as mesmas contas do Mercado (Supabase).
      Quem está na tabela "membros" (a esposa) é "casa" e vê só o Mercado; o dono vê tudo. */
-  var PAPEL=null,SB=null,EU=null,PESSOAL={},SEM_TABELA=false;
+  var PAPEL=null,SB=null,EU=null,DONO=null,PESSOAL={},SEM_TABELA=false;
   function isOwner(){return PAPEL==="dono"}
   /* Dados pessoais: um JSON por chave na tabela "pessoal", que só a conta do dono lê e grava */
   function pessoalCarregar(){
@@ -1914,6 +1933,7 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
       EU=ses.user;
       return SB.from("membros").select("dono").eq("membro",EU.id).then(function(m){
         PAPEL=m.data&&m.data.length?"casa":"dono";
+        DONO=PAPEL==="casa"?m.data[0].dono:EU.id;
         if(PAPEL!=="dono")return;
         return pessoalCarregar().catch(function(){SEM_TABELA=true}).then(migrarDoNavegador)
       }).then(iniciar)
@@ -2373,6 +2393,128 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
     var p=wCard("Perfis no X","x","#1F2328",["#x","abrir"],"w3");
     p.appendChild(h("ul",{class:"wl"},xCats().filter(function(c){return c.h.length}).map(function(c){return h("li",null,catIco(c),h("span",{class:"grow"},h("a",{href:"#x/"+c.k,text:c.n})),x36link(c.h,"36h","ghostbtn"))})));
     return p}
+
+  /* ===== Eddie e Olivia: linha do tempo com exames, vacinas, consultas, peso e momentos, com fotos, PDFs e vídeos.
+     Tabela "registros" e cofre de arquivos "familia" no Supabase (004_familia.sql); o Rayner e a esposa veem juntos. ===== */
+  var FAM={eddie:{n:"Eddie",peso:true},olivia:{n:"Olivia",peso:true}};
+  var TIPOS=[["exame","Exame","Ex.: Hemograma completo","Resultado"],["vacina","Vacina","Ex.: V10, Antirrábica, Hepatite B","Dose"],["consulta","Consulta","Ex.: Consulta de rotina","Profissional"],
+    ["peso","Peso","Ex.: Pesagem","Peso (kg)"],["momento","Momento","Ex.: Primeiro passeio na praia","Onde"],["midia","Fotos e vídeos","Ex.: Fotos do aniversário",""],
+    ["nascimento","Nascimento","Ex.: Nascimento","Onde"],["outro","Outro","",""]];
+  function tipoInfo(k){return TIPOS.filter(function(t){return t[0]===k})[0]||TIPOS[TIPOS.length-1]}
+  var famFiltro={eddie:"",olivia:""};
+  function hojeISO(){var d=new Date();return d.getFullYear()+"-"+dd(d.getMonth()+1)+"-"+dd(d.getDate())}
+  function dataBR(iso){var p=String(iso).split("-");return p[2]+"/"+p[1]+"/"+p[0]}
+  function idadeTxt(iso){
+    var n=new Date(iso+"T12:00:00"),t=new Date(),m=(t.getFullYear()-n.getFullYear())*12+t.getMonth()-n.getMonth();if(t.getDate()<n.getDate())m--;
+    if(m<1)return Math.max(0,Math.floor((t-n)/864e5))+" dias";
+    var a=Math.floor(m/12),r=m%12;return (a?a+(a===1?" ano":" anos"):"")+(a&&r?" e ":"")+(r?r+(r===1?" mês":" meses"):"")}
+  function sbOk(r){if(r.error)throw new Error(r.error.message);return r.data}
+  /* Foto grande do celular vira JPEG de até 2000 px (exame continua legível e ocupa bem menos) */
+  function encolher(f){
+    if(!/^image\/(jpeg|png|webp|heic|heif)$/i.test(f.type)||f.size<700e3)return Promise.resolve(f);
+    return createImageBitmap(f).then(function(b){
+      var k=Math.min(1,2000/Math.max(b.width,b.height)),c=document.createElement("canvas");c.width=Math.round(b.width*k);c.height=Math.round(b.height*k);
+      c.getContext("2d").drawImage(b,0,0,c.width,c.height);
+      return new Promise(function(res){c.toBlob(function(bl){res(bl&&bl.size<f.size?new File([bl],f.name.replace(/\.\w+$/,"")+".jpg",{type:"image/jpeg"}):f)},"image/jpeg",.85)})
+    }).catch(function(){return f})}
+  function nomeSeguro(n){return norm(n).replace(/[^a-z0-9.]+/g,"-").replace(/^-+|-+$/g,"").slice(-60)||"arquivo"}
+  function enviarArquivos(quem,id,files,status){
+    var out=[],i=0;
+    return Array.prototype.reduce.call(files,function(p,f){return p.then(function(){
+      i++;status("Enviando arquivo "+i+" de "+files.length+"…");
+      if(f.size>50*1024*1024)throw new Error("“"+f.name+"” passa de 50 MB. Vídeo longo: deixe no iCloud e cole o link nos detalhes.");
+      return encolher(f).then(function(g){
+        var path=DONO+"/"+quem+"/"+id+"/"+Date.now()+"-"+nomeSeguro(g.name);
+        return SB.storage.from("familia").upload(path,g,{contentType:g.type||"application/octet-stream",upsert:false}).then(function(r){
+          if(r.error)throw new Error(r.error.message);out.push({path:path,nome:f.name,tipo:g.type,tamanho:g.size})})})})},Promise.resolve()).then(function(){return out})}
+
+  function renderFamilia(quem){
+    var root=$("#"+quem+"-view"),F=FAM[quem];root.innerHTML="";
+    root.appendChild(h("div",{class:"panel"},loading()));
+    SB.from("registros").select("*").eq("quem",quem).order("data",{ascending:false}).order("criado_em",{ascending:false}).then(sbOk).then(function(regs){
+      root.innerHTML="";
+      var nasc=regs.filter(function(r){return r.tipo==="nascimento"})[0],ultPeso=regs.filter(function(r){return r.tipo==="peso"&&r.valor})[0];
+      var add=h("button",{type:"button",class:"mkadd",text:"+ Adicionar registro"});
+      var topo=h("div",{class:"panel famhead"},h("div",{class:"grow"},h("h2",{text:F.n}),
+        h("p",{class:"sub",text:[nasc?idadeTxt(nasc.data)+" (nasceu em "+dataBR(nasc.data)+")":"Adicione um registro “Nascimento” para mostrar a idade",ultPeso?"último peso "+ultPeso.valor+" kg em "+dataBR(ultPeso.data):""].filter(Boolean).join(" · ")})),add);
+      root.appendChild(topo);
+      var formBox=h("div");root.appendChild(formBox);
+      add.onclick=function(){abrirForm(null)};
+      function abrirForm(reg){formBox.innerHTML="";formBox.appendChild(famForm(quem,reg,function(){renderFamilia(quem)},function(){formBox.innerHTML=""}));formBox.scrollIntoView({behavior:"smooth",block:"start"})}
+      /* próximas doses e retornos */
+      var hoje=hojeISO(),prox=regs.filter(function(r){return r.proxima&&r.proxima>=hoje}).sort(function(a,b){return a.proxima.localeCompare(b.proxima)});
+      if(prox.length){var pp=panel("Próximas doses e retornos");
+        pp.appendChild(h("ul",{class:"wl"},prox.map(function(r){return h("li",null,h("span",{class:"grow"},h("b",{text:r.titulo}),h("span",{class:"sub",text:tipoInfo(r.tipo)[1]})),h("span",{class:"end",text:dataBR(r.proxima)}))})));
+        root.appendChild(pp)}
+      if(!regs.length){root.appendChild(h("div",{class:"panel"},h("p",{class:"empty",text:"Nada registrado ainda. Toque em “Adicionar registro” para lançar o primeiro exame, vacina ou foto."})));return}
+      /* filtro por tipo */
+      var usados=TIPOS.filter(function(t){return regs.some(function(r){return r.tipo===t[0]})});
+      var seg=h("div",{class:"seg famseg",role:"group","aria-label":"Tipo"});
+      [["","Tudo"]].concat(usados).forEach(function(t){var b=h("button",{type:"button","aria-pressed":famFiltro[quem]===t[0]?"true":"false",text:t[1]});b.onclick=function(){famFiltro[quem]=t[0];renderFamilia(quem)};seg.appendChild(b)});
+      root.appendChild(seg);
+      var lista=regs.filter(function(r){return !famFiltro[quem]||r.tipo===famFiltro[quem]});
+      var paths=[];lista.forEach(function(r){(r.arquivos||[]).forEach(function(a){paths.push(a.path)})});
+      var urls={};
+      (paths.length?SB.storage.from("familia").createSignedUrls(paths,3600).then(function(r){(r.data||[]).forEach(function(x){if(x.signedUrl)urls[x.path]=x.signedUrl})}):Promise.resolve()).then(function(){
+        var ano=null,box=h("div",{class:"stack"});root.appendChild(box);
+        lista.forEach(function(r){
+          var a=r.data.slice(0,4);if(a!==ano){ano=a;box.appendChild(h("h2",{class:"sec",text:a}))}
+          var ti=tipoInfo(r.tipo),card=h("article",{class:"panel famcard"});
+          card.appendChild(h("div",{class:"vpills"},h("span",{class:"vp",text:ti[1]}),h("span",{class:"when",text:dataBR(r.data)}),r.proxima?h("span",{class:"sub",text:"próxima: "+dataBR(r.proxima)}):null));
+          card.appendChild(h("h3",{text:r.titulo}));
+          if(r.valor)card.appendChild(h("p",null,h("b",{text:(ti[3]||"Valor")+": "}),r.valor+(r.tipo==="peso"&&/^[\d.,]+$/.test(r.valor)?" kg":"")));
+          if(r.detalhes)card.appendChild(h("p",{class:"famdet",text:r.detalhes}));
+          var arqs=r.arquivos||[];
+          if(arqs.length){var g=h("div",{class:"famarq"});
+            arqs.forEach(function(x){var u=urls[x.path];if(!u){g.appendChild(h("span",{class:"sub",text:x.nome}));return}
+              if(/^image\//.test(x.tipo))g.appendChild(h("a",{href:u,target:"_blank",rel:"noopener",title:x.nome},h("img",{src:u,alt:x.nome,loading:"lazy"})));
+              else if(/^video\//.test(x.tipo))g.appendChild(h("video",{src:u,controls:"",preload:"metadata",playsinline:""}));
+              else g.appendChild(ext(u,"📄 "+x.nome,"ghostbtn"))});
+            card.appendChild(g)}
+          var ed=h("button",{type:"button",class:"ghostbtn",text:"Editar"});ed.onclick=function(){abrirForm(r)};
+          var del=h("button",{type:"button",class:"ghostbtn",text:"Apagar"}),armado=false;
+          del.onclick=function(){
+            if(!armado){armado=true;del.textContent="Toque de novo para apagar";del.classList.add("danger");setTimeout(function(){armado=false;del.textContent="Apagar";del.classList.remove("danger")},5000);return}
+            del.disabled=true;
+            var ps=(r.arquivos||[]).map(function(x){return x.path});
+            (ps.length?SB.storage.from("familia").remove(ps):Promise.resolve()).then(function(){return SB.from("registros").delete().eq("id",r.id).then(sbOk)}).then(function(){renderFamilia(quem)})
+              .catch(function(e){del.disabled=false;del.textContent="Não apagou ("+e.message+")"})};
+          card.appendChild(h("div",{class:"vfoot"},ed,del));
+          box.appendChild(card)})})
+    }).catch(function(e){root.innerHTML="";root.appendChild(h("div",{class:"panel"},h("p",{class:"empty",text:/registros|relation|schema cache/i.test(e.message)?"Falta rodar o supabase/004_familia.sql no Supabase para ligar esta área.":"Não consegui carregar ("+e.message+")."})))})}
+
+  /* Formulário de registro: tipo, data, título, valor, próxima data, detalhes e arquivos */
+  function famForm(quem,reg,pronto,cancelar){
+    var p=panel(reg?"Editar registro":"Novo registro de "+FAM[quem].n),f=h("div",{class:"wform"});
+    var tipo=h("select",{"aria-label":"Tipo"},TIPOS.map(function(t){return h("option",{value:t[0],selected:(reg?reg.tipo:"exame")===t[0]?"":null,text:t[1]})}));
+    var data=h("input",{type:"date",value:reg?reg.data:hojeISO()}),titulo=h("input",{type:"text",value:reg?reg.titulo:""});
+    var valor=h("input",{type:"text",value:reg&&reg.valor||""}),prox=h("input",{type:"date",value:reg&&reg.proxima||""});
+    var det=h("textarea",{rows:"3",placeholder:"Contexto: como foi, o que o veterinário ou o pediatra disse, valores importantes…"});det.value=reg&&reg.detalhes||"";
+    var arq=h("input",{type:"file",multiple:"",accept:"image/*,video/*,application/pdf"});
+    var lValor=h("label",null,h("span"),valor),lProx=h("label",null,h("span"),prox);
+    function ajustar(){var t=tipoInfo(tipo.value);titulo.placeholder=t[2]||"Título";lValor.firstChild.textContent=t[3]||"Valor (opcional)";lValor.hidden=!t[3];
+      lProx.firstChild.textContent=tipo.value==="vacina"?"Próxima dose (reforço)":"Retorno (opcional)";lProx.hidden=!/^(vacina|consulta|exame)$/.test(tipo.value)}
+    tipo.addEventListener("change",ajustar);ajustar();
+    f.appendChild(h("div",{class:"two"},h("label",null,"Tipo",tipo),h("label",null,"Data",data)));
+    f.appendChild(h("label",null,"Título",titulo));
+    f.appendChild(h("div",{class:"two"},lValor,lProx));
+    f.appendChild(h("label",null,"Detalhes",det));
+    f.appendChild(h("label",null,reg&&(reg.arquivos||[]).length?"Mais arquivos (fotos, PDFs, vídeos de até 50 MB)":"Arquivos (fotos, PDFs, vídeos de até 50 MB)",arq));
+    var st=h("p",{class:"sub",role:"status"}),salvar=h("button",{type:"button",text:"Salvar"}),canc=h("button",{type:"button",class:"ghostbtn",text:"Cancelar"});
+    canc.onclick=cancelar;
+    salvar.onclick=function(){
+      if(!titulo.value.trim()){st.textContent="Escreva um título.";titulo.focus();return}
+      if(!data.value){st.textContent="Escolha a data.";return}
+      salvar.disabled=true;st.textContent="Salvando…";
+      var dados={quem:quem,tipo:tipo.value,data:data.value,titulo:titulo.value.trim(),valor:valor.value.trim()||null,proxima:lProx.hidden?null:(prox.value||null),detalhes:det.value.trim()||null};
+      var passo=reg?SB.from("registros").update(dados).eq("id",reg.id).select("id,arquivos").single():SB.from("registros").insert(dados).select("id,arquivos").single();
+      passo.then(sbOk).then(function(row){
+        if(!arq.files.length)return;
+        return enviarArquivos(quem,row.id,arq.files,function(t){st.textContent=t}).then(function(novos){
+          return SB.from("registros").update({arquivos:(row.arquivos||[]).concat(novos)}).eq("id",row.id).then(sbOk)})
+      }).then(pronto).catch(function(e){salvar.disabled=false;st.textContent="Não consegui salvar: "+e.message})};
+    f.appendChild(h("div",{class:"vfil"},salvar,canc));f.appendChild(st);
+    p.appendChild(f);return p}
 
   /* ===== Estudos: listas de exercícios para analista de dados (SQL, BI e Python) ===== */
   var TRILHAS=[

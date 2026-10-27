@@ -108,6 +108,11 @@ img.ico{background:#fff;object-fit:contain;padding:2px;box-shadow:0 0 0 1px var(
 .ptitle h1{font:700 clamp(24px,4vw,32px)/1.1 var(--f-ui);margin:0;letter-spacing:-.02em;min-width:0}
 .ptitle .ico{width:34px;height:34px;box-shadow:0 2px 10px rgba(0,0,0,.25)}
 .ptitle .ico svg{width:17px;height:17px}
+.ptitle .homebtn{margin-left:auto;display:inline-flex;align-items:center;gap:4px;font:600 13px var(--f-ui);background:var(--glass);color:var(--ink);text-shadow:none;padding:6px 12px 6px 8px;border-radius:99px;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);text-decoration:none;white-space:nowrap}
+.ptitle .homebtn[hidden]{display:none}
+.ptitle .homebtn svg{width:15px;height:15px}
+.ptitle .homebtn:hover{background:var(--surface)}
+.ptitle .homebtn:not([hidden])+.date{margin-left:0}
 .ptitle .date{margin-left:auto;font:500 13px var(--f-ui);background:var(--glass);color:var(--ink);text-shadow:none;padding:6px 12px;border-radius:99px;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);white-space:nowrap}
 .sidebtn{display:none;background:var(--glass);color:var(--ink);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-radius:10px;padding:8px;text-shadow:none}
 .sidebtn svg{width:20px;height:20px;display:block}
@@ -728,6 +733,7 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
     <button type="button" class="sidebtn" id="openside" aria-label="Abrir menu" aria-controls="side" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
     <span class="ico" id="pico"></span>
     <h1 id="ptitle">Esportes</h1>
+    <a class="homebtn" id="homebtn" href="#inicio" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>Início</a>
     <span class="date" id="hoje"></span>
   </div>
   <a class="alertbar" id="bdalert" href="#aniversarios" hidden></a>
@@ -869,6 +875,8 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
     if(PAPEL==="casa"&&DA_CASA.indexOf(top)<0){top="mercado";parts=["mercado"]}
     tabs.forEach(function(t){document.getElementById(t).hidden=(t!==top)});
     document.documentElement.setAttribute("data-sec",top);
+    /* voltar ao Início em todas as páginas (a esposa não tem o Início) */
+    $("#homebtn").hidden=top==="inicio"||PAPEL==="casa";
     setSide(false);
     window.scrollTo(0,0);
     if(top==="x"){var cat=xCats().some(function(c){return c.k===parts[1]})?parts[1]:"";sideMark(cat?"x/"+cat:"x","x");renderX(cat);return}

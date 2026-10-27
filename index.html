@@ -64,7 +64,7 @@
 /* Layout: foto em tela cheia ao fundo; barra lateral branca com ícones coloridos e contadores;
    conteúdo em cartões translúcidos por cima da foto */
 body{background:var(--img-ground);color:var(--ink);font:400 15px/1.5 var(--f-body);margin:0}
-.bgimg{position:fixed;inset:0;z-index:-1;background:var(--img-ground) center/cover no-repeat;background-image:var(--bgurl,none);transition:background-image .4s}
+.bgimg{position:fixed;inset:0;z-index:-1;background:var(--img-ground) center/cover no-repeat;background-image:var(--bgurl,none);background-position:var(--bgpos,center);transition:background-image .4s}
 .bgimg::after{content:"";position:absolute;inset:0;background:var(--veil)}
 .app{display:grid;grid-template-columns:276px minmax(0,1fr);gap:28px;min-height:100vh;padding-block:12px 48px;padding-left:max(12px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 .side{position:sticky;top:12px;align-self:start;height:calc(100vh - 24px);overflow-y:auto;background:var(--side);border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,.22);padding:14px 10px;display:flex;flex-direction:column;gap:16px;z-index:30}
@@ -902,6 +902,7 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
     if(PAPEL==="casa"&&DA_CASA.indexOf(top)<0){top="mercado";parts=["mercado"]}
     tabs.forEach(function(t){document.getElementById(t).hidden=(t!==top)});
     document.documentElement.setAttribute("data-sec",top);
+    if(top!=="eddie"&&top!=="olivia")fundoPagina(null);
     /* voltar ao Início em todas as páginas (a esposa não tem o Início) */
     $("#homebtn").hidden=top==="inicio"||PAPEL==="casa";
     setSide(false);
@@ -938,6 +939,7 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
     {k:"yosemite",n:"Yosemite",u:"https://upload.wikimedia.org/wikipedia/commons/thumb/1/13/Tunnel_View%2C_Yosemite_Valley%2C_Yosemite_NP_-_Diliff.jpg/1920px-Tunnel_View%2C_Yosemite_Valley%2C_Yosemite_NP_-_Diliff.jpg",by:"Diliff",lic:"CC BY-SA 3.0",src:"https://commons.wikimedia.org/wiki/File:Tunnel_View,_Yosemite_Valley,_Yosemite_NP_-_Diliff.jpg"}];
   function setBg(k){
     var b=BGS.filter(function(x){return x.k===k})[0]||BGS[0];
+    fundoDaPagina=null;$("#bgimg").style.removeProperty("--bgpos");
     $("#bgimg").style.setProperty("--bgurl",'url("'+b.u+'")');
     document.querySelectorAll("#bgpick button").forEach(function(x){x.setAttribute("aria-pressed",x.dataset.k===b.k?"true":"false")});
     var cr=$("#credit");cr.innerHTML="";
@@ -948,7 +950,14 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
   BGS.forEach(function(b){
     var bt=h("button",{type:"button",title:b.n,"aria-label":"Fundo: "+b.n,style:'background-image:url("'+b.u+'")'});bt.dataset.k=b.k;
     bt.onclick=function(){setBg(b.k)};$("#bgpick").appendChild(bt)});
-  setBg((function(){try{return localStorage.getItem("rac-fundo")}catch(e){return null}})());
+  function fundoSalvo(){try{return localStorage.getItem("rac-fundo")}catch(e){return null}}
+  setBg(fundoSalvo());
+  /* Páginas com foto própria (Eddie, Olivia) usam a foto dela de fundo; ao sair, volta o fundo escolhido */
+  var fundoDaPagina=null;
+  function fundoPagina(url,nome){
+    if(!url){if(fundoDaPagina)setBg(fundoSalvo());return}
+    fundoDaPagina=url;var bg=$("#bgimg");bg.style.setProperty("--bgurl",'url("'+url+'")');bg.style.setProperty("--bgpos","center 30%");
+    var cr=$("#credit");cr.innerHTML="";cr.appendChild(document.createTextNode("Foto: "+nome))}
   /* Seletor de tema: Claro (padrão), Escuro ou Auto (segue o sistema) */
   function setTheme(t){
     if(t==="auto")document.documentElement.removeAttribute("data-theme");else document.documentElement.setAttribute("data-theme",t);
@@ -2746,6 +2755,9 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
 
     function desenhar(regs,urls){
       root.innerHTML="";
+      var fotoBg=regs.filter(function(r){return dadosDe(r).perfil}).map(function(r){return (r.arquivos||[]).filter(function(a){return urls[a.path]&&/^image\//.test(a.tipo)})[0]}).filter(Boolean)[0];
+      /* só troca o fundo se a pessoa ainda estiver nesta página quando os links chegarem */
+      if((location.hash||"").replace("#","").split("/")[0]===quem)fundoPagina(fotoBg?urls[fotoBg.path]:null,F.n);
       var nasc=regs.filter(function(r){return r.tipo==="nascimento"})[0],ultPeso=regs.filter(function(r){return r.tipo==="peso"&&r.valor})[0];
       var foto=regs.filter(function(r){return dadosDe(r).perfil&&(r.arquivos||[]).some(function(a){return urls[a.path]&&/^image\//.test(a.tipo)})})[0];
       var add=h("button",{type:"button",class:"mkadd",text:"+ Adicionar registro"}),imp=h("button",{type:"button",class:"ghostbtn",text:"Importar histórico"});

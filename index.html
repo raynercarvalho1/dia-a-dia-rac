@@ -2897,14 +2897,17 @@ code.mbaf{font:calc(12px + var(--fz))/1.4 ui-monospace,Consolas,monospace;white-
         /* "juntar": completa um registro que já existe (mesmo tipo e data) com arquivos, remédios e texto que faltam */
         function alvoDe(r){var l=regs.filter(function(x){return x.tipo===r.tipo&&x.data===r.data});return l.filter(function(x){return norm(x.titulo)===norm(r.titulo)})[0]||l[0]||null}
         function pegarArquivos(r,ja){var tem={};(ja||[]).forEach(function(a){tem[norm(String(a.nome).normalize("NFC"))]=1});
-          return (r.arquivos||[]).filter(function(n){return !tem[norm(String(n).normalize("NFC"))]}).map(function(n){var f=porNome[norm(String(n).normalize("NFC"))];if(!f)faltam.push(n);return f}).filter(Boolean)}
+          return (r.arquivos||[]).filter(function(n){return !tem[norm(String(n).normalize("NFC"))]}).map(function(n){var f=porNome[norm(String(n).normalize("NFC"))];
+            /* um registro, um arquivo citado e um só arquivo escolhido: vale mesmo com outro nome (ex.: moto.jpeg em vez de Foto da moto.jpg) */
+            if(!f&&lista.length===1&&(r.arquivos||[]).length===1&&outros.length===1)f=outros[0];
+            if(!f)faltam.push(n);return f}).filter(Boolean)}
         function juntarDados(velho,novo){var d=Object.assign({},velho||{}),mudou=false;
           Object.keys(novo||{}).forEach(function(k){
             if(Array.isArray(novo[k])){var l=(d[k]||[]).slice(),chave=function(x){return norm(typeof x==="string"?x:x.nome||x.o||x.k||JSON.stringify(x))},tem={};l.forEach(function(x){tem[chave(x)]=1});
               novo[k].forEach(function(x){if(!tem[chave(x)]){l.push(x);mudou=true}});d[k]=l}
             else if(d[k]==null){d[k]=novo[k];mudou=true}});
           return mudou?d:null}
-        var faltam=[],feitos=0,criados=0,juntados=0,iguais=0;
+        var faltam=[],feitos=0,criados=0,juntados=0,iguais=0,outros=fs.filter(function(f){return f!==js});
         var fila=lista.filter(function(r){return r.juntar||!existe[r.tipo+"|"+r.data+"|"+norm(r.titulo)]});
         iguais=lista.length-fila.length;
         if(!fila.length){st.textContent="Tudo desse histórico já está aqui.";ok.disabled=false;return}

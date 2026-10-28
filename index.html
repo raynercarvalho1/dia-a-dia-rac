@@ -3262,13 +3262,13 @@ code.mbaf{font:calc(12px + var(--fz))/1.4 ui-monospace,Consolas,monospace;white-
   function mbaPainelFin(){
     var x=mbaFin();if(!x)return null;
     var p=panel("Financeiro",x.pagas+" de "+x.ps.length+" pagas · faltam "+BRL(x.falta)),f=mbaFeito();
-    var bol=x.F.link?ext(x.F.link,"Baixar o boleto no portal","ghostbtn pri"):null;
+    var bol=x.F.link?ext(x.F.link,"Baixar o boleto no portal","ghostbtn pri"):null,pasta=x.F.pasta?ext(x.F.pasta,"Boletos salvos no Drive","ghostbtn"):null;
     if(x.prox){var dd=diasAte(x.prox.venc),cls=dd<0?"qrwarn":dd<=5?"qrwarn":"sub";
       p.appendChild(h("div",{class:"kgasto"},h("div",null,h("span",{class:"kl",text:"Próximo boleto: "+x.prox.n}),h("b",{class:"kv",text:BRL(x.prox.v)})),
         h("div",null,h("span",{class:"kl",text:"Vencimento"}),h("b",{class:"kv",text:dataBR(x.prox.venc)})),h("div",null,h("span",{class:"kl",text:"Já pago"}),h("b",{class:"kv",text:BRL(x.pago)}))));
       p.appendChild(h("p",{class:cls,text:dd<0?"⚠ Venceu há "+(-dd)+(dd===-1?" dia":" dias")+". Se já pagou, marque abaixo.":dd===0?"⚠ Vence hoje.":"Vence em "+dd+(dd===1?" dia":" dias")+"."}))}
     else p.appendChild(h("p",{class:"sub",text:"Tudo pago 🎉"}));
-    if(bol)p.appendChild(h("div",{class:"vfil"},bol));
+    if(bol||pasta)p.appendChild(h("div",{class:"vfil"},pasta,bol));
     var l=h("div",{class:"exl"});
     x.ps.forEach(function(q){var cb=h("input",{type:"checkbox"});cb.checked=q.paga;
       cb.onchange=function(){mbaMarcar("pg:"+q.k,cb.checked);renderMba()};

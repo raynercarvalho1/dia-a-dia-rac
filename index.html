@@ -2586,7 +2586,9 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
 
   /* ===== Eddie e Olivia: linha do tempo com exames, vacinas, consultas, peso e momentos, com fotos, PDFs e vídeos.
      Tabela "registros" e cofre de arquivos "familia" no Supabase (004_familia.sql); o Rayner e a esposa veem juntos. ===== */
-  var FAM={eddie:{n:"Eddie",peso:true},olivia:{n:"Olivia",peso:true},
+  var FAM={eddie:{n:"Eddie",peso:true},olivia:{n:"Olivia",peso:true,
+    /* compras do Mercado que também são gastos dela: lata de NAN, fraldas e lenços (entram sozinhas nos Gastos) */
+    merc:{termos:["nan","fralda","pampers","huggies","umedec"],re:/(^|[^a-zà-ú])nan([^a-zà-ú]|$)|fralda|pampers|huggies|umedec/i}},
     /* veículos: mesma tabela de registros, outra lista de tipos e outro resumo; aparecem na página Veículos.
        Placa, ano e cor ficam num registro com dados.ficha, na conta, e não aqui no código (o repositório é público) */
     civic:{n:"Civic",veic:true,root:"veiculos-view",desc:"Honda Civic"},
@@ -2792,6 +2794,17 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
       if((d.orientacoes||[]).length)p.appendChild(h("ul",{class:"famori"},d.orientacoes.map(function(o){return h("li",{text:o})})))});
     return p}
 
+  /* itens das notas do Mercado que são dela, no formato de registro (só para os Gastos).
+     Se no mesmo dia já houver um registro com custo de fralda/fórmula, vale o registro, para não contar duas vezes. */
+  function famMercado(quem,regs){
+    var M=FAM[quem].merc;if(!M)return Promise.resolve([]);
+    var or=M.termos.map(function(t){return "produto.ilike.*"+t+"*,descricao.ilike.*"+t+"*"}).join(",");
+    return SB.from("compras").select("id,data,mercado,descricao,produto,quantidade,unidade,valor_total").or(or).order("data",{ascending:false}).then(sbOk).then(function(l){
+      var dias={};regs.forEach(function(r){if(/^(produto|alimentacao)$/.test(r.tipo)&&typeof dadosDe(r).custo==="number")dias[r.data]=1});
+      return l.filter(function(x){return M.re.test(x.produto||"")||M.re.test(x.descricao||"")}).filter(function(x){return !dias[x.data]&&+x.valor_total>0}).map(function(x){
+        var n=x.produto||x.descricao,q=+x.quantidade;
+        return {id:"m-"+x.id,merc:true,tipo:"produto",data:x.data,titulo:n+(q>1&&x.unidade!=="kg"?" ("+fmtN(q)+" un)":""),dados:{custo:Math.round(+x.valor_total*100)/100,clinica:x.mercado}}})
+    }).catch(function(){return []})}
   function famGastos(regs,ir,quem){
     var cs=regs.filter(function(r){return typeof dadosDe(r).custo==="number"}).sort(function(a,b){return b.data.localeCompare(a.data)});if(!cs.length)return null;
     var anos={};cs.forEach(function(r){var a=r.data.slice(0,4);anos[a]=(anos[a]||0)+r.dados.custo});
@@ -2801,8 +2814,10 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
     cs.forEach(function(r){var g=(grupos.filter(function(x){return x[1].test(r.tipo)})[0]||["Outros"])[0];tot[g]=(tot[g]||0)+r.dados.custo});
     p.appendChild(h("div",{class:"kgasto"},h("div",null,h("span",{class:"kl",text:"Total desde "+dataBR(cs[cs.length-1].data)}),h("b",{class:"kv",text:brl(cs.reduce(function(s,r){return s+r.dados.custo},0))})),
       grupos.map(function(x){return x[0]}).concat(["Outros"]).filter(function(g){return tot[g]}).map(function(g){return h("div",null,h("span",{class:"kl",text:g}),h("b",{class:"kv",text:brl(tot[g])}))})));
-    p.appendChild(h("ul",{class:"wl famagora"},cs.map(function(r){var li=h("li",{class:"clic",tabindex:"0",role:"button"},h("span",{class:"grow"},h("b",{text:r.titulo}),h("span",{class:"sub",text:dataBR(r.data)+(r.dados.clinica?" · "+r.dados.clinica:"")})),h("span",{class:"end",text:brl(r.dados.custo)}));
-      li.onclick=function(){ir({r:r,custo:true})};li.onkeydown=function(e){if(e.key==="Enter"){ir({r:r,custo:true})}};return li})));
+    p.appendChild(h("ul",{class:"wl famagora"},cs.map(function(r){var li=h("li",{class:"clic",tabindex:"0",role:"button"},h("span",{class:"grow"},h("b",{text:r.titulo}),h("span",{class:"sub",text:dataBR(r.data)+(r.dados.clinica?" · "+r.dados.clinica:"")+(r.merc?" · nota do Mercado":"")})),h("span",{class:"end",text:brl(r.dados.custo)}));
+      function abre(){if(r.merc&&window.RACmercado)window.RACmercado.verProduto(r.titulo.replace(/ \(\S+ un\)$/,""));else ir({r:r,custo:true})}
+      if(r.merc)li.title="Compra do Mercado: toque para ver o histórico de preço";
+      li.onclick=abre;li.onkeydown=function(e){if(e.key==="Enter")abre()};return li})));
     return p}
 
   /* O que o registro traz além do texto: profissional, diagnóstico, resumo, remédios, valores do exame, órgãos e custo */
@@ -2960,12 +2975,13 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
     p.appendChild(h("div",{class:"famtabw"},tb));return p}
 
   function renderFamilia(quem){
-    var root=$("#"+(FAM[quem].root||quem+"-view")),F=FAM[quem];root.innerHTML="";
+    var root=$("#"+(FAM[quem].root||quem+"-view")),F=FAM[quem],merc=[];root.innerHTML="";
     root.appendChild(h("div",{class:"panel"},loading()));
     SB.from("registros").select("*").eq("quem",quem).order("data",{ascending:false}).order("criado_em",{ascending:false}).then(sbOk).then(function(regs){
       var paths=[];regs.forEach(function(r){(r.arquivos||[]).forEach(function(a){paths.push(a.path)})});
       var urls={};
-      return (paths.length?SB.storage.from("familia").createSignedUrls(paths,3600).then(function(r){(r.data||[]).forEach(function(x){if(x.signedUrl)urls[x.path]=x.signedUrl})}):Promise.resolve()).then(function(){desenhar(regs,urls)})
+      return Promise.all([paths.length?SB.storage.from("familia").createSignedUrls(paths,3600).then(function(r){(r.data||[]).forEach(function(x){if(x.signedUrl)urls[x.path]=x.signedUrl})}):null,famMercado(quem,regs)])
+        .then(function(r){merc=r[1];desenhar(regs,urls)})
     }).catch(function(e){root.innerHTML="";root.appendChild(h("div",{class:"panel"},h("p",{class:"empty",text:/registros|relation|schema cache/i.test(e.message)?"Falta rodar o supabase/004_familia.sql no Supabase para ligar esta área.":"Não consegui carregar ("+e.message+")."})))});
 
     function desenhar(regs,urls){
@@ -2975,14 +2991,15 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
       if((location.hash||"").replace("#","").split("/")[0]===quem)fundoPagina(fotoBg?urls[fotoBg.path]:null,F.n);
       var nasc=regs.filter(function(r){return r.tipo==="nascimento"})[0],ultPeso=regs.filter(function(r){return r.tipo==="peso"&&r.valor})[0];
       var foto=regs.filter(function(r){return dadosDe(r).perfil&&(r.arquivos||[]).some(function(a){return urls[a.path]&&/^image\//.test(a.tipo)})})[0];
-      var add=h("button",{type:"button",class:"mkadd",text:"+ Adicionar registro"}),imp=h("button",{type:"button",class:"ghostbtn",text:"Importar histórico"});
+      var add=h("button",{type:"button",class:"mkadd",text:"+ Adicionar registro"}),imp=h("button",{type:"button",class:"ghostbtn",text:"Importar histórico"}),abf=ehVeic(quem)?h("button",{type:"button",class:"ghostbtn",text:"⛽ Abastecimento pela foto"}):null;
       var topo=h("div",{class:"panel famhead"},foto?h("img",{class:"famav",src:urls[foto.arquivos.filter(function(a){return /^image\//.test(a.tipo)})[0].path],alt:F.n}):null,
         h("div",{class:"grow"},h("h2",{text:F.n}),
         h("p",{class:"sub",text:ehVeic(quem)?[(regs.filter(function(r){return dadosDe(r).ficha})[0]||{dados:{ficha:F.desc}}).dados.ficha,(function(){var k=veicKm(regs);return k?fmtKm(k.km)+" em "+dataBR(k.data):""})()].filter(Boolean).join(" · "):[nasc?idadeTxt(nasc.data)+" (nasceu em "+dataBR(nasc.data)+")":"Adicione um registro “Nascimento” para mostrar a idade",ultPeso?"último peso "+ultPeso.valor+" kg em "+dataBR(ultPeso.data):""].filter(Boolean).join(" · ")})),
-        h("div",{class:"vfil famacoes"},add,imp));
+        h("div",{class:"vfil famacoes"},add,abf,imp));
       root.appendChild(topo);
       var formBox=h("div");root.appendChild(formBox);
       add.onclick=function(){abrirForm(null)};
+      if(abf)abf.onclick=function(){formBox.innerHTML="";formBox.appendChild(veicFoto(quem,regs,function(q){try{localStorage.setItem("rac-veic",q)}catch(e){}if(location.hash!=="#veiculos/"+q)location.hash="#veiculos/"+q;else renderVeiculos(q)},function(){formBox.innerHTML=""}));formBox.scrollIntoView({behavior:"smooth",block:"start"})};
       imp.onclick=function(){formBox.innerHTML="";formBox.appendChild(famImportar(quem,regs,function(){renderFamilia(quem)},function(){formBox.innerHTML=""}));formBox.scrollIntoView({behavior:"smooth",block:"start"})};
       function abrirForm(reg){formBox.innerHTML="";formBox.appendChild(famForm(quem,reg,function(){renderFamilia(quem)},function(){formBox.innerHTML=""}));formBox.scrollIntoView({behavior:"smooth",block:"start"})}
       if(!regs.length){root.appendChild(h("div",{class:"panel"},h("p",{class:"empty",text:"Nada registrado ainda. Toque em “Adicionar registro” para lançar o primeiro exame, vacina ou foto, ou em “Importar histórico”."})));return}
@@ -3034,7 +3051,7 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
         setTimeout(function(){c.scrollIntoView({behavior:"smooth",block:"start"})},30)}
       var box=h("div",{class:"stack"});root.appendChild(box);
       if(vista==="resumo"&&ehVeic(quem)){[veicAgora(quem,regs,ir),veicConsumo(regs),famGastos(regs,ir,quem)].forEach(function(x){if(x)box.appendChild(x)});return}
-      if(vista==="resumo"){[famAgora(quem,regs,ir),famPeso(regs,quem),famGastos(regs,ir,quem)].forEach(function(x){if(x)box.appendChild(x)});return}
+      if(vista==="resumo"){[famAgora(quem,regs,ir),famPeso(regs,quem),famGastos(regs.concat(merc),ir,quem)].forEach(function(x){if(x)box.appendChild(x)});return}
       if(vista==="exames"){[famComparaSangue(regs),famComparaUS(regs)].forEach(function(x){if(x)box.appendChild(x)});
         cards(regs.filter(function(r){return r.tipo==="exame"||r.tipo==="pedido"}),box);irAoAlvo();return}
       if(vista==="remedios"){var t=famTratamentos(regs);if(t)box.appendChild(t);return}
@@ -3045,6 +3062,93 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
       box.appendChild(fseg);
       cards(regs.filter(function(r){return !famFiltro[quem]||r.tipo===famFiltro[quem]}),box);irAoAlvo()}
   }
+
+  /* Abastecimento pela foto: o Claude lê a foto do painel (km) e a da bomba (litros, R$/litro e total)
+     e devolve um JSON; aqui a pessoa cola, confere e salva no veículo certo ("carro" ou "moto" na mensagem) */
+  var PEDIDO_ABAST="Leia as fotos deste abastecimento: uma do painel (quilometragem) e uma da bomba (litros, preço por litro e total). Responda só com este JSON, sem texto antes ou depois:\n"+
+    '{"veiculo":"carro ou moto","data":"AAAA-MM-DD","km":0,"litros":0,"preco_litro":0,"total":0,"combustivel":"gasolina, etanol ou diesel","posto":""}\n'+
+    "Regras: veiculo é o que eu escrever na mensagem (carro ou moto). km é o hodômetro total do painel, não o parcial (trip). Use ponto como separador decimal e não use separador de milhar. "+
+    "Se a data não aparecer nas fotos, use null. Se não conseguir ler um número, use null.";
+  function lerAbast(txt){
+    var t=String(txt||"").replace(/[“”„]/g,'"').replace(/[‘’]/g,"'"),j=null,a=t.indexOf("{"),b=t.lastIndexOf("}");
+    if(a>=0&&b>a){var x=t.slice(a,b+1);try{j=JSON.parse(x)}catch(e){try{j=JSON.parse(x.replace(/,\s*([}\]])/g,"$1").replace(/:\s*(-?\d+),(\d+)(?=\s*[,}])/g,":$1.$2"))}catch(e2){}}}
+    j=j||{};
+    /* sem JSON (ou faltando campos): procura no texto */
+    function campo(k,re){if(j[k]==null){var m=re.exec(t);if(m)j[k]=m[1]}}
+    campo("veiculo",/"?ve[ií]culo"?\s*[:=]\s*"?(carro|moto)/i);campo("km",/"?km"?\s*[:=]\s*"?([\d.]+)/i);campo("litros",/"?litros"?\s*[:=]\s*"?([\d.,]+)/i);
+    campo("preco_litro",/"?pre[cç]o_?(?:por_)?litro"?\s*[:=]\s*"?(?:R\$\s*)?([\d.,]+)/i);campo("total",/"?total"?\s*[:=]\s*"?(?:R\$\s*)?([\d.,]+)/i);campo("data",/(\d{4}-\d{2}-\d{2})/);
+    function n(v){if(typeof v==="number")return v;v=String(v==null?"":v).replace(/[^\d,.-]/g,"");if(!v)return null;if(/,/.test(v))v=v.replace(/\./g,"").replace(",",".");var x=parseFloat(v);return isFinite(x)?x:null}
+    var ve=String(j.veiculo||"");
+    var r={veiculo:/moto/i.test(ve)?"moto":/c3/i.test(ve)?"c3":/carro|civic/i.test(ve)?"civic":"",
+      data:/^\d{4}-\d{2}-\d{2}$/.test(j.data||"")?j.data:"",km:j.km==null?null:parseInt(String(j.km).replace(/\D/g,""),10)||null,
+      litros:n(j.litros),preco:n(j.preco_litro!=null?j.preco_litro:j.precoLitro),total:n(j.total),combustivel:String(j.combustivel||(/gasolina|etanol|[aá]lcool|diesel/i.exec(t)||[""])[0]).toLowerCase().replace(/[aá]lcool/,"etanol"),posto:String(j.posto||"").trim()};
+    if(r.total==null&&r.litros&&r.preco)r.total=Math.round(r.litros*r.preco*100)/100;
+    if(r.preco==null&&r.litros&&r.total)r.preco=Math.round(r.total/r.litros*1000)/1000;
+    return r}
+  function veicFoto(quem,regs,pronto,fechar){
+    var p=panel("Abastecimento pela foto","O Claude lê as duas fotos; você cola a resposta aqui, confere e salva."),f=h("div",{class:"wform"});
+    var CH_LINK="rac-claude-abast";function link(){try{return localStorage.getItem(CH_LINK)||""}catch(e){return ""}}
+    var cmsg=h("p",{class:"sub",role:"status"}),pedTxt=h("textarea",{class:"qrpaste",rows:"4",readonly:"",hidden:"","aria-label":"Pedido para copiar"});pedTxt.value=PEDIDO_ABAST;
+    var abrir=h("a",{class:"filebtn",target:"_blank",rel:"noopener"});
+    abrir.onclick=function(){try{navigator.clipboard.writeText(PEDIDO_ABAST).then(function(){cmsg.textContent=link()?"✓ Pedido copiado (só precisa colar se o projeto ainda não tiver as instruções).":"✓ Pedido copiado. No Claude: anexe as 2 fotos, escreva carro ou moto, cole o pedido e envie."},function(){pedTxt.hidden=false})}catch(e){pedTxt.hidden=false}};
+    var trocar=h("button",{type:"button",class:"ghostbtn"}),lform=h("div",{class:"vfil",hidden:""}),lin=h("input",{type:"url",placeholder:"https://claude.ai/project/…","aria-label":"Link do projeto do Claude",autocomplete:"off"}),lok=h("button",{type:"button",text:"Salvar"}),lmsg=h("p",{class:"sub",role:"status"});
+    function mostrar(){var l=link();abrir.href=l||"https://claude.ai/new";abrir.textContent=l?"Abrir o Claude (projeto Abastecimento)":"Abrir o Claude";trocar.textContent=l?"Trocar o projeto":"Usar o meu projeto de abastecimento"}
+    trocar.onclick=function(){lform.hidden=!lform.hidden;lin.value=link();lmsg.textContent="";if(!lform.hidden)lin.focus()};
+    lok.onclick=function(){var v=lin.value.trim();
+      if(v&&!/^https:\/\/claude\.ai\/(chat|project)\/[\w-]+/.test(v)){lmsg.textContent="O link precisa começar com https://claude.ai/project/ (ou /chat/). Copie o endereço da barra do navegador com o projeto aberto.";return}
+      try{if(v)localStorage.setItem(CH_LINK,v);else localStorage.removeItem(CH_LINK)}catch(e){}lform.hidden=true;lmsg.textContent=v?"✓ Pronto: o botão agora abre o seu projeto.":"Voltou a abrir uma conversa nova.";mostrar()};
+    lform.appendChild(lin);lform.appendChild(lok);mostrar();
+    f.appendChild(h("ol",{class:"how"},h("li",null,"Tire as duas fotos: o painel com a quilometragem e a bomba com o total abastecido."),
+      h("li",null,"Toque em Abrir o Claude, anexe as fotos, escreva ",h("b",{text:"carro"})," ou ",h("b",{text:"moto"})," e envie."),
+      h("li",null,"Copie a resposta inteira, volte aqui e toque em ",h("b",{text:"Colar a resposta"}),".")));
+    f.appendChild(h("div",{class:"vfil"},abrir,trocar));f.appendChild(lform);f.appendChild(lmsg);f.appendChild(cmsg);f.appendChild(pedTxt);
+    var resp=h("textarea",{class:"qrpaste",rows:"3",placeholder:"…ou cole aqui a resposta","aria-label":"Resposta do Claude"}),colar=h("button",{type:"button",text:"Colar a resposta"}),fch=h("button",{type:"button",class:"ghostbtn",text:"Fechar"}),rmsg=h("p",{class:"sub",role:"status"});
+    colar.onclick=function(){if(!navigator.clipboard||!navigator.clipboard.readText){resp.focus();return}navigator.clipboard.readText().then(function(t){resp.value=t;ler()},function(){rmsg.textContent="Toque no quadro abaixo e cole.";resp.focus()})};
+    fch.onclick=fechar;resp.addEventListener("input",function(){ler()});
+    f.appendChild(h("div",{class:"vfil"},colar,fch));f.appendChild(resp);f.appendChild(rmsg);
+    /* conferência: tudo editável antes de salvar */
+    var conf=h("div",{class:"wform",hidden:""});
+    var veic=h("select",{"aria-label":"Veículo"},Object.keys(FAM).filter(ehVeic).map(function(k){return h("option",{value:k,selected:k===quem?"":null,text:FAM[k].n})}));
+    var data=h("input",{type:"date",value:hojeISO()}),km=h("input",{type:"text",inputmode:"numeric"}),lit=h("input",{type:"text",inputmode:"decimal"}),pre=h("input",{type:"text",inputmode:"decimal"}),tot=h("input",{type:"text",inputmode:"decimal"});
+    var comb=h("select",{"aria-label":"Combustível"},["gasolina","etanol","diesel"].map(function(c){return h("option",{value:c,text:c.charAt(0).toUpperCase()+c.slice(1)})})),posto=h("input",{type:"text",placeholder:"Ex.: Posto Shell"});
+    var arq=h("input",{type:"file",multiple:"",accept:"image/*"}),aviso=h("p",{class:"qrwarn",hidden:""});
+    conf.appendChild(h("div",{class:"two"},h("label",null,"Veículo",veic),h("label",null,"Data",data)));
+    conf.appendChild(h("div",{class:"two"},h("label",null,"Quilometragem do painel",km),h("label",null,"Litros",lit)));
+    conf.appendChild(h("div",{class:"two"},h("label",null,"Preço por litro (R$)",pre),h("label",null,"Total pago (R$)",tot)));
+    conf.appendChild(h("div",{class:"two"},h("label",null,"Combustível",comb),h("label",null,"Posto (opcional)",posto)));
+    conf.appendChild(h("label",null,"As duas fotos (para guardar junto)",arq));conf.appendChild(aviso);
+    function br(v,c){return v==null?"":v.toLocaleString("pt-BR",{minimumFractionDigits:c,maximumFractionDigits:c})}
+    function num(s){s=String(s||"").replace(/[R$\s]/g,"");if(!s)return null;if(/,/.test(s))s=s.replace(/\./g,"").replace(",",".");var x=parseFloat(s);return isFinite(x)?x:null}
+    function ler(){
+      if(!resp.value.trim()){rmsg.textContent="";return}
+      var r=lerAbast(resp.value);
+      if(r.km==null&&r.litros==null&&r.total==null){rmsg.textContent="Não achei km, litros nem total nessa resposta. Copie a resposta inteira do Claude.";conf.hidden=true;return}
+      if(r.veiculo)veic.value=r.veiculo;if(r.data)data.value=r.data;km.value=r.km!=null?String(r.km):"";lit.value=br(r.litros,2);pre.value=br(r.preco,3);tot.value=br(r.total,2);
+      var cb=/gasolina|etanol|diesel/.exec(r.combustivel);if(cb)comb.value=cb[0];if(r.posto)posto.value=r.posto;
+      rmsg.textContent="✓ Li a resposta. Confira os valores abaixo e salve."+(r.veiculo?"":" Escolha o veículo (a resposta não disse se é carro ou moto).");conf.hidden=false;conferir()}
+    /* avisa o que parece errado: conta que não fecha ou km menor que o último anotado */
+    function conferir(){var L=num(lit.value),P=num(pre.value),T=num(tot.value),K=parseInt(km.value.replace(/\D/g,""),10),avs=[];
+      if(L&&P&&T&&Math.abs(L*P-T)>Math.max(1,T*0.02))avs.push("Litros × preço dá "+brl(Math.round(L*P*100)/100)+", diferente do total. Confira na foto da bomba.");
+      if(K&&veic.value===quem){var ult=veicKm(regs);if(ult&&K<ult.km)avs.push("A quilometragem é menor que a última anotada ("+fmtKm(ult.km)+" em "+dataBR(ult.data)+"). Confira se não leu o parcial (trip).")}
+      aviso.textContent=avs.map(function(a){return "⚠ "+a}).join(" ");aviso.hidden=!avs.length}
+    [km,lit,pre,tot,veic].forEach(function(x){x.addEventListener("change",conferir)});
+    var st=h("p",{class:"sub",role:"status"}),salvar=h("button",{type:"button",text:"Salvar abastecimento"}),canc=h("button",{type:"button",class:"ghostbtn",text:"Cancelar"});
+    canc.onclick=fechar;
+    salvar.onclick=function(){
+      var K=parseInt(km.value.replace(/\D/g,""),10),L=num(lit.value),P=num(pre.value),T=num(tot.value);
+      if(!data.value){st.textContent="Escolha a data.";return}
+      if(!(T>0)&&!(L>0)){st.textContent="Preencha pelo menos os litros ou o total.";return}
+      if(T==null&&L&&P)T=Math.round(L*P*100)/100;
+      var c=comb.value,tit=c.charAt(0).toUpperCase()+c.slice(1)+(posto.value.trim()?" ("+posto.value.trim()+")":""),q=veic.value;
+      var dd={combustivel:c};if(K>0)dd.km=K;if(L>0)dd.litros=L;if(P>0)dd.precoLitro=P;if(T>0){dd.custo=Math.round(T*100)/100;dd.itensCusto=[[L?fmtN(L)+" l de "+c:c,dd.custo]]}
+      var reg={quem:q,tipo:"abastecimento",data:data.value,titulo:tit,valor:posto.value.trim()||null,detalhes:[L?fmtN(L)+" litros":"",P?"a "+brl(P)+"/l":"",T?"total "+brl(T):""].filter(Boolean).join(" ")||null,dados:dd};
+      salvar.disabled=true;st.textContent="Salvando…";
+      SB.from("registros").insert(reg).select("id,arquivos").single().then(sbOk).then(function(row){
+        if(!arq.files.length)return;
+        return enviarArquivos(q,row.id,arq.files,function(t){st.textContent=t}).then(function(novos){return SB.from("registros").update({arquivos:(row.arquivos||[]).concat(novos)}).eq("id",row.id).then(sbOk)})
+      }).then(function(){pronto(q)}).catch(function(e){salvar.disabled=false;st.textContent="Não consegui salvar: "+e.message})};
+    conf.appendChild(h("div",{class:"vfil"},salvar,canc));conf.appendChild(st);
+    f.appendChild(conf);p.appendChild(f);return p}
 
   /* Formulário de registro: tipo, data, título, valor, próxima data, detalhes e arquivos */
   function famForm(quem,reg,pronto,cancelar){

@@ -1203,5 +1203,7 @@
     });
   }
   /* O login do Mercado é o login do site todo: a página inteira usa este mesmo cliente */
-  window.RACmercado = { render: render, client: client, resumo: resumo, money: money, grafico: graficoLinha };
+  /* abre o histórico de preço de um produto (usado pelos Gastos da Olivia) */
+  function verProduto(nome) { st.prod = nome; st.q = ""; st.voltar = false; st.voltarY = null; location.hash = "#mercado/precos"; }
+  window.RACmercado = { render: render, client: client, resumo: resumo, money: money, grafico: graficoLinha, verProduto: verProduto };
 })();

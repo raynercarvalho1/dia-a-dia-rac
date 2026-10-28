@@ -2778,12 +2778,12 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
       if((d.orientacoes||[]).length)p.appendChild(h("ul",{class:"famori"},d.orientacoes.map(function(o){return h("li",{text:o})})))});
     return p}
 
-  function famGastos(regs,ir){
+  function famGastos(regs,ir,quem){
     var cs=regs.filter(function(r){return typeof dadosDe(r).custo==="number"}).sort(function(a,b){return b.data.localeCompare(a.data)});if(!cs.length)return null;
     var anos={};cs.forEach(function(r){var a=r.data.slice(0,4);anos[a]=(anos[a]||0)+r.dados.custo});
-    var p=panel("Gastos (veterinário, remédios e ração)","Por ano: "+Object.keys(anos).sort().reverse().map(function(a){return a+": "+brl(anos[a])}).join(" · "));
+    var p=panel("Gastos","Por ano: "+Object.keys(anos).sort().reverse().map(function(a){return a+": "+brl(anos[a])}).join(" · "));
     /* total geral e quanto foi em cada tipo de gasto */
-    var grupos=[["Veterinário",/^(consulta|exame|tratamento|pedido|sintoma)$/],["Antipulgas e vermífugo",/^preventivo$/],["Ração",/^alimentacao$/]],tot={};
+    var grupos=[[quem==="eddie"?"Veterinário":"Saúde",/^(consulta|exame|tratamento|pedido|sintoma|vacina)$/],["Antipulgas e vermífugo",/^preventivo$/],[quem==="eddie"?"Ração":"Alimentação",/^alimentacao$/],["Fraldas, fórmula e produtos",/^produto$/]],tot={};
     cs.forEach(function(r){var g=(grupos.filter(function(x){return x[1].test(r.tipo)})[0]||["Outros"])[0];tot[g]=(tot[g]||0)+r.dados.custo});
     p.appendChild(h("div",{class:"kgasto"},h("div",null,h("span",{class:"kl",text:"Total desde "+dataBR(cs[cs.length-1].data)}),h("b",{class:"kv",text:brl(cs.reduce(function(s,r){return s+r.dados.custo},0))})),
       grupos.map(function(x){return x[0]}).concat(["Outros"]).filter(function(g){return tot[g]}).map(function(g){return h("div",null,h("span",{class:"kl",text:g}),h("b",{class:"kv",text:brl(tot[g])}))})));
@@ -2830,7 +2830,9 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
       if(!js){st.textContent="Inclua o arquivo .json do histórico.";return}
       var porNome={};fs.forEach(function(f){porNome[norm(f.name.normalize("NFC"))]=f});
       ok.disabled=true;st.textContent="Lendo o histórico…";
-      js.text().then(function(t){
+      /* compara com o que está na conta agora (não com a tela, que pode estar desatualizada) */
+      Promise.all([js.text(),SB.from("registros").select("*").eq("quem",quem).then(sbOk)]).then(function(rr){
+        var t=rr[0];regs=rr[1];
         var j=JSON.parse(t),lista=(j.registros||[]).filter(function(r){return r.tipo&&r.data&&r.titulo});
         if(j.quem&&j.quem!==quem)throw new Error("esse histórico é de "+j.quem);
         var existe={};regs.forEach(function(r){existe[r.tipo+"|"+r.data+"|"+norm(r.titulo)]=1});
@@ -2964,7 +2966,7 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
         c.classList.add("alvo");setTimeout(function(){c.classList.remove("alvo")},2600);
         setTimeout(function(){c.scrollIntoView({behavior:"smooth",block:"start"})},30)}
       var box=h("div",{class:"stack"});root.appendChild(box);
-      if(vista==="resumo"){[famAgora(quem,regs,ir),famPeso(regs,quem),famGastos(regs,ir)].forEach(function(x){if(x)box.appendChild(x)});return}
+      if(vista==="resumo"){[famAgora(quem,regs,ir),famPeso(regs,quem),famGastos(regs,ir,quem)].forEach(function(x){if(x)box.appendChild(x)});return}
       if(vista==="exames"){[famComparaSangue(regs),famComparaUS(regs)].forEach(function(x){if(x)box.appendChild(x)});
         cards(regs.filter(function(r){return r.tipo==="exame"||r.tipo==="pedido"}),box);irAoAlvo();return}
       if(vista==="remedios"){var t=famTratamentos(regs);if(t)box.appendChild(t);return}
@@ -2982,6 +2984,9 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
     var tipo=h("select",{"aria-label":"Tipo"},TIPOS.map(function(t){return h("option",{value:t[0],selected:(reg?reg.tipo:"exame")===t[0]?"":null,text:t[1]})}));
     var data=h("input",{type:"date",value:reg?reg.data:hojeISO()}),titulo=h("input",{type:"text",value:reg?reg.titulo:""});
     var valor=h("input",{type:"text",value:reg&&reg.valor||""}),prox=h("input",{type:"date",value:reg&&reg.proxima||""});
+    /* quanto custou (consulta, remédio, lata de fórmula, pacote de fraldas…): entra no quadro de gastos */
+    var custoV=reg&&reg.dados&&typeof reg.dados.custo==="number"?reg.dados.custo:null;
+    var custo=h("input",{type:"text",inputmode:"decimal",placeholder:"Ex.: 80,00",value:custoV!=null?custoV.toLocaleString("pt-BR",{minimumFractionDigits:2}):""});
     var det=h("textarea",{rows:"3",placeholder:"Contexto: como foi, o que o veterinário ou o pediatra disse, valores importantes…"});det.value=reg&&reg.detalhes||"";
     var arq=h("input",{type:"file",multiple:"",accept:"image/*,video/*,application/pdf"});
     var lValor=h("label",null,h("span"),valor),lProx=h("label",null,h("span"),prox);
@@ -2991,6 +2996,7 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
     f.appendChild(h("div",{class:"two"},h("label",null,"Tipo",tipo),h("label",null,"Data",data)));
     f.appendChild(h("label",null,"Título",titulo));
     f.appendChild(h("div",{class:"two"},lValor,lProx));
+    f.appendChild(h("label",null,"Quanto custou (R$, opcional)",custo));
     f.appendChild(h("label",null,"Detalhes",det));
     f.appendChild(h("label",null,reg&&(reg.arquivos||[]).length?"Mais arquivos (fotos, PDFs, vídeos de até 50 MB)":"Arquivos (fotos, PDFs, vídeos de até 50 MB)",arq));
     var st=h("p",{class:"sub",role:"status"}),salvar=h("button",{type:"button",text:"Salvar"}),canc=h("button",{type:"button",class:"ghostbtn",text:"Cancelar"});
@@ -3000,6 +3006,11 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
       if(!data.value){st.textContent="Escolha a data.";return}
       salvar.disabled=true;st.textContent="Salvando…";
       var dados={quem:quem,tipo:tipo.value,data:data.value,titulo:titulo.value.trim(),valor:valor.value.trim()||null,proxima:lProx.hidden?null:(prox.value||null),detalhes:det.value.trim()||null};
+      var cv=custo.value.trim().replace(/[R$\s]/g,""),cn=cv?parseFloat(/,/.test(cv)?cv.replace(/\./g,"").replace(",","."):cv):null;
+      if(cv&&!(cn>=0)){st.textContent="O valor precisa ser um número, como 80,00.";salvar.disabled=false;return}
+      if(cn!=null||(reg&&reg.dados&&reg.dados.custo!=null)){var dd0=Object.assign({},reg&&reg.dados||{});
+        if(cn!=null){dd0.custo=Math.round(cn*100)/100;if(!dd0.itensCusto||dd0.itensCusto.length<2)dd0.itensCusto=[[titulo.value.trim(),dd0.custo]]}else{delete dd0.custo;delete dd0.itensCusto}
+        dados.dados=dd0}
       var passo=reg?SB.from("registros").update(dados).eq("id",reg.id).select("id,arquivos").single():SB.from("registros").insert(dados).select("id,arquivos").single();
       passo.then(sbOk).then(function(row){
         if(!arq.files.length)return;

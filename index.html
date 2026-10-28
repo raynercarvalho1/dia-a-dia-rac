@@ -748,6 +748,8 @@ code.mbaf{font:calc(12px + var(--fz))/1.4 ui-monospace,Consolas,monospace;white-
 .bgimg .mos{position:absolute;inset:-12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));grid-auto-rows:250px;gap:10px;transform:rotate(-4deg) scale(1.12)}
 .bgimg .mos img{width:100%;height:100%;object-fit:cover;object-position:center 30%;border-radius:14px;display:block}
 .bgimg .mos img.esp{transform:scaleX(-1)}
+.bgimg .mos.largo{grid-template-columns:repeat(auto-fill,minmax(270px,1fr));grid-auto-rows:180px}
+.bgimg .mos.largo img{object-position:center}
 .veicseg{margin-bottom:12px}
 </style>
 </head>
@@ -959,7 +961,7 @@ code.mbaf{font:calc(12px + var(--fz))/1.4 ui-monospace,Consolas,monospace;white-
     if(PAPEL==="casa"&&DA_CASA.indexOf(top)<0){top="mercado";parts=["mercado"]}
     tabs.forEach(function(t){document.getElementById(t).hidden=(t!==top)});
     document.documentElement.setAttribute("data-sec",top);
-    if(top!=="eddie"&&top!=="olivia")fundoPagina(null);
+    if(top!=="eddie"&&top!=="olivia"&&top!=="veiculos")fundoPagina(null);
     /* voltar ao Início em todas as páginas (a esposa não tem o Início) */
     $("#homebtn").hidden=top==="inicio"||PAPEL==="casa";
     setSide(false);
@@ -1013,12 +1015,13 @@ code.mbaf{font:calc(12px + var(--fz))/1.4 ui-monospace,Consolas,monospace;white-
   setBg(fundoSalvo());
   /* Páginas com foto própria (Eddie, Olivia) usam a foto dela de fundo; ao sair, volta o fundo escolhido */
   var fundoDaPagina=null;
-  function fundoPagina(url,nome){
+  /* largo: foto deitada (carro, moto), em quadros mais largos que altos */
+  function fundoPagina(url,nome,largo){
     if(!url){if(fundoDaPagina)setBg(fundoSalvo());return}
     if(fundoDaPagina===url)return;
     /* a foto em vários quadros (mosaico), alternando o lado, em vez de uma foto só esticada */
     fundoDaPagina=url;var bg=$("#bgimg");bg.style.setProperty("--bgurl","none");bg.classList.add("mosaico");bg.innerHTML="";
-    var n=Math.ceil(Math.max(screen.width,innerWidth,1600)/180)*Math.ceil(Math.max(screen.height,innerHeight,1000)/250),g=h("div",{class:"mos"});
+    var n=Math.ceil(Math.max(screen.width,innerWidth,1600)/180)*Math.ceil(Math.max(screen.height,innerHeight,1000)/250),g=h("div",{class:"mos"+(largo?" largo":"")});
     for(var i=0;i<n;i++)g.appendChild(h("img",{src:url,alt:"",class:i%2?"esp":null,decoding:"async"}));
     bg.appendChild(g);
     var cr=$("#credit");cr.innerHTML="";cr.appendChild(document.createTextNode("Foto: "+nome))}
@@ -3008,7 +3011,8 @@ code.mbaf{font:calc(12px + var(--fz))/1.4 ui-monospace,Consolas,monospace;white-
       root.innerHTML="";
       var fotoBg=regs.filter(function(r){return dadosDe(r).perfil}).map(function(r){return (r.arquivos||[]).filter(function(a){return urls[a.path]&&/^image\//.test(a.tipo)})[0]}).filter(Boolean)[0];
       /* só troca o fundo se a pessoa ainda estiver nesta página quando os links chegarem */
-      if((location.hash||"").replace("#","").split("/")[0]===quem)fundoPagina(fotoBg?urls[fotoBg.path]:null,F.n);
+      var topoH=(location.hash||"").replace("#","").split("/")[0];
+      if(topoH===quem||(ehVeic(quem)&&topoH==="veiculos"))fundoPagina(fotoBg?urls[fotoBg.path]:null,F.n,ehVeic(quem));
       var nasc=regs.filter(function(r){return r.tipo==="nascimento"})[0],ultPeso=regs.filter(function(r){return r.tipo==="peso"&&r.valor})[0];
       var foto=regs.filter(function(r){return dadosDe(r).perfil&&(r.arquivos||[]).some(function(a){return urls[a.path]&&/^image\//.test(a.tipo)})})[0];
       var add=h("button",{type:"button",class:"mkadd",text:"+ Adicionar registro"}),imp=h("button",{type:"button",class:"ghostbtn",text:"Importar histórico"}),abf=ehVeic(quem)?h("button",{type:"button",class:"ghostbtn",text:"⛽ Abastecimento pela foto"}):null,akm=ehVeic(quem)?h("button",{type:"button",class:"ghostbtn",text:"Atualizar km"}):null;

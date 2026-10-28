@@ -3011,14 +3011,15 @@ code.mbaf{font:calc(12px + var(--fz))/1.4 ui-monospace,Consolas,monospace;white-
       if((location.hash||"").replace("#","").split("/")[0]===quem)fundoPagina(fotoBg?urls[fotoBg.path]:null,F.n);
       var nasc=regs.filter(function(r){return r.tipo==="nascimento"})[0],ultPeso=regs.filter(function(r){return r.tipo==="peso"&&r.valor})[0];
       var foto=regs.filter(function(r){return dadosDe(r).perfil&&(r.arquivos||[]).some(function(a){return urls[a.path]&&/^image\//.test(a.tipo)})})[0];
-      var add=h("button",{type:"button",class:"mkadd",text:"+ Adicionar registro"}),imp=h("button",{type:"button",class:"ghostbtn",text:"Importar histórico"}),abf=ehVeic(quem)?h("button",{type:"button",class:"ghostbtn",text:"⛽ Abastecimento pela foto"}):null;
+      var add=h("button",{type:"button",class:"mkadd",text:"+ Adicionar registro"}),imp=h("button",{type:"button",class:"ghostbtn",text:"Importar histórico"}),abf=ehVeic(quem)?h("button",{type:"button",class:"ghostbtn",text:"⛽ Abastecimento pela foto"}):null,akm=ehVeic(quem)?h("button",{type:"button",class:"ghostbtn",text:"Atualizar km"}):null;
       var topo=h("div",{class:"panel famhead"},foto?h("img",{class:"famav",src:urls[foto.arquivos.filter(function(a){return /^image\//.test(a.tipo)})[0].path],alt:F.n}):null,
         h("div",{class:"grow"},h("h2",{text:F.n}),
         h("p",{class:"sub",text:ehVeic(quem)?[(regs.filter(function(r){return dadosDe(r).ficha})[0]||{dados:{ficha:F.desc}}).dados.ficha,(function(){var k=veicKm(regs);return k?fmtKm(k.km)+" em "+dataBR(k.data):""})()].filter(Boolean).join(" · "):[nasc?idadeTxt(nasc.data)+" (nasceu em "+dataBR(nasc.data)+")":"Adicione um registro “Nascimento” para mostrar a idade",ultPeso?"último peso "+ultPeso.valor+" kg em "+dataBR(ultPeso.data):""].filter(Boolean).join(" · ")})),
-        h("div",{class:"vfil famacoes"},add,abf,imp));
+        h("div",{class:"vfil famacoes"},add,akm,abf,imp));
       root.appendChild(topo);
       var formBox=h("div");root.appendChild(formBox);
       add.onclick=function(){abrirForm(null)};
+      if(akm)akm.onclick=function(){formBox.innerHTML="";formBox.appendChild(veicKmForm(quem,regs,function(){renderFamilia(quem)},function(){formBox.innerHTML=""}));formBox.scrollIntoView({behavior:"smooth",block:"start"})};
       if(abf)abf.onclick=function(){formBox.innerHTML="";formBox.appendChild(veicFoto(quem,regs,function(q){try{localStorage.setItem("rac-veic",q)}catch(e){}if(location.hash!=="#veiculos/"+q)location.hash="#veiculos/"+q;else renderVeiculos(q)},function(){formBox.innerHTML=""}));formBox.scrollIntoView({behavior:"smooth",block:"start"})};
       imp.onclick=function(){formBox.innerHTML="";formBox.appendChild(famImportar(quem,regs,function(){renderFamilia(quem)},function(){formBox.innerHTML=""}));formBox.scrollIntoView({behavior:"smooth",block:"start"})};
       function abrirForm(reg){formBox.innerHTML="";formBox.appendChild(famForm(quem,reg,function(){renderFamilia(quem)},function(){formBox.innerHTML=""}));formBox.scrollIntoView({behavior:"smooth",block:"start"})}
@@ -3105,6 +3106,20 @@ code.mbaf{font:calc(12px + var(--fz))/1.4 ui-monospace,Consolas,monospace;white-
     if(r.total==null&&r.litros&&r.preco)r.total=Math.round(r.litros*r.preco*100)/100;
     if(r.preco==null&&r.litros&&r.total)r.preco=Math.round(r.total/r.litros*1000)/1000;
     return r}
+  /* só a quilometragem do painel, sem abastecimento: vira um registro "Quilometragem" com a data */
+  function veicKmForm(quem,regs,pronto,fechar){
+    var p=panel("Atualizar a quilometragem","Olhe o total do painel (não o Trip)."),ult=veicKm(regs);
+    var km=h("input",{type:"text",inputmode:"numeric",placeholder:ult?"Última: "+fmtKm(ult.km):"Ex.: 104308"}),data=h("input",{type:"date",value:hojeISO()});
+    var st=h("p",{class:"sub",role:"status"}),ok=h("button",{type:"button",text:"Salvar"}),canc=h("button",{type:"button",class:"ghostbtn",text:"Cancelar"});
+    canc.onclick=fechar;
+    ok.onclick=function(){var K=parseInt(km.value.replace(/\D/g,""),10);
+      if(!(K>0)){st.textContent="Escreva a quilometragem, como 104308.";km.focus();return}
+      if(ult&&K<ult.km&&!ok.dataset.conf){ok.dataset.conf="1";st.textContent="⚠ É menor que a última anotada ("+fmtKm(ult.km)+"). Toque em Salvar de novo se estiver certo.";return}
+      ok.disabled=true;st.textContent="Salvando…";
+      SB.from("registros").insert({quem:quem,tipo:"outro",data:data.value||hojeISO(),titulo:"Quilometragem",valor:null,detalhes:null,dados:{km:K}}).then(sbOk).then(pronto)
+        .catch(function(e){ok.disabled=false;st.textContent="Não consegui salvar: "+e.message})};
+    p.appendChild(h("div",{class:"wform"},h("div",{class:"two"},h("label",null,"Quilometragem total",km),h("label",null,"Data",data)),h("div",{class:"vfil"},ok,canc),st));
+    setTimeout(function(){km.focus()},50);return p}
   function veicFoto(quem,regs,pronto,fechar){
     var p=panel("Abastecimento pela foto","O Claude lê as duas fotos; você cola a resposta aqui, confere e salva."),f=h("div",{class:"wform"});
     var CH_LINK="rac-claude-abast";function link(){try{return localStorage.getItem(CH_LINK)||""}catch(e){return ""}}

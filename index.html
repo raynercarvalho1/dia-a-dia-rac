@@ -2578,6 +2578,9 @@ code.mbaf{font:calc(12px + var(--fz))/1.4 ui-monospace,Consolas,monospace;white-
     else if(m.proxData)ul.appendChild(h("li",null,h("span",{class:"grow"},h("b",{text:"Próxima aula"}),h("span",{class:"sub",text:m.proxTema||""})),h("span",{class:"end",text:quando(m.proxData)})));
     if(+m.total){var pc=Math.min(1,(+m.feitas||0)/+m.total);
       ul.appendChild(h("li",null,h("span",{class:"grow"},h("b",{text:"Progresso: "+(+m.feitas||0)+" de "+m.total+" disciplinas"}),h("div",{class:"bar"},h("i",{style:"width:"+Math.round(pc*100)+"%"}))),h("span",{class:"end",text:Math.round(pc*100)+"%"})))}
+    var avs=mbaAvals().filter(function(a){return !a.feita&&!a.vencida});
+    if(avs.length){var da=diasAte(avs[0].ate);ul.appendChild(h("li",{class:da<=5?"alerta":null},h("span",{class:"grow"},h("b",{text:avs.length+(avs.length===1?" avaliação para responder":" avaliações para responder")}),
+      h("span",{class:"sub",text:avs[0].t+(avs[0].disc?" · "+avs[0].disc:"")})),avs[0].link?ext(avs[0].link,"até "+dataBR(avs[0].ate).slice(0,5),"ghostbtn"):h("span",{class:"end",text:"até "+dataBR(avs[0].ate).slice(0,5)})))}
     var fin=mbaFin();
     if(fin&&fin.prox){var dv=diasAte(fin.prox.venc);ul.appendChild(h("li",{class:dv<=5?"alerta":null},h("span",{class:"grow"},h("b",{text:"Próximo boleto: "+BRL(fin.prox.v)}),
       h("span",{class:"sub",text:fin.pagas+" de "+fin.ps.length+" pagas · faltam "+BRL(fin.falta)})),h("span",{class:"end",text:dv<0?"atrasado":dv===0?"vence hoje":"vence "+dataBR(fin.prox.venc).slice(0,5)})))}
@@ -3316,6 +3319,20 @@ code.mbaf{font:calc(12px + var(--fz))/1.4 ui-monospace,Consolas,monospace;white-
       l.appendChild(h("label",{class:q.paga?"done":null},cb,h("span",{class:"grow"},h("b",{text:q.n+" · "+BRL(q.v)}),h("span",{class:q.atrasada?"qrwarn":"sub",style:"display:block",text:"vence "+dataBR(q.venc)+(q.paga&&f["pg:"+q.k]?" · marcada como paga":q.atrasada?" · atrasada":"")}))))});
     p.appendChild(h("details",{class:"famvals"},h("summary",{text:"Todas as parcelas (marque quando pagar)"}),l));
     return p}
+  /* avaliações do portal (pesquisas e provas): o link abre direto a avaliação; "já respondi" fica em PESSOAL.mbaFeito */
+  function mbaAvals(){var f=mbaFeito(),hoje=hojeISO();return ((PESSOAL.mba||{}).avaliacoes||[]).map(function(a){return Object.assign({},a,{feita:!!f["av:"+a.id],vencida:a.ate<hoje})}).sort(function(a,b){return a.ate.localeCompare(b.ate)})}
+  function mbaPainelAval(){
+    var l=mbaAvals();if(!l.length)return null;var abertas=l.filter(function(a){return !a.feita&&!a.vencida});
+    var p=panel("Avaliações",abertas.length?abertas.length+(abertas.length===1?" para responder":" para responder")+", a próxima até "+dataBR(abertas[0].ate):"Nenhuma pendente");
+    var box=h("div",{class:"exl"});
+    l.forEach(function(a){var cb=h("input",{type:"checkbox"});cb.checked=a.feita;cb.onchange=function(){mbaMarcar("av:"+a.id,cb.checked);renderMba()};
+      var dd=diasAte(a.ate),quando=a.feita?"respondida":a.vencida?"prazo encerrado em "+dataBR(a.ate):dd===0?"termina hoje":"até "+dataBR(a.ate)+" (faltam "+dd+(dd===1?" dia)":" dias)");
+      box.appendChild(h("label",{class:a.feita?"done":null},cb,h("span",{class:"grow"},h("b",{text:a.t+(a.disc?" · "+a.disc:"")}),
+        h("span",{class:!a.feita&&!a.vencida&&dd<=5?"qrwarn":"sub",style:"display:block",text:[a.prof?"Prof. "+a.prof:"",quando].filter(Boolean).join(" · ")})),
+        !a.feita&&!a.vencida&&a.link?ext(a.link,"Responder","ghostbtn pri"):null))});
+    p.appendChild(box);
+    p.appendChild(h("p",{class:"sub",text:"Depois de responder no portal, marque aqui para sair da lista de pendências."}));
+    return p}
   function mbaPainelGeral(){var g=(PESSOAL.mba||{}).materiaisGerais||[];if(!g.length)return null;
     var p=panel("Materiais do curso","Guardados também no seu Google Drive.");
     p.appendChild(h("ul",{class:"wl"},g.map(function(m){return h("li",null,h("span",{class:"grow"},h("b",{text:m.n}),m.sub?h("span",{class:"sub",text:m.sub}):null),ext(m.url,"Abrir","ghostbtn"))})));return p}
@@ -3323,7 +3340,7 @@ code.mbaf{font:calc(12px + var(--fz))/1.4 ui-monospace,Consolas,monospace;white-
   function renderMba(){
     var root=$("#mba-view");root.innerHTML="";var f=mbaFeito();
     root.appendChild(wMba());
-    [mbaPainelAulas(),mbaPainelFin()].forEach(function(x){if(x)root.appendChild(x)});
+    [mbaPainelAulas(),mbaPainelAval(),mbaPainelFin()].forEach(function(x){if(x)root.appendChild(x)});
     var discs=mbaDiscs().filter(function(d){return (d.roteiro||[]).length||(d.exercicios||[]).length||d.notas||(d.materiais||[]).length});
     var imp=h("input",{type:"file",accept:".json,application/json",hidden:""}),bimp=h("button",{type:"button",class:"ghostbtn",text:"Importar do arquivo (.json)"}),imsg=h("p",{class:"sub",role:"status"});
     bimp.onclick=function(){imp.click()};
@@ -3334,7 +3351,7 @@ code.mbaf{font:calc(12px + var(--fz))/1.4 ui-monospace,Consolas,monospace;white-
       var porId={};(m.disciplinas||[]).forEach(function(d){porId[d.id]=d});
       (j.disciplinas||[]).forEach(function(d){porId[d.id]=d;n++});
       m.disciplinas=Object.keys(porId).map(function(k){return porId[k]});
-      ["aulas","financeiro","materiaisGerais","aulasLink"].forEach(function(k){if(j[k])m[k]=j[k]});
+      ["aulas","financeiro","materiaisGerais","aulasLink","avaliacoes"].forEach(function(k){if(j[k])m[k]=j[k]});
       pessoalGravar("mba",m);
       /* o que o arquivo diz que já foi feito só entra se ainda não estiver marcado */
       var o=Object.assign({},mbaFeito());(j.feitos||[]).forEach(function(k){if(!o[k])o[k]=hojeISO()});pessoalGravar("mbaFeito",o);

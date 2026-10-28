@@ -218,6 +218,13 @@ form.add{display:grid;grid-template-columns:1fr 70px 130px auto;gap:8px;margin:1
 .llab{paint-order:stroke;stroke:var(--surface);stroke-width:4px;stroke-linejoin:round}
 .lgrid.lano{stroke-dasharray:3 4}
 .famper{margin:-4px 0 6px}
+.vbpeso{gap:4px;height:220px}
+.vbpeso .vb{min-width:0}
+.vbpeso .vbv,.vbpeso .vbl{white-space:nowrap}
+/* muitas colunas: no celular só ficam os números do maior, do menor e do último */
+@media (max-width:820px){.vbpeso .vbv.opc{visibility:hidden}}
+.vbpeso .vbv{font-size:calc(10.5px + var(--fz) / 2)}
+.vbcap{margin:8px 0 0;font:600 calc(14px + var(--fz)) var(--f-ui)}
 .mknota{border-top:1px solid var(--line);padding:8px 0}
 .mknota:first-of-type{border-top:0}
 .mknota summary{display:flex;align-items:center;gap:12px;cursor:pointer;list-style:none}
@@ -2691,9 +2698,20 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
         h("div",null,h("span",{class:"kl",text:"Menor"}),h("b",{class:"kv",text:kg(Math.min.apply(null,vs))})),
         h("div",null,h("span",{class:"kl",text:"Maior"}),h("b",{class:"kv",text:kg(Math.max.apply(null,vs))})),
         h("div",null,h("span",{class:"kl",text:"Desde "+dataBR(pts[0].data)}),h("b",{class:"kv",text:(d>0?"+":"")+kg(d)}))));
-      corpo.appendChild(RACmercado.grafico(pts.map(function(r,i){var ant=pts[i-1],dd=ant?pesoNum(r)-pesoNum(ant):0;
-        return {data:r.data,v:pesoNum(r),det:fmtN(pesoNum(r))+" kg"+(ant?" ("+(dd>0?"+":"")+fmtN(Math.round(dd*10)/10)+" kg)":"")+(r.titulo&&r.titulo!=="Pesagem"?" · "+r.titulo.replace(/^Pesagem\s*\(?|\)$/g,""):"")}}),{fmt:kg,aria:"Peso ao longo do tempo"}));
-      corpo.appendChild(h("p",{class:"sub",text:pts.length+" pesagens, de "+dataBR(pts[0].data)+" a "+dataBR(pts[pts.length-1].data)+". Passe o mouse ou toque nas bolinhas para ver cada uma."}))}
+      /* colunas, uma por pesagem (mesmo estilo do "Mês a mês" do Mercado); tocar ou passar o mouse mostra o detalhe embaixo */
+      var n=pts.length,maxv=Math.max.apply(null,vs),passo=Math.ceil(n/10),cap=h("p",{class:"vbcap",role:"status"}),barras=[];
+      function det(i){var r=pts[i],ant=pts[i-1],dd=ant?pesoNum(r)-pesoNum(ant):0;
+        return dataBR(r.data)+" · "+kg(pesoNum(r))+(ant?" ("+(dd>0?"+":"")+fmtN(Math.round(dd*10)/10)+" kg desde "+dataBR(ant.data)+")":"")+(r.titulo&&r.titulo!=="Pesagem"?" · "+r.titulo.replace(/^Pesagem\s*\(?|\)$/g,""):"")}
+      function marcar(i){barras.forEach(function(b,j){b.classList.toggle("on",j===i)});cap.textContent=det(i)}
+      var mostraV=function(i){return n<=14||i===n-1||vs[i]===maxv||vs[i]===Math.min.apply(null,vs)};
+      var vb=h("div",{class:"vbars vbpeso"},pts.map(function(r,i){var v=vs[i],p2=r.data.split("-");
+        var b=h("button",{type:"button",class:"vb","aria-label":det(i),title:det(i)},
+          h("span",{class:"vbv"+(mostraV(i)?"":" opc"),text:fmtN(Math.round(v*10)/10)}),
+          h("span",{class:"vbt"},h("span",{class:"vbf",style:"height:"+Math.max(2,v/maxv*100).toFixed(1)+"%"})),
+          h("span",{class:"vbl",text:(n-1-i)%passo===0?p2[1]+"/"+p2[0].slice(2):""}));
+        b.onclick=function(){marcar(i)};b.onmouseenter=function(){marcar(i)};barras.push(b);return b}));
+      corpo.appendChild(vb);corpo.appendChild(cap);marcar(n-1);
+      corpo.appendChild(h("p",{class:"sub",text:pts.length+" pesagens, de "+dataBR(pts[0].data)+" a "+dataBR(pts[pts.length-1].data)+". Passe o mouse ou toque numa coluna para ver a pesagem."}))}
     PER.forEach(function(x){var b=h("button",{type:"button",text:x[1]});b.dataset.k=x[0];b.onclick=function(){famPesoPer[quem]=x[0];desenhar()};seg.appendChild(b)});
     if(PER.length>1)p.appendChild(seg);
     p.appendChild(corpo);desenhar();

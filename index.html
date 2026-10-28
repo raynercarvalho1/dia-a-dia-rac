@@ -655,8 +655,6 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
 .exl input{margin-top:3px;width:18px;height:18px;flex:none}
 .exl .mbag{margin:12px 0 2px;font:700 calc(13px + var(--fz)) var(--f-ui);color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
 .exl label.mbaprox{background:color-mix(in srgb,#5B5BD6 10%,transparent);border-radius:8px}
-.mbaplayer{display:grid;gap:8px;margin-bottom:10px}
-iframe.mbaplay{width:100%;height:min(78vh,760px);border:0;border-radius:10px;background:#000}
 .mbaaulas li.mbames{font:700 calc(13px + var(--fz)) var(--f-ui);color:var(--muted);padding-top:12px}
 .mbaaulas li.mbames::first-letter{text-transform:uppercase}
 .mbaaulas li.mbapassou b{color:var(--muted)}
@@ -1192,7 +1190,9 @@ code.mbaf{font:calc(12px + var(--fz))/1.4 ui-monospace,Consolas,monospace;white-
     for(var i=2;i<arguments.length;i++)add(arguments[i]);
     return e}
   function svg(markup){var s=h("span");s.innerHTML=markup;return s.firstChild}
-  function ext(href,text,cls){return h("a",{class:cls||"link",href:href,target:"_blank",rel:"noopener",text:text})}
+  /* link digitado sem "https://" (ex.: site.com/pagina) abriria como página do próprio site e daria 404 */
+  function urlAbs(u){u=String(u||"").trim();return !u||/^([a-z][a-z0-9+.-]*:|#|\/|\.)/i.test(u)?u:"https://"+u}
+  function ext(href,text,cls){return h("a",{class:cls||"link",href:urlAbs(href),target:"_blank",rel:"noopener",text:text})}
   function img(src,cls){
     var i=h("img",{class:cls,src:src,alt:"",loading:"lazy"});
     i.onerror=function(){i.style.visibility="hidden"};return i}
@@ -3240,22 +3240,15 @@ code.mbaf{font:calc(12px + var(--fz))/1.4 ui-monospace,Consolas,monospace;white-
     return {F:F,ps:ps,pagas:ps.length-abertas.length,prox:abertas[0]||null,atrasadas:abertas.filter(function(p){return p.atrasada}),
       pago:ps.filter(function(p){return p.paga}).reduce(function(s,p){return s+p.v},0),falta:abertas.reduce(function(s,p){return s+p.v},0)}}
   function diasAte(iso){return Math.round((new Date(iso+"T12:00:00")-new Date(hojeISO()+"T12:00:00"))/864e5)}
-  /* a aula toca dentro da página (o portal permite); se o link tiver expirado, "Abrir no MBX" resolve */
-  function mbaPlayer(box,a){
-    box.innerHTML="";box.hidden=false;
-    var fr=h("iframe",{src:a.link,class:"mbaplay",allow:"autoplay; fullscreen; picture-in-picture",allowfullscreen:"",title:a.t,referrerpolicy:"no-referrer-when-downgrade"});
-    var fechar=h("button",{type:"button",class:"ghostbtn",text:"Fechar a aula"});fechar.onclick=function(){box.innerHTML="";box.hidden=true};
-    box.appendChild(h("div",{class:"vfil"},h("b",{class:"grow",text:"▶ "+a.t}),ext(a.link,"Abrir no MBX","ghostbtn"),fechar));
-    box.appendChild(fr);box.scrollIntoView({behavior:"smooth",block:"start"})}
   function mbaPainelAulas(){
     var aulas=mbaAulas();if(!aulas.length)return null;
-    var prox=mbaProxAula(),p=panel("Aulas",prox?"Próxima: "+prox.t+", "+quando(prox.data+"T"+prox.hora):"Todas as aulas já aconteceram"),player=h("div",{class:"mbaplayer",hidden:""});
-    p.appendChild(player);
+    var prox=mbaProxAula(),p=panel("Aulas",prox?"Próxima: "+prox.t+", "+quando(prox.data+"T"+prox.hora):"Todas as aulas já aconteceram");
     var hoje=hojeISO(),ul=h("ul",{class:"wl mbaaulas"}),mes=null;
     aulas.forEach(function(a){
       var m=a.data.slice(0,7);if(m!==mes){mes=m;ul.appendChild(h("li",{class:"mbames",text:new Date(a.data+"T12:00:00").toLocaleDateString("pt-BR",{month:"long",year:"numeric"})}))}
       var passou=mbaQuando(a).getTime()<Date.now()-3*3600e3,ehHoje=a.data===hoje,acts=h("span",{class:"end vfil"});
-      if(a.link&&(passou||ehHoje)){var b=h("button",{type:"button",class:"ghostbtn pri",text:ehHoje&&!passou?"▶ Ao vivo":"▶ Assistir"});b.onclick=function(){mbaPlayer(player,a)};acts.appendChild(b)}
+      /* o portal não deixa a aula tocar dentro de outro site (o login dele recusa), então abre numa aba só das aulas */
+      if(a.link&&(passou||ehHoje)){var b=ext(a.link,ehHoje&&!passou?"▶ Ao vivo":"▶ Assistir","ghostbtn pri");b.target="mbx-aula";acts.appendChild(b)}
       else if(passou||ehHoje){var c=h("button",{type:"button",class:"ghostbtn",text:"Colar link"});
         c.title="No portal, abra a aula, copie o link do botão Assistir Aula e cole aqui";
         c.onclick=function(){var v=(window.prompt("Cole o link do botão “Assistir Aula” do portal (começa com https://class.mbx.academy/):")||"").trim();

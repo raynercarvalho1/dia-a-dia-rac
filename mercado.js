@@ -498,8 +498,18 @@
       svg.appendChild(s("line", { x1: L, x2: W - R, y1: y, y2: y, class: "lgrid" }));
       svg.appendChild(s("text", { x: L - 8, y: y + 4, "text-anchor": "end", class: "lax" }, o.fmt(v)));
     }
-    svg.appendChild(s("text", { x: L, y: H - 8, class: "lax" }, dataBR(lista[0].data)));
-    svg.appendChild(s("text", { x: W - R, y: H - 8, "text-anchor": "end", class: "lax" }, dataBR(lista[lista.length - 1].data)));
+    /* mais de um ano de dados: marca o início de cada ano no eixo; senão, a primeira e a última data */
+    var a0 = new Date(t0).getFullYear(), a1 = new Date(t1).getFullYear();
+    if (t1 - t0 > 400 * 86400000) {
+      for (var a = a0 + 1; a <= a1; a++) {
+        var xa = X(new Date(a + "-01-01T12:00:00").getTime());
+        svg.appendChild(s("line", { x1: xa, x2: xa, y1: T, y2: H - B, class: "lgrid lano" }));
+        svg.appendChild(s("text", { x: xa, y: H - 8, "text-anchor": "middle", class: "lax" }, String(a)));
+      }
+    } else {
+      svg.appendChild(s("text", { x: L, y: H - 8, class: "lax" }, dataBR(lista[0].data)));
+      svg.appendChild(s("text", { x: W - R, y: H - 8, "text-anchor": "end", class: "lax" }, dataBR(lista[lista.length - 1].data)));
+    }
     if (pts.length > 1) svg.appendChild(s("polyline", { points: pts.map(function (q) { return X(q.t).toFixed(1) + "," + Y(q.v).toFixed(1); }).join(" "), class: "lline" }));
     /* balão com o dia e o detalhe: aparece ao passar o mouse e fica fixo ao tocar/clicar */
     var wrap = h("div", { class: "lwrap" }, svg), dica = h("div", { class: "ldica", hidden: true }), fixo = null;

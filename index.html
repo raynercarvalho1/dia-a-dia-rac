@@ -215,6 +215,9 @@ form.add{display:grid;grid-template-columns:1fr 70px 130px auto;gap:8px;margin:1
 .lpt{fill:var(--accent);stroke:var(--side);stroke-width:2}
 .lpt.on{r:7}
 .llab{fill:var(--ink);font:700 calc(12px + var(--fz)) var(--f-ui)}
+.llab{paint-order:stroke;stroke:var(--surface);stroke-width:4px;stroke-linejoin:round}
+.lgrid.lano{stroke-dasharray:3 4}
+.famper{margin:-4px 0 6px}
 .mknota{border-top:1px solid var(--line);padding:8px 0}
 .mknota:first-of-type{border-top:0}
 .mknota summary{display:flex;align-items:center;gap:12px;cursor:pointer;list-style:none}
@@ -2667,13 +2670,33 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
     return p}
 
   /* Peso ao longo do tempo: o mesmo gráfico dos preços do Mercado (balão com o dia ao passar o mouse ou tocar) */
-  function famPeso(regs){
-    var pts=regs.filter(function(r){return r.tipo==="peso"&&pesoNum(r)!=null}).sort(function(a,b){return a.data.localeCompare(b.data)});
-    if(pts.length<2||!window.RACmercado||!RACmercado.grafico)return null;
+  var famPesoPer={eddie:"3",olivia:"tudo"};
+  function famPeso(regs,quem){
+    var todos=regs.filter(function(r){return r.tipo==="peso"&&pesoNum(r)!=null}).sort(function(a,b){return a.data.localeCompare(b.data)});
+    if(todos.length<2||!window.RACmercado||!RACmercado.grafico)return null;
     function kg(v){return fmtN(Math.round(v*10)/10)+" kg"}
-    var p=panel("Peso",pts.length+" pesagens, de "+dataBR(pts[0].data)+" a "+dataBR(pts[pts.length-1].data));
-    p.appendChild(RACmercado.grafico(pts.map(function(r,i){var ant=pts[i-1],d=ant?pesoNum(r)-pesoNum(ant):0;
-      return {data:r.data,v:pesoNum(r),det:fmtN(pesoNum(r))+" kg"+(ant?" ("+(d>0?"+":"")+fmtN(Math.round(d*10)/10)+" kg)":"")+(r.titulo&&r.titulo!=="Pesagem"?" · "+r.titulo.replace(/^Pesagem\s*\(?|\)$/g,""):"")}}),{fmt:kg,aria:"Peso ao longo do tempo"}));
+    var p=panel("Peso"),corpo=h("div");
+    /* período: o histórico inteiro espreme o gráfico (filhote, anos sem pesagem), então o padrão são os últimos 3 anos */
+    var PER=[["1","Último ano",365],["3","Últimos 3 anos",1095],["tudo","Tudo",0]].filter(function(x){return !x[2]||todos[0].data<maisDias(hojeISO(),-x[2])});
+    if(!PER.some(function(x){return x[0]===famPesoPer[quem]}))famPesoPer[quem]="tudo";
+    var seg=h("div",{class:"seg famseg famper",role:"group","aria-label":"Período do peso"});
+    function desenhar(){
+      var per=PER.filter(function(x){return x[0]===famPesoPer[quem]})[0],ini=per[2]?maisDias(hojeISO(),-per[2]):"0000";
+      var pts=todos.filter(function(r){return r.data>=ini});if(pts.length<2)pts=todos.slice(-2);
+      seg.querySelectorAll("button").forEach(function(b){b.setAttribute("aria-pressed",String(b.dataset.k===per[0]))});
+      var vs=pts.map(pesoNum),ult=vs[vs.length-1],d=ult-vs[0];
+      corpo.innerHTML="";
+      corpo.appendChild(h("div",{class:"kgasto"},
+        h("div",null,h("span",{class:"kl",text:"Agora"}),h("b",{class:"kv",text:kg(ult)})),
+        h("div",null,h("span",{class:"kl",text:"Menor"}),h("b",{class:"kv",text:kg(Math.min.apply(null,vs))})),
+        h("div",null,h("span",{class:"kl",text:"Maior"}),h("b",{class:"kv",text:kg(Math.max.apply(null,vs))})),
+        h("div",null,h("span",{class:"kl",text:"Desde "+dataBR(pts[0].data)}),h("b",{class:"kv",text:(d>0?"+":"")+kg(d)}))));
+      corpo.appendChild(RACmercado.grafico(pts.map(function(r,i){var ant=pts[i-1],dd=ant?pesoNum(r)-pesoNum(ant):0;
+        return {data:r.data,v:pesoNum(r),det:fmtN(pesoNum(r))+" kg"+(ant?" ("+(dd>0?"+":"")+fmtN(Math.round(dd*10)/10)+" kg)":"")+(r.titulo&&r.titulo!=="Pesagem"?" · "+r.titulo.replace(/^Pesagem\s*\(?|\)$/g,""):"")}}),{fmt:kg,aria:"Peso ao longo do tempo"}));
+      corpo.appendChild(h("p",{class:"sub",text:pts.length+" pesagens, de "+dataBR(pts[0].data)+" a "+dataBR(pts[pts.length-1].data)+". Passe o mouse ou toque nas bolinhas para ver cada uma."}))}
+    PER.forEach(function(x){var b=h("button",{type:"button",text:x[1]});b.dataset.k=x[0];b.onclick=function(){famPesoPer[quem]=x[0];desenhar()};seg.appendChild(b)});
+    if(PER.length>1)p.appendChild(seg);
+    p.appendChild(corpo);desenhar();
     return p}
 
   /* Exames de sangue lado a lado: cada linha um indicador, cada coluna uma data */
@@ -2892,7 +2915,7 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
         c.classList.add("alvo");setTimeout(function(){c.classList.remove("alvo")},2600);
         setTimeout(function(){c.scrollIntoView({behavior:"smooth",block:"start"})},30)}
       var box=h("div",{class:"stack"});root.appendChild(box);
-      if(vista==="resumo"){[famAgora(quem,regs,ir),famPeso(regs),famGastos(regs,ir)].forEach(function(x){if(x)box.appendChild(x)});return}
+      if(vista==="resumo"){[famAgora(quem,regs,ir),famPeso(regs,quem),famGastos(regs,ir)].forEach(function(x){if(x)box.appendChild(x)});return}
       if(vista==="exames"){[famComparaSangue(regs),famComparaUS(regs)].forEach(function(x){if(x)box.appendChild(x)});
         cards(regs.filter(function(r){return r.tipo==="exame"||r.tipo==="pedido"}),box);irAoAlvo();return}
       if(vista==="remedios"){var t=famTratamentos(regs);if(t)box.appendChild(t);return}

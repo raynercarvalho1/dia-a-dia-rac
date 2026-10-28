@@ -2744,7 +2744,12 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
   function famGastos(regs,ir){
     var cs=regs.filter(function(r){return typeof dadosDe(r).custo==="number"}).sort(function(a,b){return b.data.localeCompare(a.data)});if(!cs.length)return null;
     var anos={};cs.forEach(function(r){var a=r.data.slice(0,4);anos[a]=(anos[a]||0)+r.dados.custo});
-    var p=panel("Gastos (veterinário, remédios e ração)",Object.keys(anos).sort().reverse().map(function(a){return a+": "+brl(anos[a])}).join(" · "));
+    var p=panel("Gastos (veterinário, remédios e ração)","Por ano: "+Object.keys(anos).sort().reverse().map(function(a){return a+": "+brl(anos[a])}).join(" · "));
+    /* total geral e quanto foi em cada tipo de gasto */
+    var grupos=[["Veterinário",/^(consulta|exame|tratamento|pedido|sintoma)$/],["Antipulgas e vermífugo",/^preventivo$/],["Ração",/^alimentacao$/]],tot={};
+    cs.forEach(function(r){var g=(grupos.filter(function(x){return x[1].test(r.tipo)})[0]||["Outros"])[0];tot[g]=(tot[g]||0)+r.dados.custo});
+    p.appendChild(h("div",{class:"kgasto"},h("div",null,h("span",{class:"kl",text:"Total desde "+dataBR(cs[cs.length-1].data)}),h("b",{class:"kv",text:brl(cs.reduce(function(s,r){return s+r.dados.custo},0))})),
+      grupos.map(function(x){return x[0]}).concat(["Outros"]).filter(function(g){return tot[g]}).map(function(g){return h("div",null,h("span",{class:"kl",text:g}),h("b",{class:"kv",text:brl(tot[g])}))})));
     p.appendChild(h("ul",{class:"wl famagora"},cs.map(function(r){var li=h("li",{class:"clic",tabindex:"0",role:"button"},h("span",{class:"grow"},h("b",{text:r.titulo}),h("span",{class:"sub",text:dataBR(r.data)+(r.dados.clinica?" · "+r.dados.clinica:"")})),h("span",{class:"end",text:brl(r.dados.custo)}));
       li.onclick=function(){ir({r:r,custo:true})};li.onkeydown=function(e){if(e.key==="Enter"){ir({r:r,custo:true})}};return li})));
     return p}

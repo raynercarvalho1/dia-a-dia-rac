@@ -173,7 +173,7 @@ const r2 = (v: number | null, d = 1) => (v == null ? undefined : Math.round(v * 
 const EXERC: Record<number, string> = { 0: "Supino", 1: "Panturrilha", 2: "Cardio", 3: "Carregamento", 4: "Chop", 5: "Core", 6: "Abdominal", 7: "Rosca", 8: "Levantamento terra", 9: "Crucifixo",
   10: "Elevação de quadril", 11: "Estabilidade de quadril", 12: "Swing", 13: "Hiperextensão", 14: "Elevação lateral", 15: "Flexora", 16: "Elevação de pernas", 17: "Avanço",
   18: "Levantamento olímpico", 19: "Prancha", 20: "Pliometria", 21: "Barra fixa", 22: "Flexão", 23: "Remada", 24: "Desenvolvimento", 25: "Estabilidade de ombro", 26: "Encolhimento",
-  27: "Abdominal (sit-up)", 28: "Agachamento", 29: "Corpo inteiro", 30: "Tríceps", 31: "Aquecimento", 32: "Corrida", 65534: "Exercício" };
+  27: "Abdominal (sit-up)", 28: "Agachamento", 29: "Corpo inteiro", 30: "Tríceps", 31: "Aquecimento", 32: "Corrida", 65534: "Musculação" };
 
 /* o que a página do treino mostra: série reduzida (até ~600 pontos), rota (até ~1500), voltas, séries e piscinas */
 function resumirFit(msgs: Record<number, Record<number, unknown>[]>) {
@@ -204,7 +204,7 @@ function resumirFit(msgs: Record<number, Record<number, unknown>[]>) {
   });
   const series = (msgs[225] ?? []).filter((m) => m[5] === 1).map((m) => {
     const cat = Array.isArray(m[7]) ? (m[7] as number[])[0] : num(m[7]);
-    return { exercicio: cat != null ? EXERC[cat] ?? "Exercício" : "Exercício", reps: num(m[3]) ?? undefined, peso: num(m[4]) != null ? r2(num(m[4])! / 16, 10) : undefined,
+    return { exercicio: cat != null ? EXERC[cat] ?? "Musculação" : "Musculação", reps: num(m[3]) ?? undefined, peso: num(m[4]) != null ? r2(num(m[4])! / 16, 10) : undefined,
       tempo: r2(num(m[0]) != null ? num(m[0])! / 1000 : null) };
   });
   const piscinas = (msgs[101] ?? []).filter((m) => m[12] === 1).length || undefined;

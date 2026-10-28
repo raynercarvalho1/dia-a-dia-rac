@@ -3601,6 +3601,49 @@ code.mbaf{font:calc(12px + var(--fz))/1.4 ui-monospace,Consolas,monospace;white-
     /* ritmo/velocidade: paradas puxam o mínimo para valores sem sentido, então mostra só média e o mais rápido */
     if(campo==="vel")cap.textContent="Média "+fmt(media)+" · mais rápido "+fmt(Math.max.apply(null,vs));
     return h("div",{class:"tgwrap"},h("h3",{class:"tgh",text:rot}),box,cap)}
+  /* rota no mapa: Google Maps quando há chave (guardada na conta, em PESSOAL.googleMaps); senão OpenStreetMap */
+  function rotaCores(rota){var vels=rota.map(function(p){return p[2]||0}).filter(function(v){return v>0}).sort(function(a2,b2){return a2-b2});
+    var lo=vels[Math.floor(vels.length*.05)]||0,hi=vels[Math.floor(vels.length*.95)]||1;
+    /* trechos seguidos com a mesma cor viram uma linha só */
+    var tr=[],cor=null;for(var i=1;i<rota.length;i++){var c=corVel(Math.round(((rota[i][2]||0)-lo)/((hi-lo)||1)*12)/12);
+      if(c!==cor){tr.push({cor:c,pts:[rota[i-1]]});cor=c}tr[tr.length-1].pts.push(rota[i])}return tr}
+  function carregarGoogle(chave){
+    if(window.google&&window.google.maps)return Promise.resolve();
+    return new Promise(function(ok,erro){window.__gmOk=ok;setTimeout(function(){erro(new Error("o Google Maps não respondeu"))},10000);
+      var s=document.createElement("script");s.src="https://maps.googleapis.com/maps/api/js?key="+encodeURIComponent(chave)+"&v=weekly&language=pt-BR&region=BR&callback=__gmOk";s.async=true;
+      s.onerror=function(){erro(new Error("Google Maps indisponível"))};document.head.appendChild(s)})}
+  function mapaRota(div,rota){
+    var chave=PESSOAL.googleMaps,tr=rotaCores(rota),ini=rota[0],fim=rota[rota.length-1];
+    function osm(){return carregarLeaflet().then(function(){
+      var L=window.L,m=L.map(div,{scrollWheelZoom:false});
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"}).addTo(m);
+      tr.forEach(function(t){L.polyline(t.pts.map(function(p){return [p[0],p[1]]}),{color:t.cor,weight:5,opacity:.95}).addTo(m)});
+      L.circleMarker([ini[0],ini[1]],{radius:7,color:"#fff",weight:2,fillColor:"#2e9e44",fillOpacity:1}).addTo(m).bindTooltip("Início");
+      L.circleMarker([fim[0],fim[1]],{radius:7,color:"#fff",weight:2,fillColor:"#d6283b",fillOpacity:1}).addTo(m).bindTooltip("Fim");
+      m.fitBounds(L.latLngBounds(rota.map(function(p){return [p[0],p[1]]})),{padding:[18,18]});setTimeout(function(){m.invalidateSize()},200)})}
+    if(!chave)return osm().catch(function(){div.replaceWith(h("p",{class:"sub",text:"Não consegui carregar o mapa agora."}))});
+    var caiu=false;
+    function cair(motivo){if(caiu)return;caiu=true;div.innerHTML="";div.className="tmapa";var av=h("p",{class:"qrwarn",text:"⚠ O Google Maps não aceitou a chave ("+motivo+"). Mostrando o OpenStreetMap."});div.parentNode.insertBefore(av,div);return osm()}
+    /* a chave recusada só é avisada depois que o mapa abre: aí troca para o OpenStreetMap */
+    window.gm_authFailure=function(){cair("chave recusada ou sem a Maps JavaScript API ativada")};
+    return carregarGoogle(chave).then(function(){if(caiu)return;
+      var g=window.google.maps,m=new g.Map(div,{mapTypeId:"roadmap",mapTypeControl:true,streetViewControl:false,fullscreenControl:true,gestureHandling:"cooperative"}),b=new g.LatLngBounds();
+      tr.forEach(function(t){var path=t.pts.map(function(p){var ll={lat:p[0],lng:p[1]};b.extend(ll);return ll});new g.Polyline({path:path,strokeColor:t.cor,strokeWeight:5,strokeOpacity:.95,map:m})});
+      [[ini,"#2e9e44","Início"],[fim,"#d6283b","Fim"]].forEach(function(q){new g.Marker({position:{lat:q[0][0],lng:q[0][1]},map:m,title:q[2],icon:{path:g.SymbolPath.CIRCLE,scale:7,fillColor:q[1],fillOpacity:1,strokeColor:"#fff",strokeWeight:2}})});
+      m.fitBounds(b,20);
+      /* se em 8 segundos o Google não desenhou nada (chave inválida, API desligada), volta para o OpenStreetMap */
+      setTimeout(function(){if(!div.querySelector(".gm-style"))cair("o mapa não abriu com essa chave")},8000)
+    }).catch(function(e){return cair(e.message)})}
+  /* onde colar (ou trocar) a chave do Google Maps */
+  function mapaConfig(redesenhar){
+    var tem=!!PESSOAL.googleMaps,abrir=h("button",{type:"button",class:"ghostbtn",text:tem?"Trocar a chave do Google Maps":"Usar o Google Maps"}),f=h("div",{class:"vfil",hidden:""});
+    var inp=h("input",{type:"password",placeholder:"Chave da API do Google Maps (AIza…)",autocomplete:"off","aria-label":"Chave do Google Maps"}),ok=h("button",{type:"button",text:"Salvar"}),tira=tem?h("button",{type:"button",class:"ghostbtn",text:"Voltar ao OpenStreetMap"}):null,msg=h("p",{class:"sub",role:"status"});
+    abrir.onclick=function(){f.hidden=!f.hidden;if(!f.hidden)inp.focus()};
+    ok.onclick=function(){var v=inp.value.trim();if(!/^AIza[\w-]{30,}$/.test(v)){msg.textContent="A chave do Google Maps começa com AIza e tem uns 39 caracteres.";return}
+      ok.disabled=true;msg.textContent="Guardando…";pessoalGravar("googleMaps",v,function(e){msg.textContent=e||"✓ Chave guardada na sua conta.";setTimeout(function(){location.reload()},600)});inp.value="";f.hidden=true};
+    if(tira)tira.onclick=function(){pessoalGravar("googleMaps","",function(){location.reload()})};
+    f.appendChild(inp);f.appendChild(ok);if(tira)f.appendChild(tira);
+    return h("div",{class:"mapcfg"},abrir,f,msg)}
   function saudeTreino(root,id){
     var a=(SAUDE.ativs||[]).filter(function(x){return String(x.id)===String(id)})[0];
     var volta=h("a",{href:"#saude",class:"ghostbtn",text:"← Treinos"});
@@ -3619,16 +3662,8 @@ code.mbaf{font:calc(12px + var(--fz))/1.4 ui-monospace,Consolas,monospace;white-
       if((x.rota||[]).length>1){
         var mp=panel("Percurso"),div=h("div",{class:"tmapa"}),leg=h("div",{class:"tleg"},h("span",{text:"Mais lento"}),h("i"),h("span",{text:"Mais rápido"}));
         mp.appendChild(div);mp.appendChild(leg);corpo.appendChild(mp);
-        carregarLeaflet().then(function(){
-          var L=window.L,m=L.map(div,{scrollWheelZoom:false}),pts=x.rota.map(function(p){return [p[0],p[1]]});
-          L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"}).addTo(m);
-          var vels=x.rota.map(function(p){return p[2]||0}).filter(function(v){return v>0}).sort(function(a2,b2){return a2-b2});
-          var lo=vels[Math.floor(vels.length*.05)]||0,hi=vels[Math.floor(vels.length*.95)]||1;
-          for(var i=1;i<x.rota.length;i++){var v=x.rota[i][2]||0;L.polyline([pts[i-1],pts[i]],{color:corVel((v-lo)/((hi-lo)||1)),weight:5,opacity:.95}).addTo(m)}
-          L.circleMarker(pts[0],{radius:7,color:"#fff",weight:2,fillColor:"#2e9e44",fillOpacity:1}).addTo(m).bindTooltip("Início");
-          L.circleMarker(pts[pts.length-1],{radius:7,color:"#fff",weight:2,fillColor:"#d6283b",fillOpacity:1}).addTo(m).bindTooltip("Fim");
-          m.fitBounds(L.latLngBounds(pts),{padding:[18,18]});setTimeout(function(){m.invalidateSize()},200)
-        }).catch(function(){div.replaceWith(h("p",{class:"sub",text:"Não consegui carregar o mapa agora."}))})}
+        mapaRota(div,x.rota);
+        mp.appendChild(mapaConfig(function(){div.innerHTML="";mapaRota(div,x.rota)}))}
       /* números */
       var dist=r.distance||d.distancia,mov=r.movingDuration||d.emMovimento,dur=r.duration||d.duracao,velMov=r.averageMovingSpeed||(dist&&mov?dist/mov:d.velocidade);
       var itens=[
@@ -3676,9 +3711,9 @@ code.mbaf{font:calc(12px + var(--fz))/1.4 ui-monospace,Consolas,monospace;white-
       /* séries da musculação */
       if((x.series||[]).length){var sp=panel("Séries",x.series.length+" séries"),tb2=h("table",{class:"famtab"});
         tb2.appendChild(h("thead",null,h("tr",null,["#","Exercício","Repetições","Peso","Tempo"].map(function(c){return h("th",{text:c})}))));
-        tb2.appendChild(h("tbody",null,x.series.map(function(q,i){return h("tr",null,h("td",{text:String(i+1)}),h("td",{text:q.exercicio}),h("td",{text:q.reps!=null?String(q.reps):"—"}),h("td",{text:q.peso?fmtN(q.peso)+" kg":"—"}),h("td",{text:hms(q.tempo)}))})));
+        tb2.appendChild(h("tbody",null,x.series.map(function(q,i){return h("tr",null,h("td",{text:String(i+1)}),h("td",{text:!q.exercicio||q.exercicio==="Exercício"?"Musculação":q.exercicio}),h("td",{text:q.reps!=null?String(q.reps):"—"}),h("td",{text:q.peso?fmtN(q.peso)+" kg":"—"}),h("td",{text:hms(q.tempo)}))})));
         sp.appendChild(h("div",{class:"famtabw"},tb2));
-        sp.appendChild(h("p",{class:"sub",text:"O nome do exercício aparece quando ele é escolhido no relógio durante o treino; senão fica “Exercício”."}));corpo.appendChild(sp)}
+        sp.appendChild(h("p",{class:"sub",text:"O nome do exercício aparece quando ele é escolhido no relógio durante o treino; senão fica “Musculação”."}));corpo.appendChild(sp)}
     }
   }
 

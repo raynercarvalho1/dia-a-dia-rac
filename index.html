@@ -129,6 +129,9 @@ img.ico{background:#fff;object-fit:contain;padding:2px;box-shadow:0 0 0 1px var(
   .ptitle .date{display:none}
 }
 @media(min-width:861px){.side .closebtn{display:none}}
+.menuflut{position:fixed;left:max(14px,env(safe-area-inset-left,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:24;width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:var(--glass);color:var(--ink);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:0 6px 20px rgba(0,0,0,.25)}
+.menuflut svg{width:22px;height:22px}
+@media(min-width:861px){.menuflut{display:none!important}}
 a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 section[hidden]{display:none}
 h2{font:700 calc(24px + var(--fz))/1.1 var(--f-display);margin:0 0 12px;letter-spacing:.01em}
@@ -1017,6 +1020,33 @@ code.mbaf{font:calc(12px + var(--fz))/1.4 ui-monospace,Consolas,monospace;white-
   $("#closeside").addEventListener("click",function(){setSide(false)});
   $("#scrimbg").addEventListener("click",function(){setSide(false)});
   document.addEventListener("keydown",function(e){if(e.key==="Escape"&&app.classList.contains("open"))setSide(false)});
+  /* no celular: arrastar o dedo para a direita abre o menu e para a esquerda fecha; o menu acompanha o dedo.
+     Não vale em cima do que já rola para o lado (tabelas, mapas, gráficos, botões em faixa) nem em campos de texto. */
+  (function(){
+    var side=$("#side"),x0=0,y0=0,t0=0,arr=false,eixo=null,aberto=false,larg=0;
+    function celular(){return innerWidth<=860}
+    function rolaParaLado(el){for(;el&&el!==document.body;el=el.parentElement){
+      if(el.matches&&el.matches("input,textarea,select,.tmapa,.leaflet-container,.gm-style,.tgraf,.vbars,[data-noswipe]"))return true;
+      var cs=getComputedStyle(el);if(/(auto|scroll)/.test(cs.overflowX)&&el.scrollWidth>el.clientWidth+2)return true}return false}
+    document.addEventListener("touchstart",function(e){
+      if(!celular()||e.touches.length!==1)return;aberto=app.classList.contains("open");
+      if(!aberto&&rolaParaLado(e.target))return;
+      var t=e.touches[0];x0=t.clientX;y0=t.clientY;t0=Date.now();arr=true;eixo=null;larg=side.getBoundingClientRect().width||300},{passive:true});
+    document.addEventListener("touchmove",function(e){
+      if(!arr)return;var t=e.touches[0],dx=t.clientX-x0,dy=t.clientY-y0;
+      if(!eixo){if(Math.abs(dx)<10&&Math.abs(dy)<10)return;eixo=Math.abs(dx)>Math.abs(dy)*1.3?"x":"y";if(eixo==="y"){arr=false;return}
+        if((!aberto&&dx<0)||(aberto&&dx>0)){arr=false;return}side.style.transition="none"}
+      var desl=aberto?Math.min(0,dx):Math.min(0,dx-larg-16);side.style.transform="translateX("+desl+"px)"},{passive:true});
+    document.addEventListener("touchend",function(e){
+      if(!arr)return;arr=false;if(eixo!=="x")return;
+      var dx=(e.changedTouches[0].clientX-x0),rapido=Math.abs(dx)/(Date.now()-t0)>0.4;
+      side.style.transition="";side.style.transform="";
+      if(!aberto)setSide(dx>larg*0.35||(rapido&&dx>40));else setSide(!(-dx>larg*0.3||(rapido&&dx<-40)))});
+    /* depois de rolar a página, um botão de menu fica sempre à mão no canto */
+    var flut=h("button",{type:"button",class:"menuflut","aria-label":"Abrir menu",hidden:""});flut.innerHTML=$("#openside").innerHTML;
+    flut.onclick=function(){setSide(true)};document.body.appendChild(flut);
+    addEventListener("scroll",function(){flut.hidden=!(celular()&&scrollY>220)},{passive:true});
+  })();
 
   /* Foto de fundo (Wikimedia Commons, licença livre); a escolha fica salva neste navegador */
   var BGS=[
@@ -3512,7 +3542,7 @@ code.mbaf{font:calc(12px + var(--fz))/1.4 ui-monospace,Consolas,monospace;white-
         h("div",null,h("span",{class:"kl",text:"Melhor"}),h("b",{class:"kv",text:M[3](M[5]?maxv:minv)})),
         h("div",null,h("span",{class:"kl",text:"Pior"}),h("b",{class:"kv",text:M[3](M[5]?minv:maxv)})),
         h("div",null,h("span",{class:"kl",text:"Último vs. média"}),h("b",{class:"kv "+(Math.abs(dif)<media*0.03?"":bom?"bom":"ruim"),text:(dif>0?"+":"−")+M[3](Math.abs(dif))}))));
-      var n=grupos.length,passo=Math.ceil(n/10),cap=h("p",{class:"vbcap",role:"status"}),barras=[];
+      var n=grupos.length,passo=Math.ceil(n/(innerWidth<600?5:10)),cap=h("p",{class:"vbcap",role:"status"}),barras=[];
       /* as colunas começam perto do menor valor, senão ficariam todas iguais (VFC, FC) */
       var base=M[0]==="passos"||M[0]==="sono"?0:Math.max(0,Math.floor(minv*0.85));
       function marcar(i){barras.forEach(function(b,j){b.classList.toggle("on",j===i)});cap.textContent=grupos[i].det+" · "+M[3](grupos[i].v)}

@@ -697,6 +697,9 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
 .famtab td.alto,.famtab td.baixo{color:var(--bad);font-weight:700}
 .famtab tr.famg td{font-weight:700;background:var(--hover);color:var(--muted)}
 .famus td{min-width:220px}
+.famdiario td,.famdiario th{text-align:center;white-space:nowrap}
+.famdiario td:first-child,.famdiario th:first-child,.famdiario td.sub{text-align:left}
+.famdiario td.sub{white-space:normal;min-width:160px}
 .famus td.alto{font-weight:400;color:var(--ink);box-shadow:inset 3px 0 0 var(--bad)}
 .famus td:first-child{min-width:110px}
 .famres{background:var(--hover);border-radius:10px;padding:8px 10px}
@@ -2582,7 +2585,7 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
   var FAM={eddie:{n:"Eddie",peso:true},olivia:{n:"Olivia",peso:true}};
   var TIPOS=[["exame","Exame","Ex.: Hemograma completo","Resultado"],["consulta","Consulta","Ex.: Consulta de rotina","Profissional"],["tratamento","Receita / tratamento","Ex.: Receita da endocrinologista","Profissional"],
     ["sintoma","Sintomas","Ex.: Diarreia e vômito",""],["vacina","Vacina","Ex.: V10, Antirrábica, Hepatite B","Dose"],["preventivo","Antipulgas / vermífugo","Ex.: Bravecto","Produto"],
-    ["peso","Peso","Ex.: Pesagem","Peso (kg)"],["alimentacao","Alimentação","Ex.: Troca de ração","Ração"],["pedido","Pedido de exames","Ex.: Exames de controle",""],
+    ["peso","Peso","Ex.: Pesagem","Peso (kg)"],["alimentacao","Alimentação","Ex.: Troca de ração","Ração"],["pedido","Pedido de exames","Ex.: Exames de controle",""],["diario","Diário (mamadas e fraldas)","Ex.: Diário da semana",""],["produto","Fraldas e produtos","Ex.: Pacote de fraldas","Marca"],
     ["momento","Momento","Ex.: Primeiro passeio na praia","Onde"],["midia","Fotos e vídeos","Ex.: Fotos do aniversário",""],
     ["nascimento","Nascimento","Ex.: Nascimento","Onde"],["outro","Outro","",""]];
   function tipoInfo(k){return TIPOS.filter(function(t){return t[0]===k})[0]||TIPOS[TIPOS.length-1]}
@@ -2648,7 +2651,7 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
     if(dg)item("Diagnóstico mais recente",dg.dados.diagnostico,dataBR(dg.data)+(dg.dados.vet?" · "+dg.dados.vet:""),"",{r:dg});
     var ps=regs.filter(function(r){return r.tipo==="peso"&&pesoNum(r)!=null}).sort(function(a,b){return b.data.localeCompare(a.data)});
     if(ps.length){var d=ps[1]?pesoNum(ps[0])-pesoNum(ps[1]):0;
-      item("Peso",fmtN(pesoNum(ps[0]))+" kg","em "+dataBR(ps[0].data)+(ps[1]?" · "+(d>0?"+":"")+fmtN(Math.round(d*10)/10)+" kg desde "+dataBR(ps[1].data)+" ("+(d>0?"+":"")+Math.round(d/pesoNum(ps[1])*100)+"%)":""),Math.abs(d)>=0.05*pesoNum(ps[1]||ps[0])?"alerta":null,{r:ps[0],filtro:"peso"})}
+      item("Peso",fmtN(pesoNum(ps[0]))+" kg","em "+dataBR(ps[0].data)+(ps[1]?" · "+(d>0?"+":"")+fmtN(Math.round(d*10)/10)+" kg desde "+dataBR(ps[1].data)+" ("+(d>0?"+":"")+Math.round(d/pesoNum(ps[1])*100)+"%)":""),(function(){var nasc=regs.filter(function(r){return r.tipo==="nascimento"})[0];/* bebê: ganhar peso é o esperado; só a perda chama atenção */return nasc&&nasc.data>maisDias(hojeISO(),-730)?(d<0?"alerta":"bom"):(Math.abs(d)>=0.05*pesoNum(ps[1]||ps[0])?"alerta":null)})(),{r:ps[0],filtro:"peso"})}
     var sg=famSangue(regs),ult=sg[sg.length-1],ant=sg[sg.length-2];
     if(ult){
       var fora=ult.dados.laudo.filter(foraRef);
@@ -2677,44 +2680,60 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
     return p}
 
   /* Peso ao longo do tempo: o mesmo gráfico dos preços do Mercado (balão com o dia ao passar o mouse ou tocar) */
-  var famPesoPer={eddie:"3",olivia:"tudo"};
+  var famPesoPer={eddie:"3",olivia:"tudo"},famMedida={eddie:"peso",olivia:"peso"};
+  /* medidas de crescimento guardadas nos registros "peso": o peso no valor; comprimento e cabeça em dados */
+  var MEDIDAS=[["peso","Peso","kg",function(r){return pesoNum(r)}],["altura","Comprimento","cm",function(r){var v=dadosDe(r).altura;return typeof v==="number"?v:null}],
+    ["cabeca","Cabeça","cm",function(r){var v=dadosDe(r).cabeca;return typeof v==="number"?v:null}]];
   function famPeso(regs,quem){
-    var todos=regs.filter(function(r){return r.tipo==="peso"&&pesoNum(r)!=null}).sort(function(a,b){return a.data.localeCompare(b.data)});
-    if(todos.length<2||!window.RACmercado||!RACmercado.grafico)return null;
-    function kg(v){return fmtN(Math.round(v*10)/10)+" kg"}
-    var p=panel("Peso"),corpo=h("div");
-    /* período: o histórico inteiro espreme o gráfico (filhote, anos sem pesagem), então o padrão são os últimos 3 anos */
-    var PER=[["1","Último ano",365],["3","Últimos 3 anos",1095],["tudo","Tudo",0]].filter(function(x){return !x[2]||todos[0].data<maisDias(hojeISO(),-x[2])});
-    if(!PER.some(function(x){return x[0]===famPesoPer[quem]}))famPesoPer[quem]="tudo";
-    var seg=h("div",{class:"seg famseg famper",role:"group","aria-label":"Período do peso"});
+    var pesos=regs.filter(function(r){return r.tipo==="peso"}).sort(function(a,b){return a.data.localeCompare(b.data)});
+    var meds=MEDIDAS.filter(function(m){return pesos.filter(function(r){return m[3](r)!=null}).length>=2});
+    if(!meds.length||!window.RACmercado)return null;
+    if(!meds.some(function(m){return m[0]===famMedida[quem]}))famMedida[quem]=meds[0][0];
+    /* bebê (menos de 2 anos): mostra também o ganho por dia, que é o que o pediatra acompanha */
+    var nasc=regs.filter(function(r){return r.tipo==="nascimento"})[0],bebe=nasc&&nasc.data>maisDias(hojeISO(),-730);
+    var p=panel(meds.length>1?"Crescimento":"Peso"),corpo=h("div"),segM=h("div",{class:"seg famseg famper",role:"group","aria-label":"Medida"});
+    var seg=h("div",{class:"seg famseg famper",role:"group","aria-label":"Período"}),PER=[];
     function desenhar(){
+      var m=meds.filter(function(x){return x[0]===famMedida[quem]})[0],val=m[3],un=m[2];
+      var todos=pesos.filter(function(r){return val(r)!=null});
+      function fmt(v){return fmtN(Math.round(v*(un==="kg"?100:10))/(un==="kg"?100:10))+" "+un}
+      /* período: o histórico inteiro espreme o gráfico (filhote, anos sem pesagem), então o padrão do Eddie são os últimos 3 anos */
+      PER=[["1","Último ano",365],["3","Últimos 3 anos",1095],["tudo","Tudo",0]].filter(function(x){return !x[2]||todos[0].data<maisDias(hojeISO(),-x[2])});
+      if(!PER.some(function(x){return x[0]===famPesoPer[quem]}))famPesoPer[quem]="tudo";
+      seg.innerHTML="";seg.hidden=PER.length<2;
+      PER.forEach(function(x){var b=h("button",{type:"button",text:x[1],"aria-pressed":String(x[0]===famPesoPer[quem])});b.onclick=function(){famPesoPer[quem]=x[0];desenhar()};seg.appendChild(b)});
+      segM.querySelectorAll("button").forEach(function(b){b.setAttribute("aria-pressed",String(b.dataset.k===m[0]))});
       var per=PER.filter(function(x){return x[0]===famPesoPer[quem]})[0],ini=per[2]?maisDias(hojeISO(),-per[2]):"0000";
       var pts=todos.filter(function(r){return r.data>=ini});if(pts.length<2)pts=todos.slice(-2);
-      seg.querySelectorAll("button").forEach(function(b){b.setAttribute("aria-pressed",String(b.dataset.k===per[0]))});
-      var vs=pts.map(pesoNum),ult=vs[vs.length-1],d=ult-vs[0];
+      var vs=pts.map(val),ult=vs[vs.length-1],d=ult-vs[0];
       corpo.innerHTML="";
+      var dias=Math.max(1,(new Date(pts[pts.length-1].data)-new Date(pts[0].data))/864e5);
       corpo.appendChild(h("div",{class:"kgasto"},
-        h("div",null,h("span",{class:"kl",text:"Agora"}),h("b",{class:"kv",text:kg(ult)})),
-        h("div",null,h("span",{class:"kl",text:"Menor"}),h("b",{class:"kv",text:kg(Math.min.apply(null,vs))})),
-        h("div",null,h("span",{class:"kl",text:"Maior"}),h("b",{class:"kv",text:kg(Math.max.apply(null,vs))})),
-        h("div",null,h("span",{class:"kl",text:"Desde "+dataBR(pts[0].data)}),h("b",{class:"kv",text:(d>0?"+":"")+kg(d)}))));
-      /* colunas, uma por pesagem (mesmo estilo do "Mês a mês" do Mercado); tocar ou passar o mouse mostra o detalhe embaixo */
-      var n=pts.length,maxv=Math.max.apply(null,vs),passo=Math.ceil(n/10),cap=h("p",{class:"vbcap",role:"status"}),barras=[];
-      function det(i){var r=pts[i],ant=pts[i-1],dd=ant?pesoNum(r)-pesoNum(ant):0;
-        return dataBR(r.data)+" · "+kg(pesoNum(r))+(ant?" ("+(dd>0?"+":"")+fmtN(Math.round(dd*10)/10)+" kg desde "+dataBR(ant.data)+")":"")+(r.titulo&&r.titulo!=="Pesagem"?" · "+r.titulo.replace(/^Pesagem\s*\(?|\)$/g,""):"")}
+        h("div",null,h("span",{class:"kl",text:"Agora"}),h("b",{class:"kv",text:fmt(ult)})),
+        h("div",null,h("span",{class:"kl",text:"Menor"}),h("b",{class:"kv",text:fmt(Math.min.apply(null,vs))})),
+        h("div",null,h("span",{class:"kl",text:"Maior"}),h("b",{class:"kv",text:fmt(Math.max.apply(null,vs))})),
+        h("div",null,h("span",{class:"kl",text:"Desde "+dataBR(pts[0].data)}),h("b",{class:"kv",text:(d>0?"+":"")+fmt(d)})),
+        bebe&&m[0]==="peso"?h("div",null,h("span",{class:"kl",text:"Ganho por dia"}),h("b",{class:"kv",text:fmtN(Math.round(d*1000/dias))+" g"})):null,
+        bebe&&m[0]!=="peso"?h("div",null,h("span",{class:"kl",text:"Por mês"}),h("b",{class:"kv",text:(d>0?"+":"")+fmtN(Math.round(d/dias*30.4*10)/10)+" cm"})):null));
+      /* colunas, uma por medição (mesmo estilo do "Mês a mês" do Mercado); tocar ou passar o mouse mostra o detalhe embaixo */
+      var n=pts.length,maxv=Math.max.apply(null,vs),minv=Math.min.apply(null,vs),passo=Math.ceil(n/10),cap=h("p",{class:"vbcap",role:"status"}),barras=[];
+      function det(i){var r=pts[i],ant=pts[i-1],dd=ant?val(r)-val(ant):0;
+        return dataBR(r.data)+" · "+fmt(val(r))+(ant?" ("+(dd>0?"+":"")+fmt(dd)+" desde "+dataBR(ant.data)+")":"")+(r.titulo&&!/^Pesagem$|^Pesagem e medidas$/.test(r.titulo)?" · "+r.titulo.replace(/^Pesagem\s*\(?|\)$/g,""):"")}
       function marcar(i){barras.forEach(function(b,j){b.classList.toggle("on",j===i)});cap.textContent=det(i)}
-      var mostraV=function(i){return n<=14||i===n-1||vs[i]===maxv||vs[i]===Math.min.apply(null,vs)};
+      var mostraV=function(i){return n<=14||i===n-1||vs[i]===maxv||vs[i]===minv};
+      /* comprimento e cabeça: as colunas começam perto do menor valor, senão ficariam todas iguais */
+      var base=m[0]==="peso"?0:Math.max(0,Math.floor(minv*0.9));
       var vb=h("div",{class:"vbars vbpeso"},pts.map(function(r,i){var v=vs[i],p2=r.data.split("-");
         var b=h("button",{type:"button",class:"vb","aria-label":det(i),title:det(i)},
           h("span",{class:"vbv"+(mostraV(i)?"":" opc"),text:fmtN(Math.round(v*10)/10)}),
-          h("span",{class:"vbt"},h("span",{class:"vbf",style:"height:"+Math.max(2,v/maxv*100).toFixed(1)+"%"})),
-          h("span",{class:"vbl",text:(n-1-i)%passo===0?p2[1]+"/"+p2[0].slice(2):""}));
+          h("span",{class:"vbt"},h("span",{class:"vbf",style:"height:"+Math.max(2,(v-base)/((maxv-base)||1)*100).toFixed(1)+"%"})),
+          h("span",{class:"vbl",text:(n-1-i)%passo===0?(bebe?p2[2]+"/"+p2[1]:p2[1]+"/"+p2[0].slice(2)):""}));
         b.onclick=function(){marcar(i)};b.onmouseenter=function(){marcar(i)};barras.push(b);return b}));
       corpo.appendChild(vb);corpo.appendChild(cap);marcar(n-1);
-      corpo.appendChild(h("p",{class:"sub",text:pts.length+" pesagens, de "+dataBR(pts[0].data)+" a "+dataBR(pts[pts.length-1].data)+". Passe o mouse ou toque numa coluna para ver a pesagem."}))}
-    PER.forEach(function(x){var b=h("button",{type:"button",text:x[1]});b.dataset.k=x[0];b.onclick=function(){famPesoPer[quem]=x[0];desenhar()};seg.appendChild(b)});
-    if(PER.length>1)p.appendChild(seg);
-    p.appendChild(corpo);desenhar();
+      corpo.appendChild(h("p",{class:"sub",text:pts.length+" medições, de "+dataBR(pts[0].data)+" a "+dataBR(pts[pts.length-1].data)+". Passe o mouse ou toque numa coluna para ver os detalhes."+(base?" As colunas começam em "+fmt(base)+".":"")}))}
+    meds.forEach(function(m){var b=h("button",{type:"button",text:m[1]});b.dataset.k=m[0];b.onclick=function(){famMedida[quem]=m[0];desenhar()};segM.appendChild(b)});
+    if(meds.length>1)p.appendChild(segM);
+    p.appendChild(seg);p.appendChild(corpo);desenhar();
     return p}
 
   /* Exames de sangue lado a lado: cada linha um indicador, cada coluna uma data */
@@ -2790,6 +2809,13 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
       card.appendChild(h("details",{class:"famvals"},h("summary",{text:"Ver os "+d.laudo.length+" valores"+(fora?" ("+fora+" fora da referência)":"")}),h("div",{class:"famtabw"},tb)))}
     if((d.orgaos||[]).length)card.appendChild(h("details",{class:"famvals"},h("summary",{text:d.categoria==="ultrassom"||!d.categoria?"Ver o laudo por órgão":"Ver o laudo"}),
       h("ul",{class:"famori"},d.orgaos.map(function(o){return h("li",{class:o.a?"alto":null},h("b",{text:(o.a?"⚠ ":"")+o.o+": "}),o.r)}))));
+    if((d.dias||[]).length){
+      var COLD=[["coco","Cocôs"],["xixi","Xixis"],["fraldas","Fraldas"],["mamadas","Mamadas"],["peito","Só peito"],["formula","Só fórmula"],["mistas","Mistas"],["peitoMin","Peito (min)"],["formulaMl","Fórmula (ml)"],["maternoMl","Leite materno (ml)"],["ordenhaMl","Ordenha (ml)"],["remedios","Remédios"]]
+        .filter(function(c){return d.dias.some(function(x){return x[c[0]]!=null})});
+      var tbd=h("table",{class:"famtab famdiario"},h("thead",null,h("tr",null,h("th",{text:"Dia"}),COLD.map(function(c){return h("th",{text:c[1]})}))),
+        h("tbody",null,d.dias.map(function(x){var p=x.data.split("-");return h("tr",null,h("td",null,h("b",{text:p[2]+"/"+p[1]}),x.obs?h("span",{class:"sub",text:" ("+x.obs+")"}):null),
+          COLD.map(function(c){var v=x[c[0]];return h("td",{class:c[0]==="remedios"?"sub":null,text:v==null?"—":String(v)})}))})));
+      card.appendChild(h("details",{class:"famvals",open:""},h("summary",{text:"Ver os "+d.dias.length+" dias"}),h("div",{class:"famtabw"},tbd)))}
     if(typeof d.custo==="number")card.appendChild(h("details",{class:"famvals"},h("summary",{text:"Custo: "+brl(d.custo)}),
       h("ul",{class:"famori"},(d.itensCusto||[]).map(function(x){return h("li",{text:x[0]+": "+brl(x[1])})}))))}
 

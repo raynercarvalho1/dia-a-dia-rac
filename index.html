@@ -655,6 +655,12 @@ html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgr
 .exl input{margin-top:3px;width:18px;height:18px;flex:none}
 .exl .mbag{margin:12px 0 2px;font:700 calc(13px + var(--fz)) var(--f-ui);color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
 .exl label.mbaprox{background:color-mix(in srgb,#5B5BD6 10%,transparent);border-radius:8px}
+.mbaplayer{display:grid;gap:8px;margin-bottom:10px}
+iframe.mbaplay{width:100%;height:min(78vh,760px);border:0;border-radius:10px;background:#000}
+.mbaaulas li.mbames{font:700 calc(13px + var(--fz)) var(--f-ui);color:var(--muted);padding-top:12px}
+.mbaaulas li.mbames::first-letter{text-transform:uppercase}
+.mbaaulas li.mbapassou b{color:var(--muted)}
+.mbaaulas li.mbaprox{background:color-mix(in srgb,#5B5BD6 10%,transparent);border-radius:8px}
 code.mbaf{font:calc(12px + var(--fz))/1.4 ui-monospace,Consolas,monospace;white-space:pre-wrap;word-break:break-word}
 .exl .grow{flex:1;min-width:0}
 .exl .done b{text-decoration:line-through;opacity:.6}
@@ -691,6 +697,7 @@ code.mbaf{font:calc(12px + var(--fz))/1.4 ui-monospace,Consolas,monospace;white-
 .famagora li{align-items:flex-start}
 .famagora .grow .sub,.famagora .grow b,.fammeds .grow .sub,.fammeds .grow b{white-space:normal;overflow:visible}
 .famagora li.alerta{box-shadow:inset 3px 0 0 var(--bad);padding-left:10px}
+.wl li.alerta{box-shadow:inset 3px 0 0 var(--bad);padding-left:10px}
 .famagora li.bom{box-shadow:inset 3px 0 0 var(--good);padding-left:10px}
 .famagora .end{font-weight:700;white-space:nowrap}
 .famtabw{overflow-x:auto;margin-top:6px}
@@ -2547,10 +2554,15 @@ code.mbaf{font:calc(12px + var(--fz))/1.4 ui-monospace,Consolas,monospace;white-
     corpo.appendChild(h("p",null,h("b",{text:m.curso})));
     var acts=h("div",{class:"vfil"});if(m.aulas)acts.appendChild(ext(m.aulas,"Assistir aulas","ghostbtn pri"));if(m.portal)acts.appendChild(ext(m.portal,"Portal","ghostbtn"));corpo.appendChild(acts);
     var ul=h("ul",{class:"wl"});
-    if(m.proxData)ul.appendChild(h("li",null,h("span",{class:"grow"},h("b",{text:"Próxima aula"}),h("span",{class:"sub",text:m.proxTema||""})),h("span",{class:"end",text:quando(m.proxData)})));
+    var pa=mbaProxAula();
+    if(pa)ul.appendChild(h("li",null,h("span",{class:"grow"},h("b",{text:"Próxima aula"}),h("span",{class:"sub",text:pa.t})),h("span",{class:"end",text:quando(pa.data+"T"+pa.hora)})));
+    else if(m.proxData)ul.appendChild(h("li",null,h("span",{class:"grow"},h("b",{text:"Próxima aula"}),h("span",{class:"sub",text:m.proxTema||""})),h("span",{class:"end",text:quando(m.proxData)})));
     if(+m.total){var pc=Math.min(1,(+m.feitas||0)/+m.total);
       ul.appendChild(h("li",null,h("span",{class:"grow"},h("b",{text:"Progresso: "+(+m.feitas||0)+" de "+m.total+" disciplinas"}),h("div",{class:"bar"},h("i",{style:"width:"+Math.round(pc*100)+"%"}))),h("span",{class:"end",text:Math.round(pc*100)+"%"})))}
-    if(+m.parcelas){var falta=(+m.parcelas)-(+m.pagas||0),vl=num2(m.valor),vc=proxVenc(+m.venc);
+    var fin=mbaFin();
+    if(fin&&fin.prox){var dv=diasAte(fin.prox.venc);ul.appendChild(h("li",{class:dv<=5?"alerta":null},h("span",{class:"grow"},h("b",{text:"Próximo boleto: "+BRL(fin.prox.v)}),
+      h("span",{class:"sub",text:fin.pagas+" de "+fin.ps.length+" pagas · faltam "+BRL(fin.falta)})),h("span",{class:"end",text:dv<0?"atrasado":dv===0?"vence hoje":"vence "+dataBR(fin.prox.venc).slice(0,5)})))}
+    else if(+m.parcelas){var falta=(+m.parcelas)-(+m.pagas||0),vl=num2(m.valor),vc=proxVenc(+m.venc);
       ul.appendChild(h("li",null,h("span",{class:"grow"},h("b",{text:"Financeiro: "+(+m.pagas||0)+" de "+m.parcelas+" parcelas pagas"}),
         h("span",{class:"sub",text:(vl?"Faltam "+falta+" × "+BRL(vl)+" = "+BRL(falta*vl):"Faltam "+falta+" parcelas")+(vc&&falta>0?" · vence "+vc.toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"}):"")}))))}
     var op=mbaOndeParei();
@@ -3216,10 +3228,69 @@ code.mbaf{font:calc(12px + var(--fz))/1.4 ui-monospace,Consolas,monospace;white-
     var r=(d.roteiro||[]).filter(function(t){return !f[d.id+":"+t.k]})[0],ex=(d.exercicios||[]),exf=ex.filter(function(e){return f[d.id+":ex"+e.n]}).length;
     return {d:d,prox:r,exf:exf,ext:ex.length}}
   function mbaAulasTxt(a){return (a||[]).map(function(x){var p=x.split("-");return p[2]+"/"+p[1]}).join(", ")}
+  /* calendário de aulas do portal (PESSOAL.mba.aulas); o link de cada aula pode ser colado depois (PESSOAL.mbaLinks) */
+  function mbaAulas(){var L=PESSOAL.mbaLinks||{};return ((PESSOAL.mba||{}).aulas||[]).map(function(a){return Object.assign({},a,{link:L[a.id]||a.link||""})}).sort(function(a,b){return (a.data+a.hora).localeCompare(b.data+b.hora)})}
+  function mbaQuando(a){return new Date(a.data+"T"+(a.hora||"19:00")+":00")}
+  /* a próxima aula ainda não terminada (conta 3 horas de aula) */
+  function mbaProxAula(){var ag=Date.now()-3*3600e3;return mbaAulas().filter(function(a){return mbaQuando(a).getTime()>ag})[0]||null}
+  /* financeiro: parcelas com vencimento; pagas ficam marcadas em PESSOAL.mbaFeito ("pg:…") */
+  function mbaFin(){var F=(PESSOAL.mba||{}).financeiro;if(!F||!(F.parcelas||[]).length)return null;var f=mbaFeito(),hoje=hojeISO();
+    var ps=F.parcelas.map(function(p){return Object.assign({},p,{paga:!!f["pg:"+p.k],atrasada:!f["pg:"+p.k]&&p.venc<hoje})});
+    var abertas=ps.filter(function(p){return !p.paga});
+    return {F:F,ps:ps,pagas:ps.length-abertas.length,prox:abertas[0]||null,atrasadas:abertas.filter(function(p){return p.atrasada}),
+      pago:ps.filter(function(p){return p.paga}).reduce(function(s,p){return s+p.v},0),falta:abertas.reduce(function(s,p){return s+p.v},0)}}
+  function diasAte(iso){return Math.round((new Date(iso+"T12:00:00")-new Date(hojeISO()+"T12:00:00"))/864e5)}
+  /* a aula toca dentro da página (o portal permite); se o link tiver expirado, "Abrir no MBX" resolve */
+  function mbaPlayer(box,a){
+    box.innerHTML="";box.hidden=false;
+    var fr=h("iframe",{src:a.link,class:"mbaplay",allow:"autoplay; fullscreen; picture-in-picture",allowfullscreen:"",title:a.t,referrerpolicy:"no-referrer-when-downgrade"});
+    var fechar=h("button",{type:"button",class:"ghostbtn",text:"Fechar a aula"});fechar.onclick=function(){box.innerHTML="";box.hidden=true};
+    box.appendChild(h("div",{class:"vfil"},h("b",{class:"grow",text:"▶ "+a.t}),ext(a.link,"Abrir no MBX","ghostbtn"),fechar));
+    box.appendChild(fr);box.scrollIntoView({behavior:"smooth",block:"start"})}
+  function mbaPainelAulas(){
+    var aulas=mbaAulas();if(!aulas.length)return null;
+    var prox=mbaProxAula(),p=panel("Aulas",prox?"Próxima: "+prox.t+", "+quando(prox.data+"T"+prox.hora):"Todas as aulas já aconteceram"),player=h("div",{class:"mbaplayer",hidden:""});
+    p.appendChild(player);
+    var hoje=hojeISO(),ul=h("ul",{class:"wl mbaaulas"}),mes=null;
+    aulas.forEach(function(a){
+      var m=a.data.slice(0,7);if(m!==mes){mes=m;ul.appendChild(h("li",{class:"mbames",text:new Date(a.data+"T12:00:00").toLocaleDateString("pt-BR",{month:"long",year:"numeric"})}))}
+      var passou=mbaQuando(a).getTime()<Date.now()-3*3600e3,ehHoje=a.data===hoje,acts=h("span",{class:"end vfil"});
+      if(a.link&&(passou||ehHoje)){var b=h("button",{type:"button",class:"ghostbtn pri",text:ehHoje&&!passou?"▶ Ao vivo":"▶ Assistir"});b.onclick=function(){mbaPlayer(player,a)};acts.appendChild(b)}
+      else if(passou||ehHoje){var c=h("button",{type:"button",class:"ghostbtn",text:"Colar link"});
+        c.title="No portal, abra a aula, copie o link do botão Assistir Aula e cole aqui";
+        c.onclick=function(){var v=(window.prompt("Cole o link do botão “Assistir Aula” do portal (começa com https://class.mbx.academy/):")||"").trim();
+          if(!v)return;if(!/^https:\/\/class\.mbx\.academy\//.test(v)){alert("O link precisa começar com https://class.mbx.academy/");return}
+          var L=Object.assign({},PESSOAL.mbaLinks||{});L[a.id]=v;pessoalGravar("mbaLinks",L);renderMba()};acts.appendChild(c)}
+      ul.appendChild(h("li",{class:(passou?"mbapassou":"")+(prox&&a.id===prox.id?" mbaprox":"")||null},
+        h("span",{class:"grow"},h("b",{text:a.t}),h("span",{class:"sub",text:new Date(a.data+"T12:00:00").toLocaleDateString("pt-BR",{weekday:"short",day:"2-digit",month:"2-digit"})+" · "+a.hora+(a.prof?" · "+a.prof:"")+(ehHoje?" · hoje":"")})),acts))});
+    p.appendChild(h("details",{class:"famvals",open:""},h("summary",{text:aulas.length+" aulas no semestre"}),ul));
+    if((PESSOAL.mba||{}).aulasLink)p.appendChild(h("div",{class:"vfil"},ext(PESSOAL.mba.aulasLink,"Aulas no portal","ghostbtn")));
+    return p}
+  function mbaPainelFin(){
+    var x=mbaFin();if(!x)return null;
+    var p=panel("Financeiro",x.pagas+" de "+x.ps.length+" pagas · faltam "+BRL(x.falta)),f=mbaFeito();
+    var bol=x.F.link?ext(x.F.link,"Baixar o boleto no portal","ghostbtn pri"):null;
+    if(x.prox){var dd=diasAte(x.prox.venc),cls=dd<0?"qrwarn":dd<=5?"qrwarn":"sub";
+      p.appendChild(h("div",{class:"kgasto"},h("div",null,h("span",{class:"kl",text:"Próximo boleto: "+x.prox.n}),h("b",{class:"kv",text:BRL(x.prox.v)})),
+        h("div",null,h("span",{class:"kl",text:"Vencimento"}),h("b",{class:"kv",text:dataBR(x.prox.venc)})),h("div",null,h("span",{class:"kl",text:"Já pago"}),h("b",{class:"kv",text:BRL(x.pago)}))));
+      p.appendChild(h("p",{class:cls,text:dd<0?"⚠ Venceu há "+(-dd)+(dd===-1?" dia":" dias")+". Se já pagou, marque abaixo.":dd===0?"⚠ Vence hoje.":"Vence em "+dd+(dd===1?" dia":" dias")+"."}))}
+    else p.appendChild(h("p",{class:"sub",text:"Tudo pago 🎉"}));
+    if(bol)p.appendChild(h("div",{class:"vfil"},bol));
+    var l=h("div",{class:"exl"});
+    x.ps.forEach(function(q){var cb=h("input",{type:"checkbox"});cb.checked=q.paga;
+      cb.onchange=function(){mbaMarcar("pg:"+q.k,cb.checked);renderMba()};
+      l.appendChild(h("label",{class:q.paga?"done":null},cb,h("span",{class:"grow"},h("b",{text:q.n+" · "+BRL(q.v)}),h("span",{class:q.atrasada?"qrwarn":"sub",style:"display:block",text:"vence "+dataBR(q.venc)+(q.paga&&f["pg:"+q.k]?" · marcada como paga":q.atrasada?" · atrasada":"")}))))});
+    p.appendChild(h("details",{class:"famvals"},h("summary",{text:"Todas as parcelas (marque quando pagar)"}),l));
+    return p}
+  function mbaPainelGeral(){var g=(PESSOAL.mba||{}).materiaisGerais||[];if(!g.length)return null;
+    var p=panel("Materiais do curso","Guardados também no seu Google Drive.");
+    p.appendChild(h("ul",{class:"wl"},g.map(function(m){return h("li",null,h("span",{class:"grow"},h("b",{text:m.n}),m.sub?h("span",{class:"sub",text:m.sub}):null),ext(m.url,"Abrir","ghostbtn"))})));return p}
+
   function renderMba(){
     var root=$("#mba-view");root.innerHTML="";var f=mbaFeito();
     root.appendChild(wMba());
-    var discs=mbaDiscs();
+    [mbaPainelAulas(),mbaPainelFin()].forEach(function(x){if(x)root.appendChild(x)});
+    var discs=mbaDiscs().filter(function(d){return (d.roteiro||[]).length||(d.exercicios||[]).length||d.notas||(d.materiais||[]).length});
     var imp=h("input",{type:"file",accept:".json,application/json",hidden:""}),bimp=h("button",{type:"button",class:"ghostbtn",text:"Importar do arquivo (.json)"}),imsg=h("p",{class:"sub",role:"status"});
     bimp.onclick=function(){imp.click()};
     imp.onchange=function(){var fl=imp.files[0];if(!fl)return;fl.text().then(function(t){
@@ -3229,6 +3300,7 @@ code.mbaf{font:calc(12px + var(--fz))/1.4 ui-monospace,Consolas,monospace;white-
       var porId={};(m.disciplinas||[]).forEach(function(d){porId[d.id]=d});
       (j.disciplinas||[]).forEach(function(d){porId[d.id]=d;n++});
       m.disciplinas=Object.keys(porId).map(function(k){return porId[k]});
+      ["aulas","financeiro","materiaisGerais","aulasLink"].forEach(function(k){if(j[k])m[k]=j[k]});
       pessoalGravar("mba",m);
       /* o que o arquivo diz que já foi feito só entra se ainda não estiver marcado */
       var o=Object.assign({},mbaFeito());(j.feitos||[]).forEach(function(k){if(!o[k])o[k]=hojeISO()});pessoalGravar("mbaFeito",o);
@@ -3277,6 +3349,7 @@ code.mbaf{font:calc(12px + var(--fz))/1.4 ui-monospace,Consolas,monospace;white-
       if(mats.length)p.appendChild(h("details",{class:"famvals"},h("summary",{text:"Materiais ("+mats.length+")"}),
         h("ul",{class:"wl"},mats.map(function(m){return h("li",null,h("span",{class:"grow"},h("b",{text:m.n}),m.sub?h("span",{class:"sub",text:m.sub}):null),ext(m.url,"Abrir","ghostbtn"))}))));
       root.appendChild(p)});
+    var ger=mbaPainelGeral();if(ger)root.appendChild(ger);
     root.appendChild(h("div",{class:"panel"},h("p",{class:"sub",text:"Quando chegar uma disciplina nova, me mande os materiais e eu monto o arquivo; importar de novo não apaga o que você já marcou."}),h("div",{class:"vfil"},bimp),imp,imsg))}
 
   /* ===== Estudos: listas de exercícios para analista de dados (SQL, BI e Python) ===== */

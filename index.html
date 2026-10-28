@@ -2973,6 +2973,9 @@ code.mbaf{font:calc(12px + var(--fz))/1.4 ui-monospace,Consolas,monospace;white-
       /* uma revisão depois da última troca de óleo também troca o óleo */
       var depois=t==="oleo"&&regs.filter(function(x){return x.tipo==="revisao"&&x.data>r.data}).sort(function(a,b){return b.data.localeCompare(a.data)})[0];
       if(depois){item("Troca de óleo","em dia","feita na revisão de "+dataBR(depois.data)+"; anote a próxima quando a oficina informar","bom",depois);return}
+      /* um registro mais novo do mesmo tipo, sem próxima anotada, substitui o antigo */
+      var novo=regs.filter(function(x){return x.tipo===t&&x.data>r.data}).sort(function(a,b){return b.data.localeCompare(a.data)})[0];
+      if(novo){item(t==="oleo"?"Troca de óleo":"Revisão","em dia","feita em "+dataBR(novo.data)+"; anote a próxima quando a oficina informar","bom",novo);return}
       var d=dadosDe(r),falta=km&&typeof d.proxKm==="number"?d.proxKm-km.km:null,venc=(r.proxima&&r.proxima<hoje)||(falta!=null&&falta<=0);
       item(t==="oleo"?"Próxima troca de óleo":"Próxima revisão",venc?"atrasada":(falta!=null?"faltam "+fmtKm(falta):dataBR(r.proxima)),
         [typeof d.proxKm==="number"?"com "+fmtKm(d.proxKm):"",r.proxima?"ou até "+dataBR(r.proxima):"","última em "+dataBR(r.data)].filter(Boolean).join(" · "),venc?"alerta":(falta!=null&&falta<1500?"alerta":null),r)});

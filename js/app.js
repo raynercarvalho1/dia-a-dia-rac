@@ -9,8 +9,8 @@
 
   /* Rotas por hash: #esportes/beisebol/liga, #esportes/beisebol/time-119, #esportes/beisebol/jogo-849805,
      #esportes/basquete/jogo-401909092, #x/jornalistas, #vagas ... */
-  var tabs=["inicio","esportes","vagas","mercado","aniversarios","em-breve","x","estudos","mba","saude","conexoes","agenda","busca","sistema","lista","carreira","eddie","olivia","veiculos"];
-  var DA_CASA=["mercado","lista","eddie","olivia","veiculos"];
+  var tabs=["inicio","esportes","vagas","mercado","aniversarios","em-breve","x","estudos","mba","saude","conexoes","agenda","busca","sistema","lista","carreira","documentos","eddie","olivia","veiculos"];
+  var DA_CASA=["mercado","lista","eddie","olivia","veiculos","documentos"];
   var sports=["beisebol","basquete","futebol-americano"];
   function mark(sel,attr,val){document.querySelectorAll(sel).forEach(function(a){
     if(a.dataset[attr]===val)a.setAttribute("aria-current","page");else a.removeAttribute("aria-current")})}
@@ -24,10 +24,10 @@
     n.id="pico";$("#pico").replaceWith(n);
     $("#ptitle").textContent=hit?hit.querySelector(".t").textContent:"Dia a Dia RAC"}
   /* ===== Módulos: cada seção grande fica em js/<seção>.js e só carrega quando é aberta ===== */
-  var MOD_VERSAO="2026-10-28.5",MODULOS={},MOD_OK={};
-  var MOD_DEPS={conexoes:["mba"],sistema:["familia","mba","saude"],carreira:["sistema"]};
+  var MOD_VERSAO="2026-10-28.6",MODULOS={},MOD_OK={};
+  var MOD_DEPS={conexoes:["mba"],sistema:["familia","mba","saude"],carreira:["sistema"],bebe:["familia","oms"]};
   var ROTA_MODS={esportes:["esportes"],eddie:["familia"],olivia:["familia"],veiculos:["familia"],mba:["mba"],saude:["saude"],
-    conexoes:["conexoes"],agenda:["sistema"],busca:["sistema"],sistema:["sistema"],lista:["lista"],carreira:["carreira"]};
+    conexoes:["conexoes"],agenda:["sistema"],busca:["sistema"],sistema:["sistema"],lista:["lista"],carreira:["carreira"],documentos:["familia"]};
   function modulo(n){
     if(MODULOS[n])return MODULOS[n];
     MODULOS[n]=Promise.all((MOD_DEPS[n]||[]).map(modulo)).then(function(){return new Promise(function(ok,erro){
@@ -64,6 +64,7 @@
     if(top==="inicio"){sideMark("inicio","inicio");renderInicio();return}
     if(top==="estudos"){sideMark("estudos","estudos");renderEstudos();return}
     if(top==="mba"){sideMark("mba","mba");renderMba();return}
+    if(top==="documentos"){sideMark("documentos","documentos");renderFamilia("docs");return}
     if(top==="carreira"){sideMark("carreira","carreira");renderCarreira(parts[1],parts[2]);return}
     if(top==="lista"){sideMark("lista","lista");renderLista(parts[1]);return}
     if(top==="agenda"){sideMark("agenda","agenda");renderAgenda();return}

@@ -67,14 +67,14 @@
         return SB.storage.from("familia").upload(path,new Blob([a.dados]),{upsert:true})})},Promise.resolve()).then(function(){res.anexos=B.anexos.length;return res})})})}
 
   /* ---------- agenda única: tudo que tem data no site ---------- */
-  var AGENDA_TIPOS={familia:["🐾","Família"],veiculo:["🚗","Veículos"],mba:["🎓","MBA"],niver:["🎂","Aniversário"],lembrete:["📌","Lembrete"],sistema:["🛟","Sistema"],carreira:["💼","Carreira"]};
+  var AGENDA_TIPOS={familia:["🐾","Família"],veiculo:["🚗","Veículos"],mba:["🎓","MBA"],niver:["🎂","Aniversário"],lembrete:["📌","Lembrete"],sistema:["🛟","Sistema"],carreira:["💼","Carreira"],docs:["📄","Documentos"]};
   function agendaColetar(){
     var hoje=hojeISO(),ev=[];
     function add(data,t,sub,tipo,href,extra){if(data)ev.push(Object.assign({data:String(data).slice(0,10),t:t,sub:sub||"",tipo:tipo,href:href||""},extra||{}))}
     var pReg=isOwner()?SB.from("registros").select("id,quem,tipo,data,titulo,proxima,dados").order("data",{ascending:false}).then(sbOk).catch(function(e){logErro("agenda",e);return []}):Promise.resolve([]);
     return pReg.then(function(regs){
       var visto={};
-      regs.forEach(function(r){var F=FAM[r.quem];if(!F)return;var k=r.quem+"|"+r.tipo,tipo=F.veic?"veiculo":"familia",href=F.veic?"#veiculos/"+r.quem:"#"+r.quem,d=r.dados||{};
+      regs.forEach(function(r){var F=FAM[r.quem];if(!F)return;var k=r.quem+"|"+r.tipo,tipo=F.veic?"veiculo":F.docs?"docs":"familia",href=F.veic?"#veiculos/"+r.quem:F.docs?"#documentos":"#"+r.quem,d=r.dados||{};
         /* vale só o registro mais novo de cada tipo: um mais novo sem "próxima" (ex.: revisão feita) substitui o aviso do anterior */
         if(!visto[k+"p"]){visto[k+"p"]=1;if(r.proxima&&r.proxima>=maisDias(hoje,-60))add(r.proxima,F.n+": "+r.titulo,tipoInfo(r.tipo)[1]+(r.proxima<hoje?" · estava previsto para "+dataBR(r.proxima):""),tipo,href,{reg:r})}
         if(d.vigenciaFim&&!visto[k+"v"]){visto[k+"v"]=1;add(d.vigenciaFim,F.n+": fim do "+r.titulo,"renovar antes",tipo,href,{reg:r})}
@@ -151,7 +151,7 @@
     return BUSCA.carregando}
   function buscar(q){var ts=norm(q).split(/\s+/).filter(Boolean);return buscaIndice().then(function(idx){return idx.filter(function(x){return ts.every(function(t){return x.txt.indexOf(t)>=0})})})}
   function abrirResultado(x){
-    if(x.reg){var r=x.reg,F=FAM[r.quem];famVista[r.quem]="linha";famFiltro[r.quem]="";famAlvo[r.quem]={id:r.id};var alvo=F.veic?"#veiculos/"+r.quem:"#"+r.quem;
+    if(x.reg){var r=x.reg,F=FAM[r.quem];famVista[r.quem]="linha";famFiltro[r.quem]="";famAlvo[r.quem]={id:r.id};var alvo=F.veic?"#veiculos/"+r.quem:F.docs?"#documentos":"#"+r.quem;
       if(location.hash===alvo)route();else location.hash=alvo;return}
     if(x.produto){if(window.RACmercado)window.RACmercado.verProduto(x.produto);return}
     if(x.ext)window.open(x.href,"_blank","noopener");else location.hash=x.href}

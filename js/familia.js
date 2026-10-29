@@ -3,23 +3,27 @@
   function tipoInfo(k){return TIPOS.concat(TIPOS_VEIC).filter(function(t){return t[0]===k})[0]||TIPOS[TIPOS.length-1]}
   /* ===== Eddie e Olivia: linha do tempo com exames, vacinas, consultas, peso e momentos, com fotos, PDFs e vídeos.
      Tabela "registros" e cofre de arquivos "familia" no Supabase (004_familia.sql); o Rayner e a esposa veem juntos. ===== */
-  var FAM={eddie:{n:"Eddie",peso:true},olivia:{n:"Olivia",peso:true,
+  var FAM={eddie:{n:"Eddie",peso:true},olivia:{n:"Olivia",peso:true,bebe:true,
     /* compras do Mercado que também são gastos dela: lata de NAN, fraldas e lenços (entram sozinhas nos Gastos) */
     merc:{termos:["nan","fralda","pampers","huggies","umedec"],re:/(^|[^a-zà-ú])nan([^a-zà-ú]|$)|fralda|pampers|huggies|umedec/i}},
     /* veículos: mesma tabela de registros, outra lista de tipos e outro resumo; aparecem na página Veículos.
        Placa, ano e cor ficam num registro com dados.ficha, na conta, e não aqui no código (o repositório é público) */
     civic:{n:"Civic",veic:true,root:"veiculos-view",desc:"Honda Civic"},
     moto:{n:"Moto",veic:true,root:"veiculos-view",desc:"Yamaha"},
-    c3:{n:"C3 (antigo)",veic:true,root:"veiculos-view",desc:"Citroën C3"}};
+    c3:{n:"C3 (antigo)",veic:true,root:"veiculos-view",desc:"Citroën C3"},
+    /* cofre de documentos da casa: mesmo motor, com validade ("Vence em") que entra na Agenda */
+    docs:{n:"Documentos",docs:true,root:"documentos-view"}};
+  var TIPOS_DOCS=[["identidade","Documento pessoal","Ex.: CNH do Rayner","Número (opcional)"],["garantia","Garantia","Ex.: Geladeira Brastemp","Loja"],["nota","Nota fiscal","Ex.: Notebook","Loja"],
+    ["contrato","Contrato","Ex.: Aluguel","Com quem"],["apolice","Apólice e plano","Ex.: Plano de saúde","Empresa"],["imposto","Impostos e taxas","Ex.: IPTU 2027",""],["outro","Outro","",""]];
   var TIPOS_VEIC=[["revisao","Revisão","Ex.: Revisão de 70.000 km","Oficina"],["oleo","Troca de óleo","Ex.: Troca de óleo e filtro","Oficina"],["manutencao","Manutenção","Ex.: Troca de pastilhas","Oficina"],
     ["abastecimento","Abastecimento","Ex.: Etanol","Posto"],["seguro","Seguro","Ex.: Seguro Allianz 2026","Seguradora"],["documento","Licenciamento e impostos","Ex.: Licenciamento 2026",""],
     ["bateria","Bateria","Ex.: Bateria Moura","Loja"],["pneu","Pneus","Ex.: 4 pneus novos","Loja"],["outro","Outro","",""]];
   function ehVeic(quem){return !!(FAM[quem]&&FAM[quem].veic)}
-  function tiposDe(quem){return ehVeic(quem)?TIPOS_VEIC:TIPOS}
+  function tiposDe(quem){return ehVeic(quem)?TIPOS_VEIC:FAM[quem]&&FAM[quem].docs?TIPOS_DOCS:TIPOS}
   var TIPOS=[["exame","Exame","Ex.: Hemograma completo","Resultado"],["consulta","Consulta","Ex.: Consulta de rotina","Profissional"],["tratamento","Receita / tratamento","Ex.: Receita da endocrinologista","Profissional"],
     ["sintoma","Sintomas","Ex.: Diarreia e vômito",""],["vacina","Vacina","Ex.: V10, Antirrábica, Hepatite B","Dose"],["preventivo","Antipulgas / vermífugo","Ex.: Bravecto","Produto"],
     ["peso","Peso","Ex.: Pesagem","Peso (kg)"],["alimentacao","Alimentação","Ex.: Troca de ração","Ração"],["pedido","Pedido de exames","Ex.: Exames de controle",""],["diario","Diário (mamadas e fraldas)","Ex.: Diário da semana",""],["produto","Fraldas e produtos","Ex.: Pacote de fraldas","Marca"],
-    ["momento","Momento","Ex.: Primeiro passeio na praia","Onde"],["midia","Fotos e vídeos","Ex.: Fotos do aniversário",""],
+    ["momento","Momento","Ex.: Primeiro passeio na praia","Onde"],["carta","Carta para o futuro","Ex.: Para você ler aos 18 anos","Abrir em"],["midia","Fotos e vídeos","Ex.: Fotos do aniversário",""],
     ["nascimento","Nascimento","Ex.: Nascimento","Onde"],["outro","Outro","",""]];
   var famFiltro={},famVista={},famAlvo={};Object.keys(FAM).forEach(function(k){famFiltro[k]="";famVista[k]="resumo";famAlvo[k]=null});
   function idadeTxt(iso){
@@ -396,7 +400,7 @@
       var add=h("button",{type:"button",class:"mkadd",text:"+ Adicionar registro"}),imp=h("button",{type:"button",class:"ghostbtn",text:"Importar histórico"}),abf=ehVeic(quem)?h("button",{type:"button",class:"ghostbtn",text:"⛽ Abastecimento pela foto"}):null,akm=ehVeic(quem)?h("button",{type:"button",class:"ghostbtn",text:"Atualizar km"}):null;
       var topo=h("div",{class:"panel famhead"},foto?h("img",{class:"famav",src:urls[foto.arquivos.filter(function(a){return /^image\//.test(a.tipo)})[0].path],alt:F.n}):null,
         h("div",{class:"grow"},h("h2",{text:F.n}),
-        h("p",{class:"sub",text:ehVeic(quem)?[(regs.filter(function(r){return dadosDe(r).ficha})[0]||{dados:{ficha:F.desc}}).dados.ficha,(function(){var k=veicKm(regs);return k?fmtKm(k.km)+" em "+dataBR(k.data):""})()].filter(Boolean).join(" · "):[nasc?idadeTxt(nasc.data)+" (nasceu em "+dataBR(nasc.data)+")":"Adicione um registro “Nascimento” para mostrar a idade",ultPeso?"último peso "+ultPeso.valor+" kg em "+dataBR(ultPeso.data):""].filter(Boolean).join(" · ")})),
+        h("p",{class:"sub",text:F.docs?"Documentos, garantias, notas fiscais e contratos da casa. O que tem validade entra na Agenda.":ehVeic(quem)?[(regs.filter(function(r){return dadosDe(r).ficha})[0]||{dados:{ficha:F.desc}}).dados.ficha,(function(){var k=veicKm(regs);return k?fmtKm(k.km)+" em "+dataBR(k.data):""})()].filter(Boolean).join(" · "):[nasc?idadeTxt(nasc.data)+" (nasceu em "+dataBR(nasc.data)+")":"Adicione um registro “Nascimento” para mostrar a idade",ultPeso?"último peso "+ultPeso.valor+" kg em "+dataBR(ultPeso.data):""].filter(Boolean).join(" · ")})),
         h("div",{class:"vfil famacoes"},add,akm,abf,imp));
       root.appendChild(topo);
       var formBox=h("div");root.appendChild(formBox);
@@ -405,10 +409,10 @@
       if(abf)abf.onclick=function(){formBox.innerHTML="";formBox.appendChild(veicFoto(quem,regs,function(q){try{localStorage.setItem("rac-veic",q)}catch(e){}if(location.hash!=="#veiculos/"+q)location.hash="#veiculos/"+q;else renderVeiculos(q)},function(){formBox.innerHTML=""}));formBox.scrollIntoView({behavior:"smooth",block:"start"})};
       imp.onclick=function(){formBox.innerHTML="";formBox.appendChild(famImportar(quem,regs,function(){renderFamilia(quem)},function(){formBox.innerHTML=""}));formBox.scrollIntoView({behavior:"smooth",block:"start"})};
       function abrirForm(reg){formBox.innerHTML="";formBox.appendChild(famForm(quem,reg,function(){renderFamilia(quem)},function(){formBox.innerHTML=""}));formBox.scrollIntoView({behavior:"smooth",block:"start"})}
-      if(!regs.length){root.appendChild(h("div",{class:"panel"},h("p",{class:"empty",text:"Nada registrado ainda. Toque em “Adicionar registro” para lançar o primeiro exame, vacina ou foto, ou em “Importar histórico”."})));return}
+      if(!regs.length){root.appendChild(h("div",{class:"panel"},h("p",{class:"empty",text:F.docs?"Nada guardado ainda. Toque em “Adicionar registro” para guardar o primeiro documento, garantia ou nota fiscal (com foto ou PDF e a validade).":"Nada registrado ainda. Toque em “Adicionar registro” para lançar o primeiro exame, vacina ou foto, ou em “Importar histórico”."})));return}
       /* quatro jeitos de ver: resumo, exames, remédios e a linha do tempo completa */
-      var temSaude=ehVeic(quem)||regs.some(function(r){var d=dadosDe(r);return d.laudo||d.orgaos||d.meds});
-      var vistas=ehVeic(quem)?[["resumo","Resumo"],["linha","Linha do tempo"]]:[["resumo","Resumo"],["exames","Exames"],["remedios","Remédios"],["linha","Linha do tempo"]];
+      var temSaude=ehVeic(quem)||F.bebe||regs.some(function(r){var d=dadosDe(r);return d.laudo||d.orgaos||d.meds});
+      var vistas=ehVeic(quem)?[["resumo","Resumo"],["linha","Linha do tempo"]]:F.bebe?[["resumo","Resumo"],["diadia","Dia a dia"],["crescimento","Crescimento e vacinas"],["meses","Mês a mês"],["exames","Exames"],["remedios","Remédios"],["linha","Linha do tempo"]]:[["resumo","Resumo"],["exames","Exames"],["remedios","Remédios"],["linha","Linha do tempo"]];
       if(!temSaude)famVista[quem]="linha";
       var vista=famVista[quem],seg=h("div",{class:"seg famseg famvista",role:"group","aria-label":"Ver"});
       if(temSaude){vistas.forEach(function(v){var b=h("button",{type:"button","aria-pressed":vista===v[0]?"true":"false",text:v[1]});b.onclick=function(){famVista[quem]=v[0];desenhar(regs,urls)};seg.appendChild(b)});root.appendChild(seg)}
@@ -458,6 +462,10 @@
       if(vista==="exames"){[famComparaSangue(regs),famComparaUS(regs)].forEach(function(x){if(x)box.appendChild(x)});
         cards(regs.filter(function(r){return r.tipo==="exame"||r.tipo==="pedido"}),box);irAoAlvo();return}
       if(vista==="remedios"){var t=famTratamentos(regs);if(t)box.appendChild(t);return}
+      /* bebê: diário do Napper, curvas da OMS e vacinas, e mês a mês (módulo js/bebe.js, carregado aqui) */
+      if(/^(diadia|crescimento|meses)$/.test(vista)){box.appendChild(h("p",{class:"sub",text:"Carregando…"}));precisa(["bebe"]).then(function(){box.innerHTML="";
+        if(vista==="diadia")bebeDiaDia(box,quem);else if(vista==="crescimento")bebeCrescimento(box,quem,regs);else{(BEBE.evs?Promise.resolve():bebeCarregar(quem).catch(function(){})).then(function(){bebeMeses(box,quem,regs,urls)})}})
+        .catch(function(e){box.innerHTML="";box.appendChild(h("p",{class:"empty",text:"Não consegui abrir ("+e.message+")."}))});return}
       /* linha do tempo: filtro por tipo */
       var usados=tiposDe(quem).filter(function(t){return regs.some(function(r){return r.tipo===t[0]})});
       var fseg=h("div",{class:"seg famseg",role:"group","aria-label":"Tipo"});
@@ -550,7 +558,7 @@
     var arq=h("input",{type:"file",multiple:"",accept:"image/*,video/*,application/pdf"});
     var lValor=h("label",null,h("span"),valor),lProx=h("label",null,h("span"),prox);
     function ajustar(){var t=tipoInfo(tipo.value);titulo.placeholder=t[2]||"Título";lValor.firstChild.textContent=t[3]||"Valor (opcional)";lValor.hidden=!t[3];
-      lProx.firstChild.textContent=/^(vacina|preventivo)$/.test(tipo.value)?"Próxima dose":"Retorno (opcional)";lProx.hidden=!/^(vacina|consulta|exame|preventivo|tratamento)$/.test(tipo.value)}
+      lProx.firstChild.textContent=FAM[quem].docs?"Vence em (opcional)":/^(vacina|preventivo)$/.test(tipo.value)?"Próxima dose":"Retorno (opcional)";lProx.hidden=!FAM[quem].docs&&!/^(vacina|consulta|exame|preventivo|tratamento)$/.test(tipo.value)}
     tipo.addEventListener("change",ajustar);ajustar();
     f.appendChild(h("div",{class:"two"},h("label",null,"Tipo",tipo),h("label",null,"Data",data)));
     f.appendChild(h("label",null,"Título",titulo));

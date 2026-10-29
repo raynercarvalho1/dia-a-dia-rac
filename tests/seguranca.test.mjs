@@ -8,7 +8,7 @@ const URL_SB = "https://hofnhbxnfebfnncwxrds.supabase.co", CHAVE = "sb_publishab
 const H = { apikey: CHAVE, Authorization: "Bearer " + CHAVE };
 const pular = process.env.SEM_REDE === "1";
 
-for (const t of ["pessoal", "registros", "garmin_dia", "garmin_ativ", "erros", "rotina_log", "notas", "itens", "produtos", "mercados", "membros", "lista"]) {
+for (const t of ["pessoal", "registros", "garmin_dia", "garmin_ativ", "erros", "rotina_log", "notas", "itens", "produtos", "mercados", "membros", "lista", "bebe"]) {
   test(`sem login não lê a tabela ${t}`, { skip: pular }, async () => {
     const r = await fetch(`${URL_SB}/rest/v1/${t}?select=*&limit=1`, { headers: H });
     const corpo = await r.json().catch(() => null);

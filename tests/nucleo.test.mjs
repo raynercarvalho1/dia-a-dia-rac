@@ -66,3 +66,50 @@ test("compatibilidade da vaga: o que pede, o que tem e o que falta", () => {
   assert.equal(r.nota, 75);
   assert.equal(N.compatVaga("Vaga de motorista", ["sql"]).nota, null, "sem competência de dados: sem nota");
 });
+
+test("OMS: mediana do peso ao nascer é o percentil 50, e o z volta para a mesma medida", () => {
+  const lms = [0.3809, 3.2322, 0.14171];
+  assert.ok(Math.abs(N.omsZ(lms, 3.2322)) < 1e-9);
+  assert.equal(N.percentilDeZ(0), 50);
+  assert.ok(Math.abs(N.omsValor(lms, N.omsZ(lms, 4.1)) - 4.1) < 1e-9);
+  assert.ok(Math.abs(N.percentilDeZ(1.881) - 97) < 0.2, "z = 1,88 é o percentil 97");
+});
+
+test("Napper: CSV com aspas e vírgulas vira eventos com chave única, e o resumo por dia soma certo", () => {
+  const csv = "start,end,category,diaperContent,breastLeftSeconds,breastRightSeconds,feedingAmount,bottleFeedingType,comment,createdAt\n" +
+    "2026-07-19T02:33:00.000-03:00,2026-07-19T03:10:00.000-03:00,NURSING,,600,600,,,,a\n" +
+    "2026-07-19T13:25:00.000-03:00,2026-07-19T13:25:00.000-03:00,BOTTLE,,,,50,FORMULA,,b\n" +
+    "2026-07-19T14:00:00.000-03:00,2026-07-19T14:00:00.000-03:00,CHANGED_DIAPER,MIXED,,,,,,c\n" +
+    "2026-07-19T10:05:00.000-03:00,2026-07-19T11:17:00.000-03:00,NAP,,,,,,\"soneca, no colo\",d\n";
+  const ev = N.napperLer(csv);
+  assert.equal(ev.length, 4);
+  assert.equal(new Set(ev.map((e) => e.chave)).size, 4);
+  assert.equal(ev[3].dados.obs, "soneca, no colo");
+  const [d] = N.bebeDias(ev);
+  assert.deepEqual([d.peito, d.peitoMin, d.mamadeira, d.mlFormula, d.fraldas, d.xixi, d.coco, d.sonoMin], [1, 20, 1, 50, 1, 1, 1, 72]);
+  assert.throws(() => N.napperLer("a,b\n1,2"), /Napper/);
+});
+
+test("vacinas do SUS: datas previstas pela idade e doses contadas em ordem", () => {
+  const c = N.vacinasCalendario("2026-06-01", ["Vacinas de 2 meses: Rotavirus, Pentavalente e Poliomielite", "BCG e Hepatite B"]);
+  const ver = (n) => c.find((x) => x.nome === n);
+  assert.equal(ver("Pentavalente (1ª dose)").prevista, "2026-08-01");
+  assert.equal(ver("Pentavalente (1ª dose)").tomada, true);
+  assert.equal(ver("Pentavalente (2ª dose)").tomada, false, "uma menção cobre só a 1ª dose");
+  assert.equal(ver("BCG").tomada, true);
+  assert.equal(ver("Pneumocócica 10 (1ª dose)").tomada, false);
+});
+
+test("Napper: noite da hora de dormir até acordar, sem contar despertares nem soneca dentro da noite", () => {
+  const ev = [
+    { tipo: "dormir", inicio: "2026-10-27T21:00:00-03:00", fim: "2026-10-27T21:00:00-03:00" },
+    { tipo: "despertar", inicio: "2026-10-28T02:00:00-03:00", fim: "2026-10-28T02:30:00-03:00" },
+    { tipo: "sono", inicio: "2026-10-27T21:00:00-03:00", fim: "2026-10-28T02:00:00-03:00" },
+    { tipo: "acordar", inicio: "2026-10-28T06:00:00-03:00", fim: "2026-10-28T06:00:00-03:00" },
+    { tipo: "sono", inicio: "2026-10-28T10:00:00-03:00", fim: "2026-10-28T11:00:00-03:00" },
+  ];
+  const d = Object.fromEntries(N.bebeDias(ev).map((x) => [x.data, x]));
+  assert.equal(d["2026-10-27"].noiteMin, 9 * 60 - 30, "21h às 6h, menos 30 min acordada");
+  assert.equal(d["2026-10-27"].sonecas, 0, "o trecho de sono dentro da noite não vira soneca");
+  assert.equal(d["2026-10-28"].sonecaMin, 60);
+});

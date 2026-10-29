@@ -6,7 +6,7 @@
    A cada publicação, VERSAO muda: os caches velhos do site são apagados na ativação. */
 const VERSAO = "2026-10-28.3";
 const APP = "rac-app-" + VERSAO, DADOS = "rac-dados", LIBS = "rac-libs";
-const SHELL = ["./", "./index.html", "./manifest.webmanifest", "./nucleo.js", "./mercado.js", "./icons/icon-192.png", "./icons/icon-512.png"];
+const SHELL = ["./", "./index.html", "./manifest.webmanifest", "./nucleo.js", "./mercado.js", "./js/app.js", "./js/esportes.js", "./js/familia.js", "./js/mba.js", "./js/saude.js", "./js/conexoes.js", "./js/sistema.js", "./icons/icon-192.png", "./icons/icon-512.png"];
 const LIB_HOSTS = ["cdnjs.cloudflare.com", "cdn.jsdelivr.net", "unpkg.com"];
 
 self.addEventListener("install", e => {

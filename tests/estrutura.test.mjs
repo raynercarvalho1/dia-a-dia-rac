@@ -1,0 +1,52 @@
+// Testes da estrutura do site: como os módulos dividem o mesmo escopo global, dois com a mesma função
+// de topo fariam um sobrescrever o outro sem erro (foi o que aconteceu com "hm": a da Saúde trocou o horário dos jogos).
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import fs from "node:fs";
+
+const raiz = new URL("../", import.meta.url);
+const arquivos = fs.readdirSync(new URL("js/", raiz)).filter((f) => f.endsWith(".js")).map((f) => "js/" + f);
+
+function topo(txt) {
+  const nomes = [...txt.matchAll(/^  function ([A-Za-z_$][\w$]*)\(/gm)].map((m) => m[1]);
+  for (const m of txt.matchAll(/^  var ([A-Za-z_$][\w$]*)\s*=/gm)) nomes.push(m[1]);
+  return nomes;
+}
+
+test("nenhuma função ou variável de topo repetida entre os arquivos do site", () => {
+  const visto = {};
+  const repetidos = [];
+  for (const a of arquivos) {
+    for (const n of topo(fs.readFileSync(new URL(a, raiz), "utf8"))) {
+      if (visto[n] && visto[n] !== a) repetidos.push(`${n} (${visto[n]} e ${a})`);
+      else if (visto[n] === a) repetidos.push(`${n} (duas vezes em ${a})`);
+      visto[n] = a;
+    }
+  }
+  assert.deepEqual(repetidos, []);
+});
+
+test("toda seção carregada sob demanda tem o seu arquivo", () => {
+  const app = fs.readFileSync(new URL("js/app.js", raiz), "utf8");
+  const mods = new Set([...app.matchAll(/ROTA_MODS=\{([\s\S]*?)\};/g)].flatMap((m) => [...m[1].matchAll(/"([\w-]+)"/g)].map((x) => x[1])));
+  for (const m of app.matchAll(/MOD_DEPS=\{([\s\S]*?)\};/g)) for (const x of m[1].matchAll(/"([\w-]+)"/g)) mods.add(x[1]);
+  for (const m of app.matchAll(/wLazy\(\[([^\]]*)\]/g)) for (const x of m[1].matchAll(/"([\w-]+)"/g)) mods.add(x[1]);
+  assert.ok(mods.size >= 5, "achou os módulos");
+  for (const m of mods) assert.ok(fs.existsSync(new URL(`js/${m}.js`, raiz)), `falta js/${m}.js`);
+});
+
+test("o service worker guarda todos os arquivos do site para uso sem internet", () => {
+  const sw = fs.readFileSync(new URL("sw.js", raiz), "utf8");
+  for (const a of arquivos) assert.ok(sw.includes(`"./${a}"`), `${a} fora do SHELL do sw.js`);
+  const vSw = /VERSAO = "([^"]+)"/.exec(sw)[1], vApp = /MOD_VERSAO="([^"]+)"/.exec(fs.readFileSync(new URL("js/app.js", raiz), "utf8"))[1];
+  assert.equal(vApp, vSw, "MOD_VERSAO (js/app.js) igual à VERSAO do sw.js");
+});
+
+test("nenhum dado pessoal no código público", () => {
+  const proibidos = [/@gmail\.com/i, /@icloud\.com/i, /\b\d{3}\.\d{3}\.\d{3}-\d{2}\b/, /class\.mbx\.academy\/\?t=/, /AIza[\w-]{30,}/];
+  const todos = ["index.html", "nucleo.js", "mercado.js", "sw.js", ...arquivos, ...fs.readdirSync(new URL("supabase/", raiz)).filter((f) => f.endsWith(".sql")).map((f) => "supabase/" + f)];
+  for (const a of todos) {
+    const t = fs.readFileSync(new URL(a, raiz), "utf8");
+    for (const p of proibidos) assert.ok(!p.test(t), `${a} tem algo que parece dado pessoal (${p})`);
+  }
+});

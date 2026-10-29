@@ -614,7 +614,7 @@ html:not(.logado) .app{display:none}
 .gate input{width:100%}
 .whoami{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
 .whoami .sub{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgrp),html.casa #navgrp a.it:not([data-k="mercado"]):not([data-k="eddie"]):not([data-k="olivia"]),html.casa #bdalert{display:none}
+html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgrp),html.casa #navgrp a.it:not([data-k="mercado"]):not([data-k="eddie"]):not([data-k="olivia"]):not([data-k="veiculos"]),html.casa #bdalert,html.casa .syncst{display:none}
 /* Tela inicial */
 .home{display:grid;gap:18px}
 .hi{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px;padding:6px 2px}
@@ -983,7 +983,7 @@ code.mbaf{font:calc(12px + var(--fz))/1.4 ui-monospace,Consolas,monospace;white-
   /* Rotas por hash: #esportes/beisebol/liga, #esportes/beisebol/time-119, #esportes/beisebol/jogo-849805,
      #esportes/basquete/jogo-401909092, #x/jornalistas, #vagas ... */
   var tabs=["inicio","esportes","vagas","mercado","aniversarios","em-breve","x","estudos","mba","saude","conexoes","agenda","busca","sistema","eddie","olivia","veiculos"];
-  var DA_CASA=["mercado","eddie","olivia"];
+  var DA_CASA=["mercado","eddie","olivia","veiculos"];
   var sports=["beisebol","basquete","futebol-americano"];
   function mark(sel,attr,val){document.querySelectorAll(sel).forEach(function(a){
     if(a.dataset[attr]===val)a.setAttribute("aria-current","page");else a.removeAttribute("aria-current")})}

@@ -4,7 +4,7 @@
    - Bibliotecas de CDN (mapa, gráficos de PDF, Supabase): guardadas na primeira vez, porque o endereço já tem a versão.
    - Notificações push: mostra o aviso e, ao tocar, abre a página certa.
    A cada publicação, VERSAO muda: os caches velhos do site são apagados na ativação. */
-const VERSAO = "2026-10-29.12";
+const VERSAO = "2026-10-29.13";
 const APP = "rac-app-" + VERSAO, DADOS = "rac-dados", LIBS = "rac-libs";
 const SHELL = ["./", "./index.html", "./manifest.webmanifest", "./nucleo.js", "./mercado.js", "./js/app.js", "./js/esportes.js", "./js/familia.js", "./js/mba.js", "./js/saude.js", "./js/conexoes.js", "./js/sistema.js", "./js/lista.js", "./js/carreira.js", "./js/bebe.js", "./js/oms.js", "./js/resumo.js", "./js/rede.js", "./icons/icon-192.png", "./icons/icon-512.png"];
 const LIB_HOSTS = ["cdnjs.cloudflare.com", "cdn.jsdelivr.net", "unpkg.com"];

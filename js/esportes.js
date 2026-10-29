@@ -39,8 +39,9 @@
     }).catch(function(){})}
   function hydrateSoc(root){root.querySelectorAll("[data-soc]").forEach(function(el){
     var p=el.getAttribute("data-soc").split(":");el.replaceWith(soc(p[0],p[1]))})}
-  function pcell(src,name,kind,id,extra){
-    return h("span",{class:"pc"},img(src,"ph"),h("span",{class:"pn",text:name}),extra?h("span",{class:"sub",text:extra}):null,id?soc(kind,id,name):null)}
+  function jogadorUrl(kind,id){return kind==="mlb"?"https://www.mlb.com/player/"+id:/^(nba|nfl)$/.test(kind)?"https://www.espn.com.br/"+kind+"/jogador/_/id/"+id:""}
+  function pcell(src,name,kind,id,extra){var u=id&&jogadorUrl(kind,id);
+    return h("span",{class:"pc"},img(src,"ph"),u?h("a",{class:"pn",href:u,target:"_blank",rel:"noopener",title:"Página de "+name,text:name}):h("span",{class:"pn",text:name}),extra?h("span",{class:"sub",text:extra}):null,id?soc(kind,id,name):null)}
 
   /* ===== Onde assistir no Brasil ===== */
   var DISNEY="https://www.disneyplus.com/pt-br";
@@ -197,11 +198,18 @@
       out.sort(function(a,b){return a.date.localeCompare(b.date)});return out})}
 
   /* Nomes de times da MLB no meio de um texto ganham o escudo na frente */
-  function teamNodes(text,teams){
-    if(!teams||!teams.length)return text;
-    var by={};teams.forEach(function(t){by[t.name]=t.id});
-    var re=new RegExp("("+teams.map(function(t){return t.name.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")}).sort(function(a,b){return b.length-a.length}).join("|")+")");
-    return text.split(re).map(function(p){return by[p]?h("span",{class:"tn"},logoImg(by[p],"sm"),p):p})}
+  var POS_PT={RHP:"arremessador destro",LHP:"arremessador canhoto","1B":"primeira base","2B":"segunda base","3B":"terceira base",SS:"interbases",LF:"campista esquerdo",CF:"campista central",RF:"campista direito",OF:"campista",IF:"jogador de linha (infield)",INF:"jogador de linha (infield)",DH:"rebatedor designado",C:"receptor",P:"arremessador"};
+  function esc(s){return s.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")}
+  function teamNodes(text,teams,pessoa){
+    var by={},alt=[];(teams||[]).forEach(function(t){by[t.name]=t.id;alt.push(esc(t.name))});
+    if(pessoa&&pessoa.fullName)alt.push(esc(pessoa.fullName));
+    alt.sort(function(a,b){return b.length-a.length});
+    var re=new RegExp("("+alt.concat(["\\b(?:RHP|LHP|1B|2B|3B|SS|LF|CF|RF|OF|INF|IF|DH)\\b"]).join("|")+")");
+    return text.split(re).filter(function(p){return p!==""&&p!=null}).map(function(p){
+      if(by[p])return h("a",{class:"tn",href:"#esportes/beisebol/time-"+by[p],title:"Página do "+p},logoImg(by[p],"sm"),p);
+      if(pessoa&&p===pessoa.fullName)return h("a",{class:"link",href:"https://www.mlb.com/player/"+pessoa.id,target:"_blank",rel:"noopener",text:p});
+      if(POS_PT[p])return h("abbr",{title:POS_PT[p]},p);
+      return p})}
 
   var HIT=["Jogador","Pos","AVG","HR","RBI","OPS"],PIT=["Jogador","Fun","ERA","V-D","K","WHIP"];
   function hitRow(p,pos){var s=statOf(p,"hitting")||{};
@@ -215,6 +223,12 @@
   var NUM={one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10};
   var LISTA={"restricted":"lista de restritos","bereavement":"lista de luto","paternity":"lista de paternidade","suspended":"lista de suspensos","family medical emergency":"lista de emergência médica familiar","paternity leave":"lista de paternidade"};
   var RULES=[
+    [new RegExp("^("+P+") (.+?) elected free agency"),"o $1 $2 virou agente livre"],
+    [new RegExp("\\bdeclined the (\\d{4}) (club|mutual|player) option on ("+P+") (.+)"),function(m,a,b,c,d){return "recusou a opção de "+a+" ("+({club:"do clube",mutual:"mútua",player:"do jogador"})[b]+") do "+c+" "+d}],
+    [new RegExp("\\bexercised the (\\d{4}) (club|mutual|player) option on ("+P+") (.+)"),function(m,a,b,c,d){return "exerceu a opção de "+a+" ("+({club:"do clube",mutual:"mútua",player:"do jogador"})[b]+") do "+c+" "+d}],
+    [new RegExp("^("+P+") (.+?) (?:exercised|picked up) (?:his|the) (\\d{4}) player option"),"o $1 $2 exerceu a opção de $3 (do jogador)"],
+    [new RegExp("^("+P+") (.+?) declined (?:his|the) (\\d{4}) player option"),"o $1 $2 recusou a opção de $3 (do jogador)"],
+    [new RegExp("^("+P+") (.+?) retired"),"o $1 $2 se aposentou"],
     [new RegExp("\\bplaced ("+P+") (.+?) on the (\\d+)-day (?:injured list|IL)"),"colocou o $1 $2 na lista de lesionados de $3 dias"],
     [new RegExp("\\bactivated ("+P+") (.+?) from the (\\d+)-day (?:injured list|IL)"),"ativou o $1 $2 da lista de lesionados de $3 dias"],
     [new RegExp("\\btransferred ("+P+") (.+?) from the (\\d+)-day (?:injured list|IL) to the (\\d+)-day (?:injured list|IL)"),"transferiu o $1 $2 da lista de lesionados de $3 dias para a de $4 dias"],
@@ -286,11 +300,13 @@
         if(!state.minor&&MINOR.test(t.description||""))return false;
         return state.kind==="todas"||txKind(t)===state.kind});
       if(!rows.length){list.appendChild(h("p",{class:"empty",text:"Nada nesse filtro nos últimos dias."}));return}
+      var fonte=(opts&&opts.fonte)||"https://www.mlb.com/transactions";
       rows.slice(0,60).forEach(function(t){
         list.appendChild(h("div",{class:"tx"},
-          h("span",{class:"when",text:(t.date||"").slice(8,10)+"/"+(t.date||"").slice(5,7)}),
+          h("a",{class:"when",href:fonte,target:"_blank",rel:"noopener",title:"Ver na lista oficial da MLB",text:(t.date||"").slice(8,10)+"/"+(t.date||"").slice(5,7)}),
           t.person?mlbCell(t.person.id,t.person.fullName):h("span"),
-          h("span",{class:"txd",title:t.description||""},teamNodes(ptTx(t.description||""),state.teams))))})}
+          h("span",{class:"txd",title:t.description||""},teamNodes(ptTx(t.description||""),state.teams,t.person),
+            " ",h("a",{class:"txsrc",href:fonte,target:"_blank",rel:"noopener",title:"Original: "+(t.description||""),text:"fonte ↗"}))))})}
     function load(){
       body.innerHTML="";body.appendChild(loading());chips.innerHTML="";
       Promise.all([api(path),getTeams().catch(function(){return []})]).then(function(r){
@@ -311,7 +327,7 @@
     load();return p}
 
   /* mercado de inverno dos Dodgers: direto das transações oficiais da MLB (contratações, trocas, dispensas), sem curadoria manual */
-  function mercadoDodgers(){var hj=new Date();return txPanel("Mercado de inverno","/transactions?teamId="+DODGERS+"&startDate="+ymd(addDays(hj,-60))+"&endDate="+ymd(hj),{sub:"Contratações, trocas e dispensas dos últimos 60 dias, direto da MLB. Atualiza sozinho."})}
+  function mercadoDodgers(){var hj=new Date();return txPanel("Mercado de inverno","/transactions?teamId="+DODGERS+"&startDate="+ymd(addDays(hj,-60))+"&endDate="+ymd(hj),{sub:"Contratações, trocas e dispensas dos últimos 60 dias, direto da MLB. Atualiza sozinho. Toque no jogador, no time ou em \"fonte\" para abrir a página de cada um.",fonte:"https://www.mlb.com/dodgers/roster/transactions"})}
   function rumorPanel(){
     var p=panel("Rumores");
     p.appendChild(h("h3",{class:"dayh"},img(logoUrl(DODGERS),"lg sm"),"Dodgers no mercado de inverno"));

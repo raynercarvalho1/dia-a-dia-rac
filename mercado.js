@@ -290,6 +290,13 @@
       if (!aberta) return;
       itens.appendChild(h("h3", { class: "dayh", text: semCidade(aberta[0].mercado) + " · " + dataBR(aberta[0].data) }));
       itens.appendChild(listaProdutos(agruparProdutos(aberta)));
+      var apagar = h("button", { type: "button", class: "ghostbtn", text: "Apagar esta nota" }), sta = h("span", { class: "sub", role: "status" });
+      apagar.onclick = function () {
+        if (!confirm("Apagar a nota de " + money(sum(aberta, function (x) { return x.valor_total; })) + " do " + semCidade(aberta[0].mercado) + " em " + dataBR(aberta[0].data) + "? Os " + aberta.length + " itens saem das contas.")) return;
+        apagar.disabled = true; sta.textContent = "Apagando…";
+        apagarNota(aberta).then(function () { return loadRows(true); }).then(function () { st.kpiNota = null; drawApp("painel"); }, function (e) { apagar.disabled = false; sta.textContent = "Não consegui apagar (" + e.message + ")."; });
+      };
+      itens.appendChild(h("div", { class: "vfil" }, apagar, sta));
     }
     compras.forEach(function (l) {
       var f = l[0], tot = sum(l, function (x) { return x.valor_total; }), dsc = sum(l, function (x) { return x.desconto || 0; });
@@ -900,6 +907,7 @@
     var vez = 0;
     function tentarResp() {
       var minha = ++vez, ch = /(?:^|\D)(35\d{42})(?!\d)/.exec(resp.value.replace(/(\d)\s+(?=\d)/g, "$1"));
+      rmsg.className = "sub";
       if (!resp.value.trim()) { rmsg.textContent = ""; return; }
       if (!ch) { lerEConferir(); return; }
       rmsg.textContent = "Conferindo se a nota já foi lançada…";
@@ -923,8 +931,9 @@
           : "Não achei os itens nesse texto. Copie a resposta inteira (ícone de copiar logo abaixo dela) e tente de novo.";
         return;
       }
-      rmsg.textContent = "✓ Resposta lida: " + nota.itens.length + " itens. Confira abaixo e toque em Salvar nota no fim da lista." +
-        (cortado ? " Atenção: o código veio cortado (copiado antes de o app terminar?), então faltam itens. Espere a resposta terminar, copie pelo ícone e cole de novo." : "") +
+      rmsg.className = cortado ? "qrwarn" : "sub";
+      rmsg.textContent = (cortado ? "⚠ Só " + nota.itens.length + " itens chegaram." : "✓ Resposta lida: " + nota.itens.length + " itens. Confira abaixo e toque em Salvar nota no fim da lista.") +
+        (cortado ? " O código veio cortado (copiado antes de o app terminar?), então faltam itens. Espere a resposta terminar, copie pelo ícone e cole de novo." : "") +
         (nota.semQtd ? " A resposta não trouxe quantidade nem preço por kg, então os itens entram como 1 unidade. Para o preço por kg sair certo, use o pedido do botão (ele já vai copiado)." : "");
       conferir(nota);
       passo2.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1018,6 +1027,7 @@
             "Os itens somam " + money(soma - d) + (d ? " já com desconto" : "") + ", mas o total pago é " + money(pago) + ". Diferença de " + money(Math.abs(soma - d - pago)) + ": confira os valores (os itens em amarelo são os mais suspeitos).";
         }
         [pagoI, descI].forEach(function (x) { x.addEventListener("input", somar); });
+        passo2.addEventListener("input", function () { if (salvarB.dataset.mesmo) { delete salvarB.dataset.mesmo; salvarB.textContent = "Salvar nota"; st3.textContent = ""; } });
         somar();
 
         var salvarB = h("button", { type: "button", text: "Salvar nota" }), st3 = h("p", { class: "sub", role: "status" });
@@ -1028,6 +1038,14 @@
           if (vazios.length) { st3.textContent = "Preencha o produto e o valor de todos os itens (ou tire com ×)."; vazios[0].inp.focus(); return; }
           if (!dataI.value) { st3.textContent = "Preencha a data da compra."; dataI.focus(); return; }
           if (selMerc.value === "novo" && !novoNome.value.trim()) { st3.textContent = "Escreva o nome do mercado."; novoNome.focus(); return; }
+          /* soma dos itens longe do total pago (quase sempre resposta cortada): pede um segundo toque */
+          var somaI = sum(regs, function (g) { return num(g.vt.value); }) - num(descI.value), pagoV = num(pagoI.value);
+          if (pagoV && Math.abs(somaI - pagoV) > 0.5 && !salvarB.dataset.mesmo) {
+            salvarB.dataset.mesmo = "1"; salvarB.textContent = "Salvar mesmo assim";
+            st3.textContent = "Os itens somam " + money(somaI) + " e a nota é de " + money(pagoV) + " (faltam " + money(pagoV - somaI) + "). " +
+              (nota.cortado || pagoV > somaI ? "Parece que a resposta veio cortada: espere o app terminar, copie pelo ícone de copiar e cole de novo. " : "") + "Se estiver certo assim, toque de novo para salvar.";
+            conta.scrollIntoView({ behavior: "smooth", block: "center" }); return;
+          }
           var final = { mercado: selMerc.value === "novo" ? novoNome.value.trim() : "", cnpj: nota.cnpj, endereco: "", data: dataI.value, numero: nota.numero, serie: nota.serie,
             chave: nota.chave, pagamento: nota.pagamento, fonte: "foto", desconto: num(descI.value),
             itens: regs.map(function (g) {
@@ -1057,6 +1075,14 @@
         };
       }).catch(function (e) { info.textContent = "Não consegui carregar seus produtos: " + e.message; });
     }
+  }
+
+  function apagarNota(linhas) {
+    return sb.from("itens").select("nota_id").in("id", linhas.map(function (x) { return x.id; })).then(ok).then(function (l) {
+      var ids = Object.keys(groupBy(l, function (x) { return x.nota_id; }));
+      if (!ids.length) throw new Error("nota não encontrada");
+      return sb.from("itens").delete().in("nota_id", ids).then(ok).then(function () { return sb.from("notas").delete().in("id", ids).then(ok); });
+    });
   }
 
   function salvarNota(nota, mercadoId, prods) {

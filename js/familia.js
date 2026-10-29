@@ -341,11 +341,24 @@
     renderFamilia(veicAtual)}
   /* maior quilometragem anotada (e quando) */
   function veicKm(regs){var m=null;regs.forEach(function(r){var k=dadosDe(r).km;if(typeof k==="number"&&(!m||k>m.km))m={km:k,data:r.data}});return m}
+  /* ritmo de uso: km por dia entre a primeira e a última quilometragem do último ano (precisa de 20 dias) */
+  function veicRitmo(regs){
+    var pts=regs.map(function(r){return {data:r.data,km:dadosDe(r).km}}).filter(function(x){return typeof x.km==="number"&&x.data>=maisDias(hojeISO(),-365)}).sort(function(a,b){return a.data.localeCompare(b.data)});
+    if(pts.length<2)return null;var a=pts[0],b=pts[pts.length-1],dias=(new Date(b.data)-new Date(a.data))/864e5;
+    return dias>=20&&b.km>a.km?{kmDia:(b.km-a.km)/dias,de:a,ate:b}:null}
+  /* custo por km (tudo que tem custo) e só do combustível, mais o consumo médio entre tanques, no mesmo período do ritmo */
+  function veicCustos(regs,rit){
+    if(!rit||rit.ate.km-rit.de.km<300)return null;var rod=rit.ate.km-rit.de.km,tot=0,comb=0;
+    regs.forEach(function(r){var c=dadosDe(r).custo;if(typeof c!=="number"||r.data<=rit.de.data||r.data>rit.ate.data)return;tot+=c;if(r.tipo==="abastecimento")comb+=c});
+    var ab=regs.filter(function(r){return r.tipo==="abastecimento"&&typeof dadosDe(r).km==="number"}).sort(function(a,b){return a.data.localeCompare(b.data)}),km=0,l=0;
+    for(var i=1;i<ab.length;i++){var d=dadosDe(ab[i]);if(d.litros&&d.km>dadosDe(ab[i-1]).km){km+=d.km-dadosDe(ab[i-1]).km;l+=d.litros}}
+    return {rod:rod,tot:tot,comb:comb,porKm:tot/rod,combKm:comb/rod,consumo:l?km/l:null}}
   function veicAgora(quem,regs,ir){
     var p=panel("Como "+(quem==="moto"?"a ":"o ")+FAM[quem].n+" está","Toque numa linha para ver o registro completo."),ul=h("ul",{class:"wl famagora"}),hoje=hojeISO(),km=veicKm(regs);
     function item(rot,val,sub,cls,r){var li=h("li",{class:(cls||"")+(r?" clic":""),tabindex:r?"0":null,role:r?"button":null},h("span",{class:"grow"},h("b",{text:rot}),sub?h("span",{class:"sub",text:sub}):null),val?h("span",{class:"end",text:val}):null);
       if(r){li.onclick=function(){ir({r:r})};li.onkeydown=function(e){if(e.key==="Enter")ir({r:r})}}ul.appendChild(li)}
-    if(km)item("Quilometragem",fmtKm(km.km),"última anotada, em "+dataBR(km.data));
+    var rit=veicRitmo(regs);
+    if(km)item("Quilometragem",fmtKm(km.km),"última anotada, em "+dataBR(km.data)+(rit?" · você roda uns "+fmtKm(Math.round(rit.kmDia*30))+" por mês":""));
     /* próxima revisão / troca de óleo: o registro mais recente de cada tipo que diz quando é a próxima */
     ["oleo","revisao"].forEach(function(t){
       var r=regs.filter(function(x){var d=dadosDe(x);return x.tipo===t&&(x.proxima||typeof d.proxKm==="number")}).sort(function(a,b){return b.data.localeCompare(a.data)})[0];if(!r)return;
@@ -356,8 +369,12 @@
       var novo=regs.filter(function(x){return x.tipo===t&&x.data>r.data}).sort(function(a,b){return b.data.localeCompare(a.data)})[0];
       if(novo){item(t==="oleo"?"Troca de óleo":"Revisão","em dia","feita em "+dataBR(novo.data)+"; anote a próxima quando a oficina informar","bom",novo);return}
       var d=dadosDe(r),falta=km&&typeof d.proxKm==="number"?d.proxKm-km.km:null,venc=(r.proxima&&r.proxima<hoje)||(falta!=null&&falta<=0);
+      /* no seu ritmo, quando chega no km da próxima (e se isso vem antes da data marcada) */
+      var prev=!venc&&falta!=null&&rit?maisDias(km.data,Math.ceil(falta/rit.kmDia)):null;if(prev&&r.proxima&&r.proxima<prev)prev=null;
       item(t==="oleo"?"Próxima troca de óleo":"Próxima revisão",venc?"atrasada":(falta!=null?"faltam "+fmtKm(falta):dataBR(r.proxima)),
-        [typeof d.proxKm==="number"?"com "+fmtKm(d.proxKm):"",r.proxima?"ou até "+dataBR(r.proxima):"","última em "+dataBR(r.data)].filter(Boolean).join(" · "),venc?"alerta":(falta!=null&&falta<1500?"alerta":null),r)});
+        [typeof d.proxKm==="number"?"com "+fmtKm(d.proxKm):"",r.proxima?"ou até "+dataBR(r.proxima):"",prev?"no seu ritmo, por volta de "+dataBR(prev):"","última em "+dataBR(r.data)].filter(Boolean).join(" · "),venc?"alerta":(falta!=null&&falta<1500)||(prev&&prev<maisDias(hoje,30))?"alerta":null,r)});
+    var cu=veicCustos(regs,rit);
+    if(cu)item("Custo por km",brl(cu.porKm)+"/km",[brl(cu.tot)+" em "+fmtKm(cu.rod)+" desde "+dataBR(rit.de.data),cu.comb?"combustível "+brl(cu.combKm)+"/km":"",cu.consumo?"consumo médio "+fmtN(Math.round(cu.consumo*10)/10)+" km/l":""].filter(Boolean).join(" · "));
     var seg=regs.filter(function(x){return x.tipo==="seguro"&&dadosDe(x).vigenciaFim}).sort(function(a,b){return b.data.localeCompare(a.data)})[0];
     if(seg){var vf=seg.dados.vigenciaFim;item("Seguro: "+(seg.valor||seg.titulo),vf<hoje?"vencido":"até "+dataBR(vf),vf<hoje?"venceu em "+dataBR(vf):"vigente",vf<hoje||vf<maisDias(hoje,30)?"alerta":"bom",seg)}
     var bat=regs.filter(function(x){return x.tipo==="bateria"}).sort(function(a,b){return b.data.localeCompare(a.data)})[0];

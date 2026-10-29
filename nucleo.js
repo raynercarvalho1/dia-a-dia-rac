@@ -140,5 +140,39 @@
     var usados={};return VACINAS_PNI.map(function(v){var d=new Date(nasc+"T12:00:00");d.setMonth(d.getMonth()+v[0]);var prev=d.toISOString().slice(0,10);
       var k=String(v[2]),n=(textosTomadas||[]).filter(function(t){return v[2].test(t)}).length;usados[k]=(usados[k]||0)+1;
       return {meses:v[0],nome:v[1],prevista:prev,tomada:n>=usados[k]}})}
-  raiz.RACnucleo={norm:norm,urlAbs:urlAbs,lerAbast:lerAbast,TEMAS:TEMAS,temasDe:temasDe,juntarDados:juntarDados,SKILLS:SKILLS,compatVaga:compatVaga,omsZ:omsZ,omsValor:omsValor,percentilDeZ:percentilDeZ,csvLinhas:csvLinhas,napperLer:napperLer,bebeDias:bebeDias,VACINAS_PNI:VACINAS_PNI,vacinasCalendario:vacinasCalendario};
+  /* ===== Saúde: prontidão do dia e cruzamentos ===== */
+  function mediana(l){l=l.slice().sort(function(a,b){return a-b});var n=l.length;return n?(n%2?l[(n-1)/2]:(l[n/2-1]+l[n/2])/2):null}
+  function quartis(l){l=l.slice().sort(function(a,b){return a-b});return [mediana(l.slice(0,Math.floor(l.length/2))),mediana(l.slice(Math.ceil(l.length/2)))]}
+  /* nota de 0 a 100 do dia "data" contra a faixa normal dos 60 dias anteriores; dias = [{data, dados}] (garmin_dia) */
+  function prontidao(dias,data){
+    var hoje=dias.filter(function(d){return d.data===data})[0];if(!hoje)return null;
+    var base=dias.filter(function(d){return d.data<data&&d.data>=somaDiasISO(data,-60)}),x=hoje.dados||{};
+    function serie(f){return base.map(function(d){return f(d.dados||{})}).filter(function(v){return typeof v==="number"})}
+    function comp(v,l,inverso){if(typeof v!=="number"||l.length<10)return null;var m=mediana(l),q=quartis(l),dp=Math.max((q[1]-q[0])/1.35,inverso?2:3),z=(v-m)/dp;if(inverso)z=-z;return {v:v,mediana:m,z:z,nota:Math.max(0,Math.min(100,Math.round(55+18*z)))}}
+    var fVfc=function(d){return d.vfc&&d.vfc.noite},fFc=function(d){return d.fcRepouso},fSono=function(d){return d.sono&&d.sono.total?d.sono.total/3600:null},fEst=function(d){return d.estresse};
+    var c={vfc:comp(fVfc(x),serie(fVfc)),fc:comp(fFc(x),serie(fFc),true),sono:null,bb:typeof x.bbMax==="number"?{v:x.bbMax,nota:x.bbMax}:null};
+    var hs=fSono(x);if(hs!=null)c.sono={v:hs,nota:Math.max(0,Math.min(100,Math.round(hs/8*85+((x.sono.nota||70)-70)/2)))};
+    var pesos={vfc:.35,fc:.25,sono:.25,bb:.15},soma=0,tot=0;Object.keys(pesos).forEach(function(k){if(c[k]){soma+=c[k].nota*pesos[k];tot+=pesos[k]}});
+    if(!tot)return null;var nota=Math.round(soma/tot);
+    var alertas=[];
+    if(c.vfc&&(c.vfc.z<-1.5||(x.vfc.faixaMin&&c.vfc.v<x.vfc.faixaMin)))alertas.push("VFC de "+c.vfc.v+" ms, abaixo do seu normal ("+Math.round(c.vfc.mediana)+" ms)");
+    if(c.fc&&c.fc.v>=c.fc.mediana+5)alertas.push("FC de repouso "+c.fc.v+" bpm, "+Math.round(c.fc.v-c.fc.mediana)+" acima do seu normal");
+    var ontem=dias.filter(function(d){return d.data===somaDiasISO(data,-1)})[0];
+    if(hs!=null&&hs<6&&ontem&&fSono(ontem.dados||{})!=null&&fSono(ontem.dados)<6)alertas.push("Duas noites seguidas com menos de 6 h de sono");
+    var est=fEst(x),le=serie(fEst);if(typeof est==="number"&&le.length>=10&&est>mediana(le)+15)alertas.push("Estresse médio de "+est+", bem acima do seu normal ("+Math.round(mediana(le))+")");
+    return {nota:nota,rotulo:nota>=70?"Pronto para treinar forte":nota>=45?"Bom para treino moderado":"Dia de recuperação",partes:c,alertas:alertas}}
+  function somaDiasISO(iso,n){var d=new Date(iso+"T12:00:00Z");d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)}
+  function correlacao(xs,ys){var n=xs.length;if(n<8)return null;var mx=xs.reduce(function(a,b){return a+b},0)/n,my=ys.reduce(function(a,b){return a+b},0)/n,sxy=0,sxx=0,syy=0;
+    for(var i=0;i<n;i++){sxy+=(xs[i]-mx)*(ys[i]-my);sxx+=(xs[i]-mx)*(xs[i]-mx);syy+=(ys[i]-my)*(ys[i]-my)}return sxx&&syy?sxy/Math.sqrt(sxx*syy):null}
+  /* ===== Chuva: nas próximas "janela" horas da previsão horária do Open-Meteo, a partir da hora "agora" ("AAAA-MM-DDTHH:00") ===== */
+  function chuvaAviso(hr,agora,janela){
+    janela=janela||12;var t=hr&&hr.time||[],i0=t.indexOf(String(agora).slice(0,13)+":00");if(i0<0)return null;
+    var pr=hr.precipitation_probability||[],mm=hr.precipitation||[],ini=-1,fim=-1,max=0,soma=0;
+    for(var i=i0;i<Math.min(t.length,i0+janela);i++){var p=pr[i]||0,m=mm[i]||0,chove=p>=60||(p>=40&&m>=1);
+      if(chove){if(ini<0)ini=i;fim=i}if(p>max)max=p;soma+=m}
+    if(ini<0)return null;
+    var hora=function(k){return +t[k].slice(11,13)+"h"},agoraJa=ini===i0;
+    return {agora:agoraJa,inicio:t[ini],fim:t[fim],prob:max,mm:Math.round(soma*10)/10,
+      texto:(agoraJa?"Chuva em Sorocaba agora":"Chuva em Sorocaba a partir das "+hora(ini))+(fim>ini?", até umas "+(+t[fim].slice(11,13)+1)+"h":"")+" (até "+max+"%"+(soma>=1?", ~"+Math.round(soma)+" mm":"")+")."}}
+  raiz.RACnucleo={norm:norm,urlAbs:urlAbs,lerAbast:lerAbast,TEMAS:TEMAS,temasDe:temasDe,juntarDados:juntarDados,SKILLS:SKILLS,compatVaga:compatVaga,omsZ:omsZ,omsValor:omsValor,percentilDeZ:percentilDeZ,csvLinhas:csvLinhas,napperLer:napperLer,bebeDias:bebeDias,VACINAS_PNI:VACINAS_PNI,vacinasCalendario:vacinasCalendario,mediana:mediana,prontidao:prontidao,somaDiasISO:somaDiasISO,correlacao:correlacao,chuvaAviso:chuvaAviso};
 })(typeof window!=="undefined"?window:globalThis);

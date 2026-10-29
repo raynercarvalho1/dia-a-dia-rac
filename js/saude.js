@@ -6,6 +6,8 @@
   var SAUDE={dias:null,ativs:null,met:"sono",per:"30",tipo:"",mais:30,sinc:null};
   var ATIV_TIPOS={running:["Corrida","🏃"],treadmill_running:["Esteira","🏃"],walking:["Caminhada","🚶"],strength_training:["Musculação","🏋️"],
     lap_swimming:["Natação","🏊"],open_water_swimming:["Águas abertas","🌊"],cycling:["Bike","🚴"],fitness_equipment:["Aparelhos","⚙️"]};
+  /* esportes que não aparecem no quadro de Treinos: aparelhos, águas abertas e bike */
+  var TREINO_OCULTOS=["fitness_equipment","open_water_swimming","cycling"];
   function ativTipo(t){return ATIV_TIPOS[t]||[t.replace(/_/g," "),"•"]}
   function hmDur(seg){if(seg==null)return "—";var m=Math.round(seg/60);return Math.floor(m/60)+"h"+String(m%60).padStart(2,"0")}
   function durTxt(seg){var m=Math.round(seg/60);return m<60?m+" min":Math.floor(m/60)+"h"+String(m%60).padStart(2,"0")}
@@ -24,10 +26,14 @@
     ["bb","Body Battery",function(d){return d.bbMax},function(v){return Math.round(v)},"#2E8BD8",true],
     ["estresse","Estresse",function(d){return d.estresse},function(v){return Math.round(v)},"#E8A317",false],
     ["passos","Passos",function(d){return d.passos},function(v){return Math.round(v).toLocaleString("pt-BR")},"#B5641B",true]];
+  /* antes desta data o relógio era de outra pessoa: nada disso entra no site, e o que tiver ficado no banco é apagado */
+  var GARMIN_DESDE="2025-01-01";
   function saudeCarregar(){
     function pag(t,cols,ord,from,acc){return SB.from(t).select(cols).order(ord,{ascending:false}).range(from,from+999).then(sbOk).then(function(l){acc=acc.concat(l);return l.length===1000?pag(t,cols,ord,from+1000,acc):acc})}
     return Promise.all([pag("garmin_dia","data,dados,atualizado","data",0,[]),pag("garmin_ativ","id,inicio,tipo,dados","inicio",0,[])])
-      .then(function(r){SAUDE.dias=r[0].reverse();SAUDE.ativs=r[1]})}
+      .then(function(r){SAUDE.dias=r[0].reverse().filter(function(d){return d.data>=GARMIN_DESDE});
+        SAUDE.ativs=r[1].filter(function(a){return a.inicio>=GARMIN_DESDE});
+        if(SAUDE.ativs.length<r[1].length||SAUDE.dias.length<r[0].length)Promise.resolve().then(function(){return Promise.all([SB.from("garmin_ativ").delete().lt("inicio",GARMIN_DESDE),SB.from("garmin_dia").delete().lt("data",GARMIN_DESDE)])}).catch(function(e){logErro("Garmin (limpar antigos)",e)})})}
   /* pede à função "garmin" o que é novo (dias e depois treinos), em rodadas até não ter mais */
   function saudeSincronizar(st){
     function chamar(corpo){return SB.functions.invoke("garmin",{body:corpo}).then(function(r){
@@ -57,7 +63,46 @@
     function desenhar(){
       corpo.innerHTML="";var dias=SAUDE.dias||[],ativs=SAUDE.ativs||[];
       if(!dias.length&&!ativs.length){corpo.appendChild(h("div",{class:"panel"},h("p",{class:"empty",text:"Ainda sem dados. Toque em Atualizar agora."})));return}
-      [saudeHoje(dias),saudeTendencia(dias),saudeSono(dias),saudeTreinos(ativs)].forEach(function(x){if(x)corpo.appendChild(x)})}
+      [saudeProntidao(dias,ativs),saudeHoje(dias),saudeTendencia(dias),saudeSono(dias),saudeTreinos(ativs)].forEach(function(x){if(x)corpo.appendChild(x)})}
+    /* prontidão do dia (VFC, FC de repouso, sono e Body Battery contra a sua faixa dos últimos 60 dias) e cruzamentos dos últimos 120 dias */
+    function saudeProntidao(dias,ativs){
+      var d=dias[dias.length-1];if(!d)return null;var pr=NUCLEO.prontidao(dias,d.data);if(!pr)return null;
+      var cor=pr.nota>=70?"var(--good)":pr.nota>=45?"#E8A317":"#D6283B";
+      var p=panel("Prontidão "+(d.data===hojeISO()?"de hoje":"em "+dataBR(d.data)),"Comparada com o seu normal dos últimos 60 dias, não com a média da população.");
+      var P=pr.partes,itens=[P.vfc?["VFC",P.vfc.v+" ms","normal "+Math.round(P.vfc.mediana),P.vfc.nota]:null,P.fc?["FC repouso",P.fc.v+" bpm","normal "+Math.round(P.fc.mediana),P.fc.nota]:null,
+        P.sono?["Sono",hmDur(P.sono.v*3600),"",P.sono.nota]:null,P.bb?["Body Battery",String(P.bb.v),"",P.bb.nota]:null].filter(Boolean);
+      /* últimos 14 dias em barrinhas */
+      var serie=dias.slice(-14).map(function(x){var q=NUCLEO.prontidao(dias,x.data);return [x.data,q&&q.nota]});
+      p.appendChild(h("div",{class:"prontw"},h("div",{class:"pronto",style:"--c:"+cor},h("b",{text:String(pr.nota)}),h("span",{text:pr.rotulo})),
+        h("div",{class:"prontp"},itens.map(function(i){return h("div",{class:"prontl"},h("span",{class:"kl",text:i[0]}),h("i",{class:"prontb"},h("i",{style:"width:"+i[3]+"%"})),h("span",{class:"sub",text:i[1]+(i[2]?" · "+i[2]:"")}))}))));
+      p.appendChild(h("div",{class:"prontserie",title:"Prontidão dos últimos 14 dias"},serie.map(function(x){return h("i",{title:dataBR(x[0])+": "+(x[1]==null?"sem dado":x[1]),style:"height:"+(x[1]||2)+"%;background:"+(x[1]==null?"var(--line)":x[1]>=70?"#1a8a4a":x[1]>=45?"#E8A317":"#D6283B")})})));
+      if(pr.alertas.length)p.appendChild(h("ul",{class:"wl"},pr.alertas.map(function(t){return h("li",{class:"qrwarn"},h("span",{class:"grow",text:"⚠ "+t}))})));
+      var ins=saudeInsights(dias,ativs);
+      if(ins.length){p.appendChild(h("h3",{class:"dayh",text:"O que os seus dados mostram"}));p.appendChild(h("ul",{class:"wl"},ins.map(function(t){return h("li",null,h("span",{class:"grow",text:t}))})))}
+      return p}
+    function saudeInsights(dias,ativs){
+      var ini=NUCLEO.somaDiasISO(hojeISO(),-120),D=dias.filter(function(x){return x.data>=ini}),por={},out=[];D.forEach(function(x){por[x.data]=x.dados||{}});
+      function media(l){return l.length?l.reduce(function(a,b){return a+b},0)/l.length:null}
+      /* carga de treino por dia (soma da "carga" do Garmin, ou minutos quando não tem) */
+      var carga={};ativs.forEach(function(a){var k=a.inicio.slice(0,10);if(k<ini)return;carga[k]=(carga[k]||0)+(a.dados.carga||(a.dados.duracao||0)/60)});
+      var cs=Object.keys(carga).map(function(k){return carga[k]}).sort(function(a,b){return a-b}),forte=cs.length?cs[Math.floor(cs.length*.6)]:Infinity;
+      var vf=[],vd=[],sf=[],sd=[];
+      D.forEach(function(x){var ont=NUCLEO.somaDiasISO(x.data,-1);if(!por[ont])return;var c=carga[ont]||0,v=x.dados.vfc&&x.dados.vfc.noite,n=x.dados.sono&&x.dados.sono.nota;
+        if(c>=forte){if(v)vf.push(v);if(n)sf.push(n)}else if(!c){if(v)vd.push(v);if(n)sd.push(n)}});
+      if(vf.length>=5&&vd.length>=5){var dv=media(vf)-media(vd);if(Math.abs(dv)>=2)out.push("Na noite depois de um treino forte, a sua VFC fica em média "+Math.abs(Math.round(dv))+" ms "+(dv<0?"mais baixa":"mais alta")+" do que depois de um dia sem treino ("+Math.round(media(vf))+" × "+Math.round(media(vd))+" ms).")}
+      if(sf.length>=5&&sd.length>=5){var dn=media(sf)-media(sd);if(Math.abs(dn)>=3)out.push("A nota do sono é "+Math.abs(Math.round(dn))+" pontos "+(dn>0?"maior":"menor")+" nas noites depois de treino forte.")}
+      /* horário de dormir contra a nota do sono */
+      var cedo=[],tarde=[];D.forEach(function(x){var s2=x.dados.sono;if(!s2||!s2.inicio||!s2.nota)return;var m=+s2.inicio.slice(0,2)*60+ +s2.inicio.slice(3,5);if(m<12*60)m+=1440;(m<=23*60?cedo:m>=23*60+45?tarde:[]).push(s2.nota)});
+      if(cedo.length>=5&&tarde.length>=5){var dc=media(cedo)-media(tarde);if(Math.abs(dc)>=3)out.push("Quando você dorme até 23h, a nota do sono fica em "+Math.round(media(cedo))+"; depois de 23h45, cai para "+Math.round(media(tarde))+".")}
+      /* estresse por dia da semana */
+      var DS=["domingo","segunda","terça","quarta","quinta","sexta","sábado"],sem=[[],[],[],[],[],[],[]];
+      D.forEach(function(x){if(typeof x.dados.estresse==="number")sem[new Date(x.data+"T12:00:00").getDay()].push(x.dados.estresse)});
+      var ms=sem.map(function(l,i){return [i,l.length>=4?media(l):null]}).filter(function(x){return x[1]!=null}).sort(function(a,b){return b[1]-a[1]});
+      if(ms.length>=5&&ms[0][1]-ms[ms.length-1][1]>=5)out.push("O dia da semana mais estressante é "+DS[ms[0][0]]+" (média "+Math.round(ms[0][1])+"); o mais tranquilo, "+DS[ms[ms.length-1][0]]+" ("+Math.round(ms[ms.length-1][1])+").");
+      /* passos do dia contra o sono da noite seguinte */
+      var xs=[],ys=[];D.forEach(function(x){var am=por[NUCLEO.somaDiasISO(x.data,1)];if(am&&am.sono&&am.sono.total&&x.dados.passos){xs.push(x.dados.passos);ys.push(am.sono.total/3600)}});
+      var rc=NUCLEO.correlacao(xs,ys);if(rc!=null&&Math.abs(rc)>=.25)out.push("Nos dias em que você anda mais, você "+(rc>0?"dorme mais":"dorme menos")+" na noite seguinte (correlação "+fmtN(Math.round(rc*100)/100)+").");
+      return out}
     function saudeHoje(dias){
       var d=dias[dias.length-1];if(!d)return null;var x=d.dados,ont=dias[dias.length-2];
       var p=panel(d.data===hojeISO()?"Hoje":"Em "+dataBR(d.data),"Toque numa métrica para ver o gráfico."),g=h("div",{class:"kgasto saudekpi"});
@@ -126,6 +171,7 @@
           h("span",{class:"sonot",text:hmDur(s.total)+(s.nota?" · "+s.nota:"")}))})));
       return p}
     function saudeTreinos(ativs){
+      ativs=ativs.filter(function(a){return TREINO_OCULTOS.indexOf(a.tipo)<0});
       if(!ativs.length)return null;
       var p=panel("Treinos",ativs.length+" atividades desde "+dataBR(ativs[ativs.length-1].inicio.slice(0,10)));
       /* resumo do mês e do ano por esporte */

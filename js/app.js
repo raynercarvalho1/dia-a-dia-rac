@@ -9,7 +9,7 @@
 
   /* Rotas por hash: #esportes/beisebol/liga, #esportes/beisebol/time-119, #esportes/beisebol/jogo-849805,
      #esportes/basquete/jogo-401909092, #x/jornalistas, #vagas ... */
-  var tabs=["inicio","esportes","vagas","mercado","aniversarios","em-breve","x","estudos","mba","saude","conexoes","agenda","busca","sistema","lista","carreira","documentos","eddie","olivia","veiculos"];
+  var tabs=["inicio","esportes","vagas","mercado","aniversarios","em-breve","x","estudos","mba","saude","conexoes","agenda","busca","sistema","resumo","lista","carreira","documentos","eddie","olivia","veiculos"];
   var DA_CASA=["mercado","lista","eddie","olivia","veiculos","documentos"];
   var sports=["beisebol","basquete","futebol-americano"];
   function mark(sel,attr,val){document.querySelectorAll(sel).forEach(function(a){
@@ -24,10 +24,10 @@
     n.id="pico";$("#pico").replaceWith(n);
     $("#ptitle").textContent=hit?hit.querySelector(".t").textContent:"Dia a Dia RAC"}
   /* ===== Módulos: cada seção grande fica em js/<seção>.js e só carrega quando é aberta ===== */
-  var MOD_VERSAO="2026-10-28.6",MODULOS={},MOD_OK={};
-  var MOD_DEPS={conexoes:["mba"],sistema:["familia","mba","saude"],carreira:["sistema"],bebe:["familia","oms"]};
+  var MOD_VERSAO="2026-10-29.1",MODULOS={},MOD_OK={};
+  var MOD_DEPS={conexoes:["mba"],sistema:["familia","mba","saude"],carreira:["sistema"],bebe:["familia","oms"],resumo:["saude","mba","familia"]};
   var ROTA_MODS={esportes:["esportes"],eddie:["familia"],olivia:["familia"],veiculos:["familia"],mba:["mba"],saude:["saude"],
-    conexoes:["conexoes"],agenda:["sistema"],busca:["sistema"],sistema:["sistema"],lista:["lista"],carreira:["carreira"],documentos:["familia"]};
+    conexoes:["conexoes"],agenda:["sistema"],busca:["sistema"],sistema:["sistema"],lista:["lista"],carreira:["carreira"],documentos:["familia"],resumo:["resumo"]};
   function modulo(n){
     if(MODULOS[n])return MODULOS[n];
     MODULOS[n]=Promise.all((MOD_DEPS[n]||[]).map(modulo)).then(function(){return new Promise(function(ok,erro){
@@ -68,6 +68,7 @@
     if(top==="carreira"){sideMark("carreira","carreira");renderCarreira(parts[1],parts[2]);return}
     if(top==="lista"){sideMark("lista","lista");renderLista(parts[1]);return}
     if(top==="agenda"){sideMark("agenda","agenda");renderAgenda();return}
+    if(top==="resumo"){sideMark("resumo","resumo");renderResumo(parts[1]);return}
     if(top==="busca"){sideMark("busca","busca");$("#ptitle").textContent="Busca";renderBusca(decodeURIComponent(parts.slice(1).join("/")||""));return}
     if(top==="sistema"){sideMark("sistema","sistema");renderSistema();return}
     if(top==="conexoes"){sideMark("conexoes","conexoes");renderConexoes(parts[1],decodeURIComponent(parts[2]||""));return}
@@ -758,8 +759,11 @@
     root.appendChild(h("div",{class:"home"},
       h("div",{class:"hi"},h("div",null,h("h2",{text:saudacao()+", Rayner"}),h("p",{class:"sub",text:new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long",year:"numeric"})})),h("div",null,clock,wx)),
       h("div",{class:"hgrid"},wEmail(),wLazy(["sistema"],"wAgenda"),wLazy(["conexoes"],"wConexoes"),wLazy(["esportes"],"wEsportes"),wNoticias(),wX(),wMercado(),wLazy(["mba"],"wMba"),wAniv(),wVagas(),wEstudos())));
-    getJson("https://api.open-meteo.com/v1/forecast?latitude=-23.50&longitude=-47.46&current=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min&timezone=America%2FSao_Paulo&forecast_days=1").then(function(d){
-      wx.textContent=Math.round(d.current.temperature_2m)+"° agora em Sorocaba · "+WXTXT[wxKind(d.current.weather_code)]+" · máx. "+Math.round(d.daily.temperature_2m_max[0])+"°, mín. "+Math.round(d.daily.temperature_2m_min[0])+"°"}).catch(function(){})}
+    getJson("https://api.open-meteo.com/v1/forecast?latitude=-23.50&longitude=-47.46&current=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min&hourly=precipitation_probability,precipitation&timezone=America%2FSao_Paulo&forecast_days=2").then(function(d){
+      wx.textContent=Math.round(d.current.temperature_2m)+"° agora em Sorocaba · "+WXTXT[wxKind(d.current.weather_code)]+" · máx. "+Math.round(d.daily.temperature_2m_max[0])+"°, mín. "+Math.round(d.daily.temperature_2m_min[0])+"°";
+      /* aviso de chuva nas próximas 12 horas, em cima dos cartões */
+      var c=NUCLEO.chuvaAviso(d.hourly,d.current.time);if(!c)return;
+      var g=root.querySelector(".hgrid");if(g)g.parentNode.insertBefore(h("div",{class:"chuva",role:"status"},h("b",{text:"☔ "+c.texto}),h("span",{class:"sub",text:c.agora?"Se for sair, leve o guarda-chuva.":"Bom saber antes de sair."})),g)}).catch(function(){})}
 
   /* E-mail: as duas contas do Gmail, com a caixa de entrada aqui dentro */
   var EMAILS_PADRAO=[{n:"Rayner Carvalho",u:"https://mail.google.com/mail/u/0/#inbox"},{n:"Raynim Carvalho",u:"https://mail.google.com/mail/u/1/#inbox"}];

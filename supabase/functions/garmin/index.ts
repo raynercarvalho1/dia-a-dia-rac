@@ -214,19 +214,22 @@ function resumirFit(msgs: Record<number, Record<number, unknown>[]>) {
 /* ---------- sincronização (usada pelo site e pela rotina diária) ---------- */
 type Sb = ReturnType<typeof createClient>;
 /* atividades em páginas de 100, da mais nova para a mais antiga; para quando acha uma página toda conhecida */
+/* antes desta data o relógio era de outra pessoa: não entra, e o que tiver ficado no banco sai */
+const GARMIN_DESDE = "2025-01-01";
 async function sincAtiv(sb: Sb, tok: string, uid: string | null, corpo: Record<string, unknown>) {
   let inicio = Number(corpo.inicio ?? 0), salvas = 0, mais = false;
+  if (!inicio) { let d = sb.from("garmin_ativ").delete().lt("inicio", GARMIN_DESDE); if (uid) d = d.eq("user_id", uid); await d; }
   for (let i = 0; i < 6; i++) {
     const l = await garmin(tok, `/activitylist-service/activities/search/activities?start=${inicio}&limit=100`);
     if (!Array.isArray(l) || !l.length) { mais = false; break; }
     const ids = l.map((a: any) => a.activityId);
     let q = sb.from("garmin_ativ").select("id").in("id", ids); if (uid) q = q.eq("user_id", uid);
     const { data: ja } = await q;
-    const linhas = l.map((a: any) => (uid ? { user_id: uid, ...ativ(a) } : ativ(a)));
-    const { error } = await sb.from("garmin_ativ").upsert(linhas);
-    if (error) throw error;
+    const linhas = l.map((a: any) => (uid ? { user_id: uid, ...ativ(a) } : ativ(a))).filter((a: any) => a.inicio >= GARMIN_DESDE);
+    if (linhas.length) { const { error } = await sb.from("garmin_ativ").upsert(linhas); if (error) throw error; }
     salvas += linhas.length; inicio += l.length;
-    mais = l.length === 100 && !(corpo.completo !== true && (ja?.length ?? 0) === ids.length);
+    /* a lista vem da mais nova para a mais antiga: chegou antes do corte, para */
+    mais = l.length === 100 && linhas.length === l.length && !(corpo.completo !== true && (ja?.length ?? 0) === ids.length);
     if (!mais) break;
   }
   return { salvas, mais, inicio };
@@ -250,6 +253,107 @@ async function sincDias(sb: Sb, tok: string, uid: string | null, corpo: Record<s
     salvos += linhas.length; ini = somaDias(fim, 1);
   }
   return { salvos, mais: ini <= hoje, desde: ini };
+}
+
+/* ---------- notificações push (Web Push: VAPID + aes128gcm, RFC 8291/8292), só com WebCrypto ---------- */
+const b64u = (b: ArrayBuffer | Uint8Array) => btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+const deB64u = (s: string) => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((s.length + 3) % 4)), (c) => c.charCodeAt(0));
+const junta = (...l: Uint8Array[]) => { const o = new Uint8Array(l.reduce((s, x) => s + x.length, 0)); let i = 0; for (const x of l) { o.set(x, i); i += x.length; } return o; };
+const txt = (s: string) => new TextEncoder().encode(s);
+async function hmac(chave: Uint8Array, dados: Uint8Array) {
+  const k = await crypto.subtle.importKey("raw", chave, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  return new Uint8Array(await crypto.subtle.sign("HMAC", k, dados));
+}
+/* corpo cifrado para uma inscrição {p256dh, auth} */
+async function cifrar(texto: string, p256dh: string, auth: string) {
+  const ua = deB64u(p256dh), seg = deB64u(auth);
+  const par = await crypto.subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, ["deriveBits"]);
+  const as = new Uint8Array(await crypto.subtle.exportKey("raw", par.publicKey));
+  const uaK = await crypto.subtle.importKey("raw", ua, { name: "ECDH", namedCurve: "P-256" }, false, []);
+  const ecdh = new Uint8Array(await crypto.subtle.deriveBits({ name: "ECDH", public: uaK }, par.privateKey, 256));
+  const ikm = await hmac(await hmac(seg, ecdh), junta(txt("WebPush: info\0"), ua, as, new Uint8Array([1])));
+  const sal = crypto.getRandomValues(new Uint8Array(16)), prk = await hmac(sal, ikm);
+  const cek = (await hmac(prk, txt("Content-Encoding: aes128gcm\0\x01"))).slice(0, 16);
+  const nonce = (await hmac(prk, txt("Content-Encoding: nonce\0\x01"))).slice(0, 12);
+  const k = await crypto.subtle.importKey("raw", cek, "AES-GCM", false, ["encrypt"]);
+  const cif = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv: nonce }, k, junta(txt(texto), new Uint8Array([2]))));
+  return junta(sal, new Uint8Array([0, 0, 16, 0, 65]), as, cif);
+}
+/* chaves VAPID: {publica (base64url, 65 bytes), jwk (privada)} */
+async function novasChavesVapid(): Promise<Vapid> {
+  const par = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"]);
+  return { publica: b64u(await crypto.subtle.exportKey("raw", par.publicKey)), jwk: await crypto.subtle.exportKey("jwk", par.privateKey) as JsonWebKey };
+}
+type Vapid = { publica: string; jwk: JsonWebKey };
+async function vapid(endpoint: string, ch: Vapid) {
+  const aud = new URL(endpoint).origin, agora = Math.floor(Date.now() / 1000);
+  const corpo = b64u(txt(JSON.stringify({ typ: "JWT", alg: "ES256" }))) + "." + b64u(txt(JSON.stringify({ aud, exp: agora + 12 * 3600, sub: "https://raynercarvalho.com.br" })));
+  const k = await crypto.subtle.importKey("jwk", ch.jwk, { name: "ECDSA", namedCurve: "P-256" }, false, ["sign"]);
+  const ass = await crypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, k, txt(corpo));
+  return `vapid t=${corpo}.${b64u(ass)}, k=${ch.publica}`;
+}
+/* manda para uma inscrição; devolve o status (404/410 = inscrição morta) */
+async function enviarPush(insc: { endpoint: string; p256dh: string; auth: string }, msg: unknown, ch: Vapid) {
+  const corpo = await cifrar(JSON.stringify(msg), insc.p256dh, insc.auth);
+  const r = await fetch(insc.endpoint, { method: "POST", body: corpo, headers: {
+    Authorization: await vapid(insc.endpoint, ch), "Content-Encoding": "aes128gcm", "Content-Type": "application/octet-stream", TTL: "86400", Urgency: "normal" } });
+  return r.status;
+}
+/* as chaves VAPID são criadas na primeira vez e ficam na tabela privada rac_segredos (só o servidor lê) */
+async function chavesVapid(adm: Sb): Promise<Vapid> {
+  const { data } = await adm.from("rac_segredos").select("valor").eq("chave", "vapid").maybeSingle();
+  if (data?.valor) return data.valor as Vapid;
+  const ch = await novasChavesVapid();
+  const { error } = await adm.from("rac_segredos").insert({ chave: "vapid", valor: ch });
+  if (error) { const { data: d2 } = await adm.from("rac_segredos").select("valor").eq("chave", "vapid").single(); if (d2?.valor) return d2.valor as Vapid; throw error; }
+  return ch;
+}
+/* manda para todos os aparelhos inscritos de uma pessoa; apaga os que o serviço de push diz que não existem mais */
+async function pushPara(adm: Sb, uid: string, msg: { titulo: string; corpo: string; url?: string; tag?: string }) {
+  const { data: l } = await adm.from("push_inscricoes").select("id,endpoint,p256dh,auth").eq("user_id", uid);
+  if (!l?.length) return "nenhum aparelho com notificações ativas";
+  const ch = await chavesVapid(adm), res: number[] = [];
+  for (const x of l as { id: number; endpoint: string; p256dh: string; auth: string }[]) {
+    const st = await enviarPush(x, msg, ch).catch(() => 0);
+    res.push(st);
+    if (st === 404 || st === 410) await adm.from("push_inscricoes").delete().eq("id", x.id);
+  }
+  return `${res.filter((c) => c >= 200 && c < 300).length} de ${l.length} aparelhos`;
+}
+const admin = () => createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
+
+/* ---------- chuva em Sorocaba hoje (Open-Meteo, previsão por hora, das 6h em diante) ---------- */
+async function chuvaHoje(hoje: string) {
+  const r = await fetch("https://api.open-meteo.com/v1/forecast?latitude=-23.50&longitude=-47.46&hourly=precipitation_probability,precipitation&timezone=America%2FSao_Paulo&forecast_days=1");
+  if (!r.ok) throw new Error("Open-Meteo respondeu " + r.status);
+  const h = (await r.json()).hourly as { time: string[]; precipitation_probability: number[]; precipitation: number[] };
+  let ini = -1, fim = -1, max = 0, mm = 0;
+  for (let i = 0; i < h.time.length; i++) {
+    const hr = +h.time[i].slice(11, 13); if (h.time[i].slice(0, 10) !== hoje || hr < 6) continue;
+    const p = h.precipitation_probability[i] ?? 0, m = h.precipitation[i] ?? 0;
+    if (p >= 60 || (p >= 40 && m >= 1)) { if (ini < 0) ini = hr; fim = hr; }
+    max = Math.max(max, p); mm += m;
+  }
+  return ini < 0 ? null : `☔ Chuva em Sorocaba hoje, das ${ini}h às ${fim + 1}h (até ${max}%${mm >= 1 ? ", ~" + Math.round(mm) + " mm" : ""}).`;
+}
+
+/* ---------- resumo da semana (vai no domingo) ---------- */
+const hm = (seg: number) => `${Math.floor(seg / 3600)}h${String(Math.round(seg % 3600 / 60)).padStart(2, "0")}`;
+async function resumoSemana(adm: Sb, uid: string, hoje: string) {
+  const ini = somaDias(hoje, -6), l: string[] = [];
+  const { data: at } = await adm.from("garmin_ativ").select("tipo,inicio,dados").eq("user_id", uid).gte("inicio", ini);
+  if (at?.length) {
+    const km = at.reduce((s, a: any) => s + (a.dados?.distancia ?? 0), 0) / 1000, seg = at.reduce((s, a: any) => s + (a.dados?.duracao ?? 0), 0);
+    l.push(`🏃 ${at.length} treino${at.length > 1 ? "s" : ""}${km >= 1 ? ", " + km.toFixed(1).replace(".", ",") + " km" : ""}, ${hm(seg)}`);
+  } else l.push("🏃 nenhum treino na semana");
+  const { data: dias } = await adm.from("garmin_dia").select("dados").eq("user_id", uid).gte("data", ini).lte("data", hoje);
+  const med = (f: (d: any) => number | undefined) => { const v = (dias ?? []).map((x: any) => f(x.dados ?? {})).filter((x): x is number => typeof x === "number"); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
+  const sono = med((d) => d.sono?.total), passos = med((d) => d.passos), vfc = med((d) => d.vfc?.noite);
+  if (sono) l.push(`😴 sono médio ${hm(sono)}${vfc ? " · VFC " + Math.round(vfc) + " ms" : ""}`);
+  if (passos) l.push(`👟 ${Math.round(passos).toLocaleString("pt-BR")} passos por dia`);
+  const { data: nt } = await adm.from("notas").select("total").eq("user_id", uid).gte("data", ini).lte("data", hoje);
+  if (nt?.length) l.push(`🛒 mercado: R$ ${nt.reduce((s, x: any) => s + Number(x.total || 0), 0).toFixed(2).replace(".", ",")} em ${nt.length} compra${nt.length > 1 ? "s" : ""}`);
+  return l;
 }
 
 /* ---------- rotina diária (chamada pelo agendamento do banco, sem ninguém com o site aberto) ---------- */
@@ -335,13 +439,21 @@ async function rotina(req: Request) {
     await passo("garmin_dias", () => sincDias(adm, tok!, uid, {}, hoje, 13));
     await passo("garmin_treinos", () => sincAtiv(adm, tok!, uid, {}));
   }
+  const domingo = new Date(hoje + "T12:00:00Z").getUTCDay() === 0;
+  let chuva: string | null = null, semana: string[] = [];
+  await passo("chuva", async () => { chuva = await chuvaHoje(hoje); return chuva ?? "sem chuva"; });
+  if (domingo) await passo("resumo_semana", async () => { semana = await resumoSemana(adm, uid, hoje); return semana.length; });
   await passo("alertas", async () => {
     const ev = await agendaServidor(adm, uid, hoje);
-    if (!ev.length) return { itens: 0 };
     const linhas = ev.map((e) => (e.data < hoje ? "⚠ atrasado: " : e.data === hoje ? "• hoje: " : "• " + dBR(e.data) + ": ") + e.t);
-    return { itens: ev.length, telegram: await telegram("Dia a Dia RAC — próximos dias\n\n" + linhas.join("\n")) };
+    const partes = [chuva, semana.length ? "Sua semana\n" + semana.join("\n") : null, linhas.length ? "Próximos dias\n" + linhas.join("\n") : null].filter(Boolean) as string[];
+    if (!partes.length) return { itens: 0 };
+    /* push: o essencial em poucas linhas; ao tocar, abre a Agenda (ou o Resumo, no domingo) */
+    const corpoPush = [chuva, semana.length ? "Sua semana: " + semana.join(" · ") : null, linhas.length ? linhas.length + (linhas.length > 1 ? " itens" : " item") + " na agenda: " + ev[0].t : null].filter(Boolean).join("\n");
+    return { itens: ev.length, telegram: await telegram("Dia a Dia RAC\n\n" + partes.join("\n\n")),
+      push: await pushPara(adm, uid, { titulo: domingo ? "Dia a Dia RAC — resumo da semana" : "Dia a Dia RAC — hoje", corpo: corpoPush, url: domingo && semana.length ? "./#resumo" : "./#agenda", tag: "rotina" }) };
   });
-  if (new Date(hoje + "T12:00:00Z").getUTCDay() === 0) await passo("backup", () => backupSemanal(adm, uid, hoje));
+  if (domingo) await passo("backup", () => backupSemanal(adm, uid, hoje));
   await adm.from("rotina_log").insert({ user_id: uid, ok: tudoOk, resumo: res });
   return responder({ ok: tudoOk, ...res });
 }
@@ -356,6 +468,9 @@ Deno.serve(async (req) => {
     const { data: u } = await sb.auth.getUser();
     if (!u?.user) return responder({ erro: "faça login no site" }, 401);
     const corpo = await req.json().catch(() => ({}));
+    /* notificações: a chave pública para o aparelho se inscrever, e um teste para os aparelhos de quem chamou */
+    if (corpo.tipo === "push_chave") return responder({ ok: true, publica: (await chavesVapid(admin())).publica });
+    if (corpo.tipo === "push_teste") return responder({ ok: true, resultado: await pushPara(admin(), u.user.id, { titulo: "Dia a Dia RAC", corpo: "Notificações funcionando neste aparelho ✓", url: "./#sistema", tag: "teste" }) });
     const tok = await token();
     const hoje = iso(new Date(Date.now() - 3 * 3600e3)); // horário de Brasília
 

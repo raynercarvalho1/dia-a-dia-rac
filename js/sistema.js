@@ -79,6 +79,12 @@
         if(!visto[k+"p"]){visto[k+"p"]=1;if(r.proxima&&r.proxima>=maisDias(hoje,-60))add(r.proxima,F.n+": "+r.titulo,tipoInfo(r.tipo)[1]+(r.proxima<hoje?" · estava previsto para "+dataBR(r.proxima):""),tipo,href,{reg:r})}
         if(d.vigenciaFim&&!visto[k+"v"]){visto[k+"v"]=1;add(d.vigenciaFim,F.n+": fim do "+r.titulo,"renovar antes",tipo,href,{reg:r})}
         if(d.garantiaAte&&!visto[k+"g"]&&d.garantiaAte>=hoje){visto[k+"g"]=1;add(d.garantiaAte,F.n+": fim da garantia de "+r.titulo,"",tipo,href,{reg:r})}});
+      /* IPVA de SP: vence em janeiro pelo final da placa (cota única com desconto ou 1ª parcela); aparece de novembro até quitar.
+         Some quando houver um registro "Licenciamento e impostos" com IPVA do ano. */
+      var ano=+hoje.slice(0,4)+(+hoje.slice(5,7)>=11?1:0),dIpva=ano+"-01-09";
+      if(dIpva>=maisDias(hoje,-60)&&dIpva<=maisDias(hoje,75))Object.keys(FAM).forEach(function(q){var F=FAM[q];if(!F.veic||/antigo/i.test(F.n))return;
+        if(regs.some(function(r){return r.quem===q&&r.tipo==="documento"&&/ipva/i.test(r.titulo||"")&&(String(r.titulo).indexOf(String(ano))>=0||r.data>=(ano-1)+"-12-01")}))return;
+        add(dIpva,F.n+": IPVA "+ano,"vence em janeiro conforme o final da placa · veja a data na Sefaz-SP","veiculo","https://portal.fazenda.sp.gov.br/servicos/ipva",{ext:true})});
       if(isOwner()){
         mbaAulas().forEach(function(a){if(a.data>=hoje)add(a.data,"Aula: "+a.t,a.hora+(a.prof?" · "+a.prof:""),"mba","#mba")});
         mbaAvals().forEach(function(a){if(!a.feita)add(a.ate,"Responder: "+a.t+(a.disc?" ("+a.disc+")":""),"avaliação do MBA","mba",a.link||"#mba",{ext:!!a.link})});
@@ -168,6 +174,30 @@
     inp.addEventListener("input",ir);ir();setTimeout(function(){inp.focus()},50)}
 
   /* ---------- página Sistema ---------- */
+  /* ===== Notificações push neste aparelho: a inscrição fica em push_inscricoes e a rotina das 6h manda os avisos ===== */
+  function pushPainel(){
+    var p=panel("Notificações neste aparelho","O aviso das 6h (chuva em Sorocaba e o que vence na agenda) e, no domingo, o resumo da semana. No iPhone, funciona com o site instalado na tela de início (Compartilhar → Adicionar à Tela de Início).");
+    var st=h("p",{class:"sub",role:"status",text:"Conferindo…"}),at=h("button",{type:"button",text:"Ativar neste aparelho",hidden:""}),te=h("button",{type:"button",class:"ghostbtn",text:"Mandar um teste",hidden:""}),de=h("button",{type:"button",class:"ghostbtn",text:"Desativar",hidden:""});
+    p.appendChild(h("div",{class:"vfil"},at,te,de));p.appendChild(st);
+    var pode="serviceWorker" in navigator&&"PushManager" in window&&"Notification" in window;
+    function reg(){return Promise.race([navigator.serviceWorker.ready,new Promise(function(_,n){setTimeout(function(){n(new Error("o app ainda está se instalando; recarregue a página"))},5000)})])}
+    function chamar(corpo){return SB.functions.invoke("garmin",{body:corpo}).then(function(r){if(r.error)throw new Error(r.error.message);if(r.data&&r.data.erro)throw new Error(r.data.erro);return r.data})}
+    function bytes(b64){var s=atob(b64.replace(/-/g,"+").replace(/_/g,"/")+"===".slice((b64.length+3)%4)),u=new Uint8Array(s.length);for(var i=0;i<s.length;i++)u[i]=s.charCodeAt(i);return u}
+    function estado(){
+      if(!pode){st.textContent="Este navegador não recebe notificações do site."+(/iPhone|iPad/.test(navigator.userAgent)?" No iPhone, instale o site na tela de início e abra por lá.":"");return}
+      reg().then(function(r){return r.pushManager.getSubscription()}).then(function(s){at.hidden=!!s;te.hidden=de.hidden=!s;at.disabled=false;
+        st.textContent=s?"✓ Ativas neste aparelho.":Notification.permission==="denied"?"As notificações do site estão bloqueadas nas configurações do navegador. Libere lá e volte aqui.":"Desligadas neste aparelho."})
+        .catch(function(e){st.textContent="Não consegui conferir ("+e.message+")."})}
+    at.onclick=function(){at.disabled=true;st.textContent="Pedindo permissão…";
+      /* o pedido de permissão precisa sair direto do toque (exigência do iPhone) */
+      Notification.requestPermission().then(function(perm){if(perm!=="granted")throw new Error("a permissão não foi dada");return Promise.all([reg(),chamar({tipo:"push_chave"})])})
+        .then(function(r){return r[0].pushManager.subscribe({userVisibleOnly:true,applicationServerKey:bytes(r[1].publica)})})
+        .then(function(s){var j=s.toJSON();return SB.from("push_inscricoes").upsert({endpoint:j.endpoint,p256dh:j.keys.p256dh,auth:j.keys.auth,aparelho:navigator.userAgent.slice(0,160)},{onConflict:"endpoint"}).then(sbOk)})
+        .then(function(){estado()},function(e){at.disabled=false;logErro("notificações",e);
+          st.textContent=/push_inscricoes|relation|schema cache/i.test(e.message)?"Falta rodar o supabase/011_push.sql no Supabase.":"Não consegui ativar: "+e.message})};
+    te.onclick=function(){te.disabled=true;st.textContent="Mandando…";chamar({tipo:"push_teste"}).then(function(d){st.textContent="Teste enviado para "+d.resultado+". Deve chegar em alguns segundos."},function(e){st.textContent="Não consegui mandar: "+e.message}).then(function(){te.disabled=false})};
+    de.onclick=function(){reg().then(function(r){return r.pushManager.getSubscription()}).then(function(s){if(!s)return;return SB.from("push_inscricoes").delete().eq("endpoint",s.endpoint).then(function(){return s.unsubscribe()})}).then(estado,function(e){st.textContent="Não consegui desativar: "+e.message})};
+    estado();return p}
   function renderSistema(){
     var root=$("#sistema-view");root.innerHTML="";
     /* sincronização e conflitos */
@@ -204,14 +234,15 @@
       r.data.forEach(function(f){var b=h("button",{type:"button",class:"ghostbtn",text:"Baixar"});b.onclick=function(){SB.storage.from("backups").download(EU.id+"/"+f.name).then(function(x){if(x.data)baixarArquivo(x.data,"rac-backup-servidor-"+f.name)})};
         lb.appendChild(h("li",null,h("span",{class:"grow",text:f.name.replace(".json","").split("-").reverse().join("/")}),b))})});
     root.appendChild(pb);
+    root.appendChild(pushPainel());
     /* rotina automática */
-    var pr=panel("Rotina automática","Todo dia às 6h o servidor atualiza a Garmin, confere a agenda e manda os avisos pelo Telegram; aos domingos guarda um backup.");
+    var pr=panel("Rotina automática","Todo dia às 6h o servidor atualiza a Garmin, vê se vai chover, confere a agenda e manda os avisos (notificação e Telegram); aos domingos manda o resumo da semana e guarda um backup.");
     var lr=h("ul",{class:"wl"},h("li",null,h("span",{class:"sub",text:"Carregando…"})));pr.appendChild(lr);root.appendChild(pr);
     Promise.resolve().then(function(){return SB.from("rotina_log").select("quando,ok,resumo").order("quando",{ascending:false}).limit(10)}).catch(function(e){return {error:e}}).then(function(r){lr.innerHTML="";
       if(r.error){lr.appendChild(h("li",null,h("span",{class:"qrwarn",text:/rotina_log|relation|schema cache/i.test(r.error.message)?"A rotina ainda não está ligada: falta rodar o supabase/008_sistema.sql.":"Não consegui ler ("+r.error.message+")."})));return}
       if(!r.data.length){lr.appendChild(h("li",null,h("span",{class:"sub",text:"Ainda não rodou. A primeira vez é amanhã às 6h."})));return}
       r.data.forEach(function(x){var s=x.resumo||{},partes=[];if(s.garmin_dias&&s.garmin_dias.salvos!=null)partes.push(s.garmin_dias.salvos+" dias da Garmin");if(s.garmin_treinos&&s.garmin_treinos.salvas!=null)partes.push(s.garmin_treinos.salvas+" treinos conferidos");
-        if(s.alertas&&s.alertas.itens!=null)partes.push(s.alertas.itens+" avisos"+(s.alertas.telegram?" ("+s.alertas.telegram+")":""));if(s.backup&&!s.backup.erro)partes.push("backup feito");
+        if(s.alertas&&s.alertas.itens!=null)partes.push(s.alertas.itens+" avisos"+(s.alertas.telegram?" (Telegram: "+s.alertas.telegram+(s.alertas.push?"; notificação: "+s.alertas.push:"")+")":""));if(typeof s.chuva==="string"&&s.chuva!=="sem chuva")partes.push("chuva");if(s.backup&&!s.backup.erro)partes.push("backup feito");
         Object.keys(s).forEach(function(k){if(s[k]&&s[k].erro)partes.push("⚠ "+k+": "+s[k].erro)});
         lr.appendChild(h("li",{class:x.ok?null:"alerta"},h("span",{class:"grow"},h("b",{text:new Date(x.quando).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})+(x.ok?" · ok":" · com falha")}),h("span",{class:"sub",text:partes.join(" · ")}))))})});
     /* falhas */

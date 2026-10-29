@@ -113,3 +113,27 @@ test("Napper: noite da hora de dormir até acordar, sem contar despertares nem s
   assert.equal(d["2026-10-27"].sonecas, 0, "o trecho de sono dentro da noite não vira soneca");
   assert.equal(d["2026-10-28"].sonecaMin, 60);
 });
+
+test("prontidão: dia normal fica no meio, dia ruim cai e gera alertas", () => {
+  const dias = [];
+  for (let i = 60; i >= 1; i--) dias.push({ data: N.somaDiasISO("2026-10-28", -i), dados: { vfc: { noite: 54 + (i % 5) - 2 }, fcRepouso: 50 + (i % 3) - 1, sono: { total: 7.5 * 3600, nota: 80 }, bbMax: 75, estresse: 30 + (i % 7) - 3 } });
+  const normal = N.prontidao(dias.concat([{ data: "2026-10-28", dados: { vfc: { noite: 54 }, fcRepouso: 50, sono: { total: 7.5 * 3600, nota: 80 }, bbMax: 75, estresse: 30 } }]), "2026-10-28");
+  assert.ok(normal.nota >= 55 && normal.nota <= 80, "nota normal: " + normal.nota);
+  assert.deepEqual(normal.alertas, []);
+  const ruim = N.prontidao(dias.slice(0, -1).concat([{ data: "2026-10-27", dados: { sono: { total: 5 * 3600 } } }, { data: "2026-10-28", dados: { vfc: { noite: 40, faixaMin: 47 }, fcRepouso: 58, sono: { total: 5.5 * 3600, nota: 50 }, bbMax: 30, estresse: 60 } }]), "2026-10-28");
+  assert.ok(ruim.nota < 45, "nota ruim: " + ruim.nota);
+  assert.equal(ruim.rotulo, "Dia de recuperação");
+  assert.equal(ruim.alertas.length, 4);
+  assert.ok(Math.abs(N.correlacao([1, 2, 3, 4, 5, 6, 7, 8], [2, 4, 6, 8, 10, 12, 14, 16]) - 1) < 1e-9);
+});
+
+test("chuva: acha a primeira hora com chuva provável e ignora garoa improvável", () => {
+  const time = Array.from({ length: 24 }, (_, i) => "2026-10-29T" + String(i).padStart(2, "0") + ":00");
+  const prob = time.map((_, i) => (i >= 15 && i <= 17 ? 80 : i === 10 ? 45 : 10)), mm = time.map((_, i) => (i >= 15 && i <= 17 ? 2.4 : 0.2));
+  const a = N.chuvaAviso({ time, precipitation_probability: prob, precipitation: mm }, "2026-10-29T08:00");
+  assert.equal(a.inicio, "2026-10-29T15:00");
+  assert.equal(a.prob, 80);
+  assert.match(a.texto, /a partir das 15h, até umas 18h/);
+  assert.equal(N.chuvaAviso({ time, precipitation_probability: prob, precipitation: mm }, "2026-10-29T00:00", 9), null);
+  assert.ok(N.chuvaAviso({ time, precipitation_probability: prob, precipitation: mm }, "2026-10-29T16:00").agora);
+});

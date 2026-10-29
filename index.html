@@ -153,6 +153,17 @@ img.ico{background:#fff;object-fit:contain;padding:2px;box-shadow:0 0 0 1px var(
 .skillgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px}
 .star{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;margin:0}.star dt{font-weight:700;color:var(--accent)}.star dd{margin:0}
 .omsg circle{cursor:pointer}
+.wrapg{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;margin-top:12px}
+.wcard{display:flex;flex-direction:column;gap:2px;padding:16px;border-radius:16px;color:#fff;background:linear-gradient(140deg,var(--wc),color-mix(in srgb,var(--wc) 55%,#0E1B2C));box-shadow:var(--shadow)}
+.wcard .wico{font-size:1.5rem}.wcard .wnum{font:800 calc(30px + var(--fz))/1.1 var(--f-ui);overflow-wrap:anywhere}.wcard .wrot{font-weight:600;opacity:.95}
+.wcard .sub{color:rgba(255,255,255,.85)}.wcard .wdif{font-weight:600;color:#fff}
+.chuva{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;padding:12px 16px;margin:0 0 14px;border-radius:14px;background:rgba(58,141,255,.16);border:1px solid rgba(58,141,255,.45);backdrop-filter:blur(8px)}
+.prontw{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+.pronto{width:118px;height:118px;border-radius:50%;display:grid;place-content:center;text-align:center;border:8px solid var(--c);flex:none}
+.pronto b{font-size:2.2rem;line-height:1;color:var(--c)}.pronto span{font-size:.72rem;max-width:84px;margin:4px auto 0;line-height:1.15}
+.prontp{flex:1;min-width:200px;display:grid;gap:8px}.prontl{display:grid;grid-template-columns:96px 1fr;gap:2px 10px;align-items:center}.prontl .sub{grid-column:2}
+.prontb{display:block;height:8px;border-radius:4px;background:var(--line)}.prontb i{display:block;height:100%;border-radius:4px;background:var(--accent,#2E8BD8)}
+.prontserie{display:flex;align-items:flex-end;gap:3px;height:44px;margin:12px 0 4px}.prontserie i{flex:1;border-radius:3px 3px 0 0;min-height:2px}
 .sqled{font:calc(13px + var(--fz))/1.45 ui-monospace,Consolas,monospace;width:100%}
 .syncst{display:block;font:600 calc(12px + var(--fz)) var(--f-ui);padding:6px 10px;border-radius:10px;text-decoration:none;color:var(--ink);background:var(--bg)}
 .syncst.bom{color:var(--good,#1a7f37)}.syncst.pend{color:var(--warn,#b45309)}.syncst.ruim{color:var(--bad,#c62828);background:color-mix(in srgb,#c62828 10%,var(--bg))}
@@ -838,6 +849,7 @@ code.mbaf{font:calc(12px + var(--fz))/1.4 ui-monospace,Consolas,monospace;white-
       <a class="it" href="#inicio" data-k="inicio"><span class="ico" style="--ic:var(--c-inicio)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11l8-7 8 7v9a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1z"/></svg></span><span class="t">Início</span></a>
       <a class="it" href="#conexoes" data-k="conexoes"><span class="ico" style="--ic:var(--c-mercado)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg></span><span class="t">Conexões do dia</span></a>
       <a class="it" href="#agenda" data-k="agenda"><span class="ico" style="--ic:var(--c-vagas)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg></span><span class="t">Agenda</span></a>
+      <a class="it" href="#resumo" data-k="resumo"><span class="ico" style="--ic:var(--c-saude)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></span><span class="t">Resumo</span></a>
       <a class="it" href="#esportes" data-k="esportes"><span class="ico" style="--ic:var(--c-esportes)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M7.2 5.6c2 3.6 2 9.2 0 12.8M16.8 5.6c-2 3.6-2 9.2 0 12.8"/></svg></span><span class="t">Esportes</span><span class="cnt" id="cnt-esportes"></span></a>
       <a class="it" href="#x" data-k="x"><span class="ico" style="--ic:var(--c-x);color:var(--side)"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></span><span class="t">Perfis no X</span><span class="cnt" id="cnt-x"></span></a>
       <a class="it" href="#saude" data-k="saude"><span class="ico" style="--ic:var(--c-saude)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.8 5.6a5.2 5.2 0 0 0-7.4 0L12 7l-1.4-1.4a5.2 5.2 0 1 0-7.4 7.4L12 21.6l8.8-8.6a5.2 5.2 0 0 0 0-7.4z"/><path d="M3.5 12h4l2-3 3 6 2-3h6"/></svg></span><span class="t">Saúde e treinos</span></a>
@@ -976,11 +988,12 @@ code.mbaf{font:calc(12px + var(--fz))/1.4 ui-monospace,Consolas,monospace;white-
 
   <section id="mercado" hidden><div id="mercado-view" class="stack"></div></section>
 
+  <section id="resumo" hidden><div id="resumo-view" class="stack"></div></section>
   <section id="em-breve" hidden>
     <div class="soonlist">
-      <div class="panel"><h3>Alertas no Telegram</h3><p>Notícias novas em tempo real. Precisa de um bot seu, e eu guio a criação.</p></div>
       <div class="panel"><h3>Preços da Olivia</h3><p>Remédios, shampoos e cremes, com aviso quando baixar.</p></div>
-      <div class="panel"><h3>Tendências em dados</h3><p>O que o mercado de análise e ciência de dados está pedindo.</p></div>
+      <div class="panel"><h3>Recordes pessoais</h3><p>Melhor 1 km, 5 km e maior distância, tirados da exportação completa do Garmin.</p></div>
+      <div class="panel"><h3>Avisos também no Telegram</h3><p>A rotina das 6h já sabe mandar; falta só criar o bot (opcional, as notificações do site já fazem isso).</p></div>
     </div>
   </section>
 

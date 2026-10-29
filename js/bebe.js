@@ -138,7 +138,7 @@
         linhas.push("Dormia umas "+fmtN(Math.round(so*10)/10)+" horas por dia e mamava umas "+Math.round(ma)+" vezes.")}
       var mom=l.filter(function(r){return r.tipo==="momento"}).map(function(r){return r.titulo}),vac=l.filter(function(r){return r.tipo==="vacina"}).map(function(r){return r.titulo}),con=l.filter(function(r){return /consulta|exame/.test(r.tipo)}).map(function(r){return r.titulo});
       if(mom.length)linhas.push("Foi o mês de: "+mom.join("; ")+".");if(vac.length)linhas.push("Tomou "+(vac.length===1?"a vacina ":"as vacinas ")+vac.join(", ")+" (e foi corajosa).");if(con.length)linhas.push("Teve "+con.join(", ")+".");
-      var txt="Querida Olivia,\n\nEste é o seu "+(m===0?"primeiro":(m+1)+"º")+" mês de vida, de "+dataBR(de)+" a "+dataBR(ate)+". "+linhas.join(" ")+"\n\n(Escreva aqui o que vocês viveram, o que ela aprontou, como vocês se sentiram.)\n\nCom amor,\n";
+      var txt="Querida Olivia,\n\nEste foi o seu "+(m===0?"primeiro":(m+1)+"º")+" mês de vida, de "+dataBR(de)+" a "+dataBR(ate)+". "+linhas.join(" ")+"\n\n(Escreva aqui o que vocês viveram, o que ela aprontou, como vocês se sentiram.)\n\nCom amor,\n";
       var ta=h("textarea",{rows:"9"});ta.value=txt;
       var d18=new Date(nasc+"T12:00:00");d18.setFullYear(d18.getFullYear()+18);var ab=h("input",{type:"date",value:d18.toISOString().slice(0,10)});
       var fotos=[];l.forEach(function(r){(r.arquivos||[]).forEach(function(a){if(/^image\//.test(a.tipo))fotos.push(a.path)})});

@@ -27,7 +27,7 @@
     ["estresse","Estresse",function(d){return d.estresse},function(v){return Math.round(v)},"#E8A317",false],
     ["passos","Passos",function(d){return d.passos},function(v){return Math.round(v).toLocaleString("pt-BR")},"#B5641B",true]];
   /* antes desta data o relógio era de outra pessoa: nada disso entra no site, e o que tiver ficado no banco é apagado */
-  var GARMIN_DESDE="2025-01-01";
+  var GARMIN_DESDE="2025-11-01";
   function saudeCarregar(){
     function pag(t,cols,ord,from,acc){return SB.from(t).select(cols).order(ord,{ascending:false}).range(from,from+999).then(sbOk).then(function(l){acc=acc.concat(l);return l.length===1000?pag(t,cols,ord,from+1000,acc):acc})}
     return Promise.all([pag("garmin_dia","data,dados,atualizado","data",0,[]),pag("garmin_ativ","id,inicio,tipo,dados","inicio",0,[])])

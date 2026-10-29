@@ -215,7 +215,7 @@ function resumirFit(msgs: Record<number, Record<number, unknown>[]>) {
 type Sb = ReturnType<typeof createClient>;
 /* atividades em páginas de 100, da mais nova para a mais antiga; para quando acha uma página toda conhecida */
 /* antes desta data o relógio era de outra pessoa: não entra, e o que tiver ficado no banco sai */
-const GARMIN_DESDE = "2025-01-01";
+const GARMIN_DESDE = "2025-11-01";
 async function sincAtiv(sb: Sb, tok: string, uid: string | null, corpo: Record<string, unknown>) {
   let inicio = Number(corpo.inicio ?? 0), salvas = 0, mais = false;
   if (!inicio) { let d = sb.from("garmin_ativ").delete().lt("inicio", GARMIN_DESDE); if (uid) d = d.eq("user_id", uid); await d; }

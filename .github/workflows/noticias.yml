@@ -1,4 +1,4 @@
-# A cada 3 horas: atualiza noticias.json (Sorocaba, tela inicial) e tecdados.json (dados e tecnologia, Conexões do dia).
+# A cada 3 horas: atualiza noticias.json (Sorocaba, tela inicial), tecdados.json (dados e tecnologia, Conexões do dia) e rumores.json (MLB, Esportes).
 name: Atualizar notícias
 
 on:
@@ -30,16 +30,27 @@ jobs:
       - name: Buscar notícias de dados e tecnologia (Conexões do dia)
         run: python scripts/atualizar_tecdados.py
 
+      - name: Buscar rumores da MLB (Esportes)
+        id: rumores
+        continue-on-error: true    # se falhar, as notícias ainda são salvas; o último passo marca a falha
+        run: python scripts/atualizar_rumores.py
+
       - name: Salvar se mudou
         run: |
-          git add -N tecdados.json 2>/dev/null || true
-          if git diff --quiet -- noticias.json tecdados.json; then
+          git add -N tecdados.json rumores.json 2>/dev/null || true
+          if git diff --quiet -- noticias.json tecdados.json rumores.json; then
             echo "Nenhuma notícia nova."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add noticias.json tecdados.json
+          git add noticias.json tecdados.json rumores.json
           git commit -m "Notícias atualizadas"
           git pull --rebase --autostash
           git push
+
+      - name: Avisar se os rumores falharam
+        if: steps.rumores.outcome == 'failure'
+        run: |
+          echo "O robô de rumores da MLB falhou (veja o passo acima)."
+          exit 1

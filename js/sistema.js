@@ -254,10 +254,10 @@
     l1(SIS.falhaSinc||Object.keys(SIS.conflitos).length?"erro":np||fila?"aviso":"ok",(SIS.ultimaSinc?"Última sincronização bem-sucedida "+sisHa(SIS.ultimaSinc):"Ainda não sincronizou nesta sessão")+(np?" · "+np+" alterações esperando":"")+(fila?" · "+fila+" itens na fila sem internet":"")+(SIS.falhaSinc?" · ⚠ "+SIS.falhaSinc:""));
     /* 2. coletas */
     var l2=linha("Coletas (vagas, notícias, relógio e rotina)");
-    Promise.all([["vagas.json",30],["noticias.json",8],["tecdados.json",8]].map(function(x){return getJson(x[0]+"?v="+Date.now()).then(function(d){return [x[0],d.coletado,x[1]]},function(){return [x[0],null,x[1]]})})
+    Promise.all([["vagas.json",30],["noticias.json",8],["tecdados.json",8],["rumores.json",8]].map(function(x){return getJson(x[0]+"?v="+Date.now()).then(function(d){return [x[0],d.coletado,x[1]]},function(){return [x[0],null,x[1]]})})
       .concat([sisQ(function(){return SB.from("garmin_dia").select("atualizado").order("atualizado",{ascending:false}).limit(1)}).then(sbOk).then(function(l){return ["relógio",l[0]&&l[0].atualizado,30]},function(){return ["relógio",null,30]}),
         sisQ(function(){return SB.from("rotina_log").select("quando,ok").order("quando",{ascending:false}).limit(1)}).then(sbOk).then(function(l){return ["rotina das 6h",l[0]&&l[0].quando,26,l[0]&&l[0].ok]},function(){return ["rotina das 6h",null,26]})])).then(function(r){
-      var NOME={"vagas.json":"vagas","noticias.json":"notícias de Sorocaba","tecdados.json":"notícias de tecnologia"},velhas=r.filter(function(x){return !x[1]||(Date.now()-new Date(x[1]))/36e5>x[2]||x[3]===false});
+      var NOME={"vagas.json":"vagas","noticias.json":"notícias de Sorocaba","tecdados.json":"notícias de tecnologia","rumores.json":"rumores da MLB"},velhas=r.filter(function(x){return !x[1]||(Date.now()-new Date(x[1]))/36e5>x[2]||x[3]===false});
       l2(velhas.length?"aviso":"ok",r.map(function(x){return (NOME[x[0]]||x[0])+" "+sisHa(x[1])+(x[3]===false?" (com falha)":"")}).join(" · "))});
     /* 3. fontes que falharam */
     var l3=linha("Fontes que falharam (30 dias)");
@@ -369,7 +369,7 @@
       if(!r.error){var lim=h("button",{type:"button",class:"ghostbtn",text:"Limpar as falhas"});lim.onclick=function(){SB.from("erros").delete().gte("id",0).then(function(){SIS.erros=[];try{localStorage.removeItem("rac-erros")}catch(e){}renderSistema()})};pf.appendChild(lim)}});
     /* robôs do GitHub: se um parar (fonte quebrou ou veio vazia), aparece aqui; o GitHub também manda e-mail */
     var pg=panel("Robôs de coleta","Vagas (todo dia às 7h) e notícias de Sorocaba e de tecnologia (a cada 3 horas). Se a fonte quebrar ou vier vazia, o robô falha de propósito e o GitHub avisa por e-mail."),lg=h("ul",{class:"wl"});pg.appendChild(lg);root.appendChild(pg);
-    [["vagas.json","Vagas","vagas",30],["noticias.json","Notícias de Sorocaba","noticias",8],["tecdados.json","Notícias de dados e tecnologia","noticias",8]].forEach(function(r){
+    [["vagas.json","Vagas","vagas",30],["noticias.json","Notícias de Sorocaba","noticias",8],["tecdados.json","Notícias de dados e tecnologia","noticias",8],["rumores.json","Rumores da MLB","liga",8]].forEach(function(r){
       getJson(r[0]+"?v="+Date.now()).then(function(d){var q=new Date(d.coletado),horas=(Date.now()-q)/36e5,n=(d[r[2]]||[]).length,velho=horas>r[3]||!n;
         lg.appendChild(h("li",{class:velho?"alerta":null},h("span",{class:"grow"},h("b",{text:(velho?"⚠ ":"✓ ")+r[1]}),h("span",{class:"sub",text:n+" itens · coletado "+q.toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})+(velho?" · parado há "+Math.round(horas)+" h":"")}))))})
       .catch(function(e){lg.appendChild(h("li",{class:"alerta"},h("span",{class:"grow"},h("b",{text:"⚠ "+r[1]}),h("span",{class:"sub",text:"não consegui ler ("+e.message+")"}))))})});

@@ -328,6 +328,39 @@
 
   /* mercado de inverno dos Dodgers: direto das transações oficiais da MLB (contratações, trocas, dispensas), sem curadoria manual */
   function mercadoDodgers(){var hj=new Date();return txPanel("Mercado de inverno","/transactions?teamId="+DODGERS+"&startDate="+ymd(addDays(hj,-60))+"&endDate="+ymd(hj),{sub:"Contratações, trocas e dispensas dos últimos 60 dias, direto da MLB. Atualiza sozinho. Toque no jogador, no time ou em \"fonte\" para abrir a página de cada um.",fonte:"https://www.mlb.com/dodgers/roster/transactions"})}
+  /* rumores do MLB Trade Rumors (rumores.json, coletado pelo robô a cada 3 horas): dos Dodgers ou da liga */
+  function rumoresMlb(qual,n){
+    var p=panel(qual==="dodgers"?"Rumores dos Dodgers":"Rumores da liga","Do MLB Trade Rumors, em inglês; toque na manchete para ler a matéria. Atualiza a cada 3 horas."),box=h("div",null,loading());p.appendChild(box);
+    getJson("rumores.json?v="+Math.floor(Date.now()/36e5)).then(function(d){box.innerHTML="";var l=(d[qual]||[]).slice(0,n||10);
+      if(!l.length){box.appendChild(h("p",{class:"empty",text:"Nenhum rumor nas últimas semanas."}));return}
+      box.appendChild(h("ul",{class:"wl rumores"},l.map(function(r){var dt=new Date(r.data);
+        return h("li",null,h("span",{class:"grow"},h("a",{class:"link",href:r.link,target:"_blank",rel:"noopener",text:r.t}),
+          h("span",{class:"sub",text:dt.toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"})+" · "+r.resumo}),
+          r.tags&&r.tags.length?h("span",{class:"rtags"},r.tags.filter(function(t){return !/^(Notes|Newsstand|Transactions)$/i.test(t)}).slice(0,4).map(function(t){return h("span",{class:"vp",text:t})})):null))})));
+      box.appendChild(h("p",{class:"note"},"Coletado "+new Date(d.coletado).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})+" · ",ext(qual==="dodgers"?"https://www.mlbtraderumors.com/los-angeles-dodgers":"https://www.mlbtraderumors.com/","Ver tudo no MLB Trade Rumors")))
+    }).catch(function(){box.innerHTML="";box.appendChild(h("p",{class:"empty"},"Os rumores ainda não foram coletados. ",ext("https://www.mlbtraderumors.com/","Abrir o MLB Trade Rumors")))});
+    return p}
+  /* prêmios da temporada (saem em novembro) e as datas oficiais da próxima */
+  var PREMIOS=[["ALMVP","MVP · Liga Americana"],["NLMVP","MVP · Liga Nacional"],["ALCY","Cy Young · Liga Americana"],["NLCY","Cy Young · Liga Nacional"],["ALROY","Novato do ano · Liga Americana"],["NLROY","Novato do ano · Liga Nacional"]];
+  function premiosPanel(){
+    var p=panel("Prêmios de "+SEASON,"MVP, Cy Young e Novato do ano. São anunciados em novembro; até lá, aparecem os vencedores do ano passado."),box=h("div",null,loading());p.appendChild(box);
+    function ano(s){return Promise.all(PREMIOS.map(function(a){return api("/awards/"+a[0]+"/recipients?season="+s).then(function(d){return (d.awards||[])[0]||null},function(){return null})}))}
+    ano(SEASON).then(function(l){return l.some(Boolean)?[SEASON,l]:ano(SEASON-1).then(function(x){return [SEASON-1,x]})}).then(function(r){box.innerHTML="";
+      if(r[0]!==SEASON)box.appendChild(h("p",{class:"sub",text:"Os de "+SEASON+" ainda não saíram. Vencedores de "+r[0]+":"}));
+      box.appendChild(h("ul",{class:"wl"},PREMIOS.map(function(a,i){var w=r[1][i];return w?h("li",null,h("span",{class:"grow"},h("b",{text:a[1]}),h("span",{class:"sub"},mlbCell(w.player.id,w.player.nameFirstLast))),
+        w.team?h("a",{class:"end",href:"#esportes/beisebol/time-"+w.team.id,title:"Página do time"},logoImg(w.team.id,"sm")):null):null}).filter(Boolean)))})
+      .catch(function(){box.innerHTML="";box.appendChild(h("p",{class:"empty",text:"Não consegui carregar os prêmios agora."}))});
+    return p}
+  function datasPanel(){
+    var p=panel("Temporada "+(SEASON+1),"Datas oficiais da MLB."),box=h("div",null,loading());p.appendChild(box);
+    api("/seasons/"+(SEASON+1)+"?sportId=1").then(function(d){var s=(d.seasons||[])[0]||{};box.innerHTML="";
+      function dt(x){return x?new Date(x+"T12:00:00").toLocaleDateString("pt-BR",{day:"numeric",month:"long"}):"—"}
+      var hj=hojeISO(),dias=s.regularSeasonStartDate?Math.round((new Date(s.regularSeasonStartDate+"T12:00:00")-new Date(hj+"T12:00:00"))/864e5):null;
+      box.appendChild(h("ul",{class:"wl"},[["Spring training (treinos de pré-temporada)",s.springStartDate],["Dia de abertura",s.regularSeasonStartDate],["Jogo das Estrelas",s.allStarDate],["Fim da temporada regular",s.regularSeasonEndDate],["Começo dos playoffs",s.postSeasonStartDate]]
+        .map(function(x){return h("li",null,h("span",{class:"grow",text:x[0]}),h("span",{class:"end",text:dt(x[1])}))})));
+      if(dias>0)box.appendChild(h("p",{class:"sub",text:"Faltam "+dias+" dias para o dia de abertura."}))}).catch(function(){box.innerHTML="";box.appendChild(h("p",{class:"empty",text:"Datas ainda não divulgadas."}))});
+    return p}
+  function foraDeTemporada(){var m=new Date().getMonth();return m>=10||m<=1}
   function rumorPanel(){
     var p=panel("Rumores");
     p.appendChild(h("h3",{class:"dayh"},img(logoUrl(DODGERS),"lg sm"),"Dodgers no mercado de inverno"));
@@ -364,8 +397,15 @@
         if(!nx.length){body.appendChild(h("p",{class:"empty",text:"Sem jogos nos próximos 10 dias. A temporada 2027 começa em março."}));return}
         body.appendChild(cards(nx,false))})}));
     root.appendChild(dodgersSummary());
-    root.appendChild(txPanel("Mudanças de jogadores","/transactions?sportId=1&startDate="+ymd(addDays(now,-7))+"&endDate="+ymd(now),{sub:"Últimos 7 dias, liga toda"}));
-    root.appendChild(rumorPanel())}
+    /* fora de temporada (novembro a fevereiro), o mercado ganha mais espaço: 30 dias de movimentações, rumores, prêmios e as datas da próxima */
+    /* acabou a temporada quando não há jogo agendado nos próximos 10 dias (ou de novembro a fevereiro) */
+    var resto=h("div",{class:"stack"});root.appendChild(resto);
+    sched.then(function(gs){return !gs.some(function(g){return g.state!=="post"})},function(){return false}).then(function(semJogos){
+      var off=foraDeTemporada()||semJogos;
+      resto.appendChild(txPanel(off?"Mercado da liga":"Mudanças de jogadores","/transactions?sportId=1&startDate="+ymd(addDays(now,off?-30:-7))+"&endDate="+ymd(now),{sub:off?"Contratos, trocas, opções e agentes livres dos últimos 30 dias, liga toda":"Últimos 7 dias, liga toda"}));
+      resto.appendChild(rumoresMlb("liga",off?12:6));
+      if(off){resto.appendChild(premiosPanel());resto.appendChild(datasPanel())}
+      resto.appendChild(rumorPanel())})}
 
   function dodgersRecord(){
     return once("std",function(){return api("/standings?leagueId=103,104&season="+SEASON).then(function(d){
@@ -492,6 +532,7 @@
   function viewDodgers(root){
     root.appendChild(dodgersBanner([["Elenco e estatísticas","#esportes/beisebol/time-"+DODGERS],["@Dodgers no X","https://x.com/Dodgers"],["Instagram","https://www.instagram.com/dodgers/"]]));
     root.appendChild(mercadoDodgers());
+    root.appendChild(rumoresMlb("dodgers",10));
     root.appendChild(section("Últimos jogos dos Dodgers",null,function(body){
       return dodgersGames(6).then(function(fin){body.innerHTML="";
         if(!fin.length){body.appendChild(h("p",{class:"empty",text:"Sem jogos recentes."}));return}
@@ -756,6 +797,7 @@
         var prev=fin.slice(0,-1).slice(-3);
         if(prev.length)resB.appendChild(cards(prev,true));else resBlk.hidden=true;
         if(nx.length)nxtB.appendChild(cards(nx.slice(0,6),false));else nxtB.appendChild(h("p",{class:"empty",text:"Nenhum jogo agendado."}));
+        [espnClassificacao(sport,t),espnTabela(sport,d.games),espnNoticias(sport,t)].forEach(function(x){root.insertBefore(x,lastBox)});
         var last=fin.filter(function(g){return g.state==="post"}).pop();
         if(last)espnSummary(sport,last.id).then(function(s){
           var g=espnFromSummary(sport,s);
@@ -766,6 +808,52 @@
       }).catch(function(e){head.innerHTML="";head.appendChild(failed(load,e));heroB.innerHTML="";nxtB.innerHTML=""})}
     load()}
 
+  /* classificação: NBA na conferência do time (a outra fica recolhida); NFL na divisão e, recolhida, a conferência pela vaga nos playoffs */
+  function espnClassificacao(sport,t){
+    var p=panel("Classificação",sport==="nba"?"Conferência do "+(t.shortDisplayName||t.displayName)+", pela posição de playoffs.":"Divisão do "+(t.shortDisplayName||t.displayName)+" e a conferência."),box=h("div",null,loading());p.appendChild(box);
+    getJson("https://site.api.espn.com/apis/v2/sports/"+ESPN[sport].path+"/standings"+(sport==="nfl"?"?level=3":"")).then(function(d){box.innerHTML="";
+      function st(e,n){var x=(e.stats||[]).filter(function(s){return s.name===n||s.type===n||s.abbreviation===n})[0];return x?x.displayValue:"—"}
+      function tabela(entries,cols){var tb=h("table",{class:"famtab stand"});
+        tb.appendChild(h("thead",null,h("tr",null,[h("th",{text:"#"}),h("th",{text:"Time"})].concat(cols.map(function(c){return h("th",{text:c[0],title:c[2]||""})})))));
+        tb.appendChild(h("tbody",null,entries.map(function(e,i){var tm=e.team||{},eu=tm.abbreviation===t.abbreviation;
+          return h("tr",{class:eu?"eu":null},h("td",{text:String(i+1)}),h("td",null,h("span",{class:"tn"},img((tm.logos&&tm.logos[0]&&tm.logos[0].href)||"","lg sm"),tm.shortDisplayName||tm.displayName)),cols.map(function(c){return h("td",{text:st(e,c[1])})}))})));
+        return h("div",{class:"famtabw"},tb)}
+      function seed(a,b){return (+st(a,"playoffSeed")||99)-(+st(b,"playoffSeed")||99)}
+      var temTime=function(g){return (g.standings&&g.standings.entries||[]).some(function(e){return e.team.abbreviation===t.abbreviation})};
+      if(sport==="nba"){var CN=[["V","wins","Vitórias"],["D","losses","Derrotas"],["%","winPercent","Aproveitamento"],["JA","gamesBehind","Jogos atrás do líder"],["Seq.","streak","Sequência"],["Últ. 10","Last Ten Games","Últimos 10 jogos"]];
+        (d.children||[]).sort(function(a,b){return temTime(b)-temTime(a)}).forEach(function(c,i){var es=c.standings.entries.slice().sort(seed),nome=c.name.replace("Eastern Conference","Conferência Leste").replace("Western Conference","Conferência Oeste");
+          if(i===0){box.appendChild(h("h3",{class:"dayh",text:nome}));box.appendChild(tabela(es,CN))}else box.appendChild(h("details",{class:"famvals"},h("summary",{text:nome}),tabela(es,CN)))})}
+      else{var CF=[["V","wins","Vitórias"],["D","losses","Derrotas"],["E","ties","Empates"],["%","winPercent","Aproveitamento"],["Div.","divisionRecord","Campanha na divisão"],["Seq.","streak","Sequência"]];
+        (d.children||[]).forEach(function(conf){var divs=conf.children||[],minha=divs.filter(temTime)[0];if(!minha)return;
+          var nd=minha.name.replace(/^(AFC|NFC) /,"$1 · ").replace("North","Norte").replace("South","Sul").replace("East","Leste").replace("West","Oeste");
+          box.appendChild(h("h3",{class:"dayh",text:"Divisão "+nd}));box.appendChild(tabela(minha.standings.entries.slice().sort(function(a,b){return (+st(b,"winPercent")||0)-(+st(a,"winPercent")||0)}),CF));
+          var todos=[];divs.forEach(function(dv){todos=todos.concat(dv.standings.entries)});
+          box.appendChild(h("details",{class:"famvals"},h("summary",{text:conf.name.replace("National Football Conference","Conferência Nacional (NFC)").replace("American Football Conference","Conferência Americana (AFC)")+" · ordem dos playoffs"}),tabela(todos.sort(seed),CF)))})}
+      if(!box.children.length)box.appendChild(h("p",{class:"empty",text:"Classificação ainda não disponível."}))
+    }).catch(function(){box.innerHTML="";box.appendChild(h("p",{class:"empty",text:"Não consegui carregar a classificação agora."}))});
+    return p}
+  /* todos os jogos da temporada, por mês (o mês atual aberto); cada linha abre a página do jogo */
+  function espnTabela(sport,games){
+    var p=panel("Tabela da temporada",games.length+" jogos · toque num jogo para ver os detalhes"),meus=ESPN[sport].team.toUpperCase(),por={},hj=hojeISO().slice(0,7);
+    games.forEach(function(g){var k=g.date.slice(0,7);(por[k]=por[k]||[]).push(g)});
+    Object.keys(por).sort().forEach(function(k){var d0=new Date(k+"-15T12:00:00"),ul=h("ul",{class:"wl tabjogos"});
+      por[k].forEach(function(g){var casa=g.home.abbr===meus,adv=casa?g.away:g.home,eu=casa?g.home:g.away,dt=new Date(g.date);
+        var res=g.state==="post"?(eu.winner?"V ":adv.winner?"D ":"E ")+eu.score+"–"+adv.score:g.state==="live"?"ao vivo":g.tbd?"a definir":dt.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
+        ul.appendChild(h("li",{class:"clic"+(g.state==="post"?(eu.winner?" ganhou":" perdeu"):"")},h("span",{class:"when",text:dt.toLocaleDateString("pt-BR",{weekday:"short",day:"2-digit",month:"2-digit"})}),
+          h("span",{class:"grow tn"},h("span",{class:"sub",text:casa?"vs":"@"}),img(adv.logo,"lg sm"),adv.name),h("a",{class:"end",href:g.detail,text:res})))});
+      var nome=d0.toLocaleDateString("pt-BR",{month:"long",year:"numeric"});
+      p.appendChild(h("details",{class:"famvals",open:k===hj?"":null},h("summary",{text:nome.charAt(0).toUpperCase()+nome.slice(1)+" ("+por[k].length+")"}),ul))});
+    return p}
+  /* notícias do time na ESPN (em inglês) */
+  function espnNoticias(sport,t){
+    var p=panel("Notícias do "+(t.shortDisplayName||t.displayName||"time"),"Da ESPN, em inglês."),box=h("div",null,loading());p.appendChild(box);
+    espn(sport,"/news?team="+t.id+"&limit=8").then(function(d){box.innerHTML="";var l=d.articles||[];
+      if(!l.length){box.appendChild(h("p",{class:"empty",text:"Sem notícias agora."}));return}
+      box.appendChild(h("ul",{class:"wl rumores"},l.map(function(a){var u=a.links&&a.links.web&&a.links.web.href,im=(a.images||[])[0];
+        return h("li",null,im?img(im.url,"nimg"):null,h("span",{class:"grow"},h("a",{class:"link",href:u||"#",target:"_blank",rel:"noopener",text:a.headline}),
+          h("span",{class:"sub",text:(a.published?new Date(a.published).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"})+" · ":"")+(a.description||"")})))})))})
+      .catch(function(){box.innerHTML="";box.appendChild(h("p",{class:"empty",text:"Não consegui carregar as notícias agora."}))});
+    return p}
   function espnFromSummary(sport,s){
     var c=s.header.competitions[0];
     var e={id:s.header.id,season:s.header.season,week:s.header.week};

@@ -9,7 +9,7 @@
   function carMeus(){return ((PESSOAL.perfilCarreira||{}).skills)||["sql","powerbi","excel","negocio","estat"]}
   function renderCarreira(sub,arg){
     var root=$("#carreira-view");root.innerHTML="";var aba=CAR_ABAS.some(function(a){return a[0]===sub})?sub:"funil";
-    root.appendChild(h("div",{class:"seg famseg"},CAR_ABAS.map(function(a){return h("a",{href:"#carreira/"+a[0],"aria-pressed":String(a[0]===aba),text:a[1]})})));
+    root.appendChild(h("div",{class:"seg famseg"},CAR_ABAS.map(function(a){return h("a",{href:"#carreira/"+a[0],"aria-pressed":String(a[0]===aba),text:a[1]})}).concat([h("a",{href:"#rede",text:"Rede (LinkedIn)"})])));
     ({funil:carFunil,compat:carCompat,star:carStar,sql:carSql,portfolio:carPortfolio})[aba](root,arg)}
 
   /* ---------- funil ---------- */
@@ -22,6 +22,7 @@
     topo.appendChild(h("div",{class:"vfil"},nv,h("a",{href:"#vagas",class:"ghostbtn",text:"Ver vagas abertas"})));
     var tot=CAR_COLS.map(function(c){return c[1]+": "+l.filter(function(x){return x.coluna===c[0]}).length});topo.appendChild(h("p",{class:"sub",text:tot.join(" · ")}));
     root.appendChild(topo);
+    root.appendChild(carEmails());
     var kb=h("div",{class:"kanban"});
     CAR_COLS.forEach(function(col,ci){
       var cards=l.filter(function(x){return x.coluna===col[0]}).sort(function(a,b){return String((b.datas||{})[col[0]]||"").localeCompare(String((a.datas||{})[col[0]]||""))});
@@ -31,7 +32,7 @@
         var fu=col[0]==="candidatei"&&dias>=5&&!x.followup;
         var k=h("div",{class:"kcard"+(fu?" alerta":"")},h("b",{text:x.t}),h("span",{class:"sub",text:[x.e,dias!=null?"há "+dias+(dias===1?" dia":" dias"):""].filter(Boolean).join(" · ")}),
           cp.nota!=null?h("span",{class:"kcompat",title:"Pede: "+cp.pede.map(carSkillNome).join(", "),text:cp.nota+"% compatível"+(cp.falta.length?" · falta "+cp.falta.map(carSkillNome).join(", "):"")}):null,
-          x.resultado?h("span",{class:"sub",text:"Resultado: "+x.resultado}):null,fu?h("span",{class:"qrwarn",text:"Fazer follow-up"}):null);
+          x.resultado?h("span",{class:"sub",text:"Resultado: "+x.resultado}):null,x.etapa?h("span",{class:"sub",text:"Etapa liberada: "+x.etapa}):null,x.fonte?h("span",{class:"sub",text:"via "+x.fonte}):null,fu?h("span",{class:"qrwarn",text:"Fazer follow-up"}):null);
         var bt=h("div",{class:"vfil"});
         if(ci>0){var e=h("button",{type:"button",class:"ghostbtn",text:"◀"});e.onclick=function(){carMover(x.id,CAR_COLS[ci-1][0]);renderCarreira("funil")};bt.appendChild(e)}
         if(ci<CAR_COLS.length-1){var d=h("button",{type:"button",class:"ghostbtn",text:"▶ "+CAR_COLS[ci+1][1]});d.onclick=function(){carMover(x.id,CAR_COLS[ci+1][0]);renderCarreira("funil")};bt.appendChild(d)}
@@ -41,12 +42,62 @@
       kb.appendChild(c)});
     root.appendChild(kb)}
   /* uma candidatura: dados, descrição colada (deixa a compatibilidade precisa), notas, follow-up e histórias ao lado */
+  /* ===== E-mails das candidaturas: confirmações, etapas, entrevistas e retornos viram passos no funil (você confirma cada um) ===== */
+  var CAR_Q="newer_than:120d (from:gupy.com.br OR from:burh.com.br OR from:avisos@jobbol.com.br OR from:mailquickin.com OR from:solides.com OR from:empregoshub.com.br OR from:kenoby.com OR from:catho.com.br OR from:infojobs.com.br OR from:vagas.com.br OR from:jobs-noreply@linkedin.com OR subject:candidatura OR subject:\"processo seletivo\" OR subject:entrevista) -from:jobalerts-noreply@linkedin.com";
+  var CAR_PROPS=null;
+  function carEmails(){
+    var p=panel("E-mails das candidaturas","Lê as confirmações da Gupy, Burh, Jobbol, Sólides, LinkedIn e outras nos seus Gmails (últimos 4 meses) e sugere: candidatura nova, etapa liberada, entrevista, retorno ou vaga cancelada. Nada muda sem você tocar em Aplicar.");
+    var st=h("p",{class:"sub",role:"status"}),bt=h("button",{type:"button",class:"ghostbtn pri",text:"Buscar nos e-mails"}),cx=h("div",{class:"vfil"}),ul=h("ul",{class:"wl carmail"});
+    p.appendChild(h("div",{class:"vfil"},bt));p.appendChild(cx);p.appendChild(st);p.appendChild(ul);
+    function vistos(){return ((PESSOAL.carEmails||{}).vistos)||[]}
+    function marcar(ids){var v=vistos().concat(ids).filter(function(x,i,a){return a.indexOf(x)===i}).slice(-800);pessoalGravar("carEmails",{vistos:v,quando:new Date().toISOString()})}
+    var NOMES={candidatura:"Candidatura",etapa:"Etapa liberada",entrevista:"Entrevista",retorno:"Retorno",cancelada:"Vaga cancelada"};
+    /* o que fazer com cada e-mail: {m, x, c (candidatura do funil ou null), texto, aplicar()} */
+    function proposta(m,x){
+      var l=carCands(),c=l.filter(function(k){return NUCLEO.vagaParecida(x,k)})[0]||null,neg=/agradecemos (a )?sua participa|infelizmente|n[ãa]o (seguiremos|foi selecionad|fomos)|optamos por|obrigad[ao] pelo interesse/i.test(m.assunto+" "+m.trecho);
+      var nome=[x.vaga||"(vaga sem nome no e-mail)",x.empresa].filter(Boolean).join(" — ");
+      var alvo=x.tipo==="candidatura"?"candidatei":x.tipo==="entrevista"?"entrevista":x.tipo==="etapa"?"candidatei":"resposta";
+      if(c&&x.tipo==="candidatura"&&c.coluna!=="salva")return null; /* já está no funil, nada a fazer */
+      if(c&&x.tipo==="etapa"&&c.etapa===x.etapa)return null;
+      var texto=c?(x.tipo==="etapa"?"Anotar \"Etapa "+x.etapa+" liberada\" em ":"Mover para "+CAR_COLS.filter(function(k){return k[0]===alvo})[0][1]+(x.tipo==="cancelada"?" (vaga cancelada)":x.tipo==="retorno"&&neg?" (recusado)":"")+": ")+c.t:"Nova no funil ("+CAR_COLS.filter(function(k){return k[0]===alvo})[0][1]+"): "+nome;
+      return {m:m,x:x,c:c,texto:texto,aplicar:function(){
+        /* procura de novo na hora: aplicar a confirmação antes cria o card que a entrevista do mesmo e-mail vai mover */
+        var lista=carCands().slice(),hj=m.data;c=lista.filter(function(k){return NUCLEO.vagaParecida(x,k)})[0]||null;
+        if(c){lista=lista.map(function(k){if(k.id!==c.id)return k;var d=Object.assign({},k.datas||{});var o=Object.assign({},k,{emailId:k.emailId||m.id});
+          if(x.tipo==="etapa"){o.etapa=x.etapa;o.followup=true;if(o.coluna==="salva"){o.coluna="candidatei";d.candidatei=d.candidatei||hj}}
+          else{o.coluna=alvo;d[alvo]=d[alvo]||hj;if(alvo!=="candidatei")o.followup=true;if(x.tipo==="cancelada")o.resultado="vaga cancelada";else if(x.tipo==="retorno"&&neg)o.resultado="recusado"}
+          if(!o.e&&x.empresa)o.e=x.empresa;o.datas=d;return o})}
+        else{var d2={};d2[alvo]=hj;if(alvo!=="candidatei")d2.candidatei=hj;
+          lista.unshift({id:"e"+m.id,emailId:m.id,t:x.vaga||"(vaga sem nome no e-mail)",e:x.empresa,link:gmLinkMsg(m),fonte:x.plataforma,coluna:alvo,datas:d2,etapa:x.etapa,followup:alvo!=="candidatei",
+            resultado:x.tipo==="cancelada"?"vaga cancelada":x.tipo==="retorno"&&neg?"recusado":undefined})}
+        carSalvar(lista)}}}
+    function buscar(){bt.disabled=true;st.textContent="Lendo os e-mails…";ul.innerHTML="";cx.innerHTML="";
+      gmBuscar(CAR_Q,80).then(function(res){bt.disabled=false;gmBotoesConectar(res,buscar).forEach(function(b){cx.appendChild(b)});
+        var vs=vistos(),todos=[],ps=[];res.forEach(function(r){r.msgs.forEach(function(m){todos.push(m)})});
+        todos.sort(function(a,b){return a.data.localeCompare(b.data)}); /* do mais antigo para o mais novo: a confirmação vem antes da entrevista */
+        var semAcao=[];todos.forEach(function(m){if(vs.indexOf(m.id)>=0)return;var x=NUCLEO.lerEmailVaga(m);if(!x||x.tipo==="alerta"){semAcao.push(m.id);return}
+          var pr=proposta(m,x);if(pr)ps.push(pr);else semAcao.push(m.id)});
+        if(semAcao.length)marcar(semAcao);
+        var erro=res.filter(function(r){return r.erro}).map(function(r){return r.conta+": "+r.erro});
+        st.textContent=(ps.length?ps.length+(ps.length===1?" sugestão":" sugestões")+" dos e-mails.":"Nada novo nos e-mails."+(res.some(function(r){return r.semAcesso})?" Conecte as contas acima para ler todas.":""))+(erro.length?" ⚠ "+erro.join("; "):"");
+        CAR_PROPS=ps;mostrar()
+      }).catch(function(e){bt.disabled=false;st.textContent="Não consegui ler os e-mails: "+e.message;logErro("carreira (e-mails)",e)})}
+    /* as sugestões ficam guardadas enquanto a página está aberta: aplicar uma redesenha o funil sem perder as outras */
+    function tirar(q){CAR_PROPS=CAR_PROPS.filter(function(z){return z!==q})}
+    function mostrar(){var ps=CAR_PROPS||[];ul.innerHTML="";var velho=cx.querySelector(".tudo");if(velho)velho.remove();
+        if(ps.length>1){var tudo=h("button",{type:"button",class:"ghostbtn tudo",text:"Aplicar todas ("+ps.length+")"});tudo.onclick=function(){ps.forEach(function(q){q.aplicar()});marcar(ps.map(function(q){return q.m.id}));CAR_PROPS=[];renderCarreira("funil")};cx.appendChild(tudo)}
+        ps.slice().reverse().forEach(function(q){var ap=h("button",{type:"button",text:"Aplicar"}),ig=h("button",{type:"button",class:"ghostbtn",text:"Ignorar"});
+          ap.onclick=function(){q.aplicar();marcar([q.m.id]);tirar(q);renderCarreira("funil")};ig.onclick=function(){marcar([q.m.id]);tirar(q);li.remove()};
+          var li=h("li",null,h("span",{class:"grow"},h("b",{text:(NOMES[q.x.tipo]||q.x.tipo)+" · "+q.texto}),h("span",{class:"sub",text:dataBR(q.m.data)+" · "+(q.x.plataforma||q.m.de.replace(/^.*<|>.*$/g,""))+" · "+q.m.assunto})),
+            h("span",{class:"vfil"},ext(gmLinkMsg(q.m),"E-mail","ghostbtn"),ap,ig));ul.appendChild(li)});
+        if(CAR_PROPS&&!ps.length&&!st.textContent)st.textContent="Tudo aplicado. ✓"}
+    bt.onclick=buscar;if(CAR_PROPS)mostrar();return p}
   function carEditar(x){
     var root=$("#carreira-view");root.innerHTML="";var novo=!x;x=x||{id:"c"+Date.now().toString(36),coluna:"salva",datas:{salva:hojeISO()}};
     var p=panel(novo?"Nova candidatura":x.t),f=h("div",{class:"wform"});
     var t=h("input",{type:"text",value:x.t||"",placeholder:"Cargo"}),e=h("input",{type:"text",value:x.e||"",placeholder:"Empresa"}),lk=h("input",{type:"url",value:x.link||"",placeholder:"https://…"});
     var col=h("select",null,CAR_COLS.map(function(c){return h("option",{value:c[0],selected:c[0]===x.coluna?"":null,text:c[1]})}));
-    var res=h("select",null,["","aprovado","recusado","sem retorno","desisti"].map(function(r){return h("option",{value:r,selected:r===(x.resultado||"")?"":null,text:r||"(sem resultado ainda)"})}));
+    var res=h("select",null,["","aprovado","recusado","sem retorno","vaga cancelada","desisti"].map(function(r){return h("option",{value:r,selected:r===(x.resultado||"")?"":null,text:r||"(sem resultado ainda)"})}));
     var desc=h("textarea",{rows:"6",placeholder:"Cole aqui a descrição da vaga: a compatibilidade passa a usar o texto completo"});desc.value=x.desc||"";
     var notas=h("textarea",{rows:"3",placeholder:"Contato, salário combinado, próximos passos…"});notas.value=x.notas||"";
     var fu=h("input",{type:"checkbox"});fu.checked=!!x.followup;

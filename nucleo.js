@@ -218,5 +218,40 @@
   function dividirItens(texto){
     return String(texto||"").split(/\s*(?:\n|;|,|\s+e\s+(?=\S))\s*/i).map(function(x){return x.replace(/^(?:- )?(?:\[[ xX]?\]|[-*•·◦○◯⚪☐])\s*/,"").replace(/[.!]+$/,"").trim()}).filter(Boolean)
       .map(function(x){return x.charAt(0).toUpperCase()+x.slice(1)})}
-  raiz.RACnucleo={norm:norm,urlAbs:urlAbs,lerAbast:lerAbast,TEMAS:TEMAS,temasDe:temasDe,juntarDados:juntarDados,SKILLS:SKILLS,compatVaga:compatVaga,omsZ:omsZ,omsValor:omsValor,percentilDeZ:percentilDeZ,csvLinhas:csvLinhas,napperLer:napperLer,bebeDias:bebeDias,VACINAS_PNI:VACINAS_PNI,vacinasCalendario:vacinasCalendario,mediana:mediana,prontidao:prontidao,somaDiasISO:somaDiasISO,correlacao:correlacao,chuvaAviso:chuvaAviso,diasEntre:diasEntre,chaveProduto:chaveProduto,previsaoCompras:previsaoCompras,padraoCompras:padraoCompras,itemBate:itemBate,notaItens:notaItens,dividirItens:dividirItens};
+  /* ===== E-mails de vagas: o que cada um quer dizer para o funil (Gupy, Burh, Jobbol, Sólides, Quickin, LinkedIn, Indeed…) =====
+     m = {de, assunto, trecho}; devolve {tipo, vaga, empresa, plataforma, etapa} ou null.
+     tipo: candidatura (confirmação), etapa (teste/redação liberada), entrevista, retorno (resposta, geralmente negativa), cancelada, alerta (vaga sugerida) */
+  function lerEmailVaga(m){
+    var de=String(m.de||"").toLowerCase(),a=String(m.assunto||"").replace(/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]/gu,"").replace(/\s+/g," ").trim(),t=String(m.trecho||"").replace(/[\u034f\u200b-\u200d\u00ad]/g,"").replace(/\s+/g," ").trim(),x;
+    var plat=/gupy/.test(de)?"Gupy":/burh/.test(de)?"Burh":/jobbol/.test(de)?"Jobbol":/solides/.test(de)?"Sólides":/quickin/.test(de)?"Quickin":/empregoshub/.test(de)?"Empregos Hub":
+      /linkedin/.test(de)?"LinkedIn":/indeed/.test(de)?"Indeed":/catho/.test(de)?"Catho":/infojobs/.test(de)?"InfoJobs":/vagas\.com/.test(de)?"Vagas.com":/kenoby/.test(de)?"Kenoby":"";
+    function r(tipo,vaga,empresa,extra){var o={tipo:tipo,vaga:(vaga||"").replace(/\s*[-–]\s*n[ºo°]\s*\w+$/i,"").trim(),empresa:(empresa||"").trim(),plataforma:plat};return extra?Object.assign(o,extra):o}
+    /* alertas de vaga (não são candidaturas) */
+    if(/jobalerts|match\.indeed|alert/.test(de)||(/jobbol/.test(de)&&!/avisos@/.test(de))){
+      if((x=/^A empresa (.+?) está contratando:?\s*(.+)$/i.exec(a)))return r("alerta",x[2],x[1]);
+      if((x=/^(?:Vaga de )?(.+?) na empresa (.+)$/i.exec(a)))return r("alerta",x[1].replace(/^\d+-/,""),x[2]);
+      if((x=/^(.+?) (?:está contratando|abriu vaga)\s*(.*?)(?: hoje)?$/i.exec(a)))return r("alerta",x[2]||"",x[1]);
+      return r("alerta",a.replace(/ e mais \d+ vagas?.*$/i,""),"")}
+    if(/vaga cancelada/i.test(a)){x=/^(.+?)\s*\|\s*(.+?)\s*-\s*Vaga Cancelada/i.exec(a);return r("cancelada",x?x[2]:"",x?x[1]:"")}
+    if(/entrevista/i.test(a)){x=/para a vaga (.+)$/i.exec(a);return r("entrevista",x?x[1]:"",(/^(.+?) [-–|] /.exec(t)||[])[1]||"")}
+    if((x=/^Etapa (.+?) desbloqueada para a vaga (.+)$/i.exec(a)))return r("etapa",x[2],"",{etapa:x[1]});
+    if(/obrigad[ao] pelo interesse|atualiza[çc][ãa]o sobre (a )?sua candidatura|agradecemos (a )?sua participa|infelizmente|n[ãa]o (foi|fomos|seguiremos|seguir[áa])|optamos por/i.test(a+" "+t)&&!/candidatura (recebida|enviada|confirmada|efetuada)/i.test(a)){
+      var vg=(/referente [àa] vaga (.+?)\s*:/i.exec(t)||/para a vaga (.+?)[.,:]/i.exec(t)||[])[1]||"",em=(/^(.+?)\s+[-–]\s+/.exec(t)||[])[1]||(/^(.+?)\s+[-–|]\s+/.exec(a)||[])[1]||"";
+      if(/\d{5,}/.test(em))em="";return r("retorno",vg,em)}
+    if(/candidatura (recebida|enviada|confirmada|efetuada)|confirma[çc][ãa]o de inscri|sua candidatura (para|foi)|candidatou|application (was )?(sent|received)|recebemos sua candidatura/i.test(a+" "+t)){
+      if((x=/^Sua candidatura para (.+)$/i.exec(a)))return r("candidatura",x[1],"");
+      if((x=/^Candidatura efetuada em (.+)$/i.exec(a)))return r("candidatura",x[1],"");
+      if((x=/^Confirma[çc][ãa]o de inscri[çc][ãa]o\s*[-–]\s*(.+)$/i.exec(a)))return r("candidatura","",x[1]);
+      if((x=/candidatou na\(?s?\)? vaga\(?s?\)? (.+?)\. Ir para/i.exec(t)))return r("candidatura",x[1],"");
+      if((x=/(?:sua candidatura foi enviada para|application was sent to) (.+?)(?:[.!]|$)/i.exec(a)))return r("candidatura",(/^(.+?) [-–·] /.exec(t)||[])[1]||"",x[1]);
+      var emp=(/processo seletivo (?:na|da|do|no) (.+?)[.,!]/i.exec(t)||[])[1]||"",antes=(/^(.+?)\s+Ol[áa](?=[\s,!])/.exec(t)||[])[1]||"";
+      return r("candidatura",emp&&antes.indexOf(emp)===0?antes.slice(emp.length):antes,emp)}
+    return null}
+  /* a vaga do e-mail é esta candidatura do funil? (todas as palavras importantes do título batem, e a empresa, quando as duas têm) */
+  function vagaParecida(v,c){
+    function ws(s){return chaveProduto(s).split(" ").filter(function(w){return w.length>=3&&!/^(de|da|do|das|dos|para|com|vaga|ii|iii|jr|pl|sr)$/.test(w)})}
+    var a=ws(v.vaga),b=ws(c.t);if(!a.length||!b.length)return !!(v.empresa&&c.e&&chaveProduto(v.empresa)===chaveProduto(c.e)&&!a.length);
+    var comum=a.filter(function(w){return b.indexOf(w)>=0}).length;if(comum/Math.min(a.length,b.length)<0.75)return false;
+    return !(v.empresa&&c.e)||ws(v.empresa).some(function(w){return ws(c.e).indexOf(w)>=0})}
+  raiz.RACnucleo={norm:norm,urlAbs:urlAbs,lerAbast:lerAbast,TEMAS:TEMAS,temasDe:temasDe,juntarDados:juntarDados,SKILLS:SKILLS,compatVaga:compatVaga,omsZ:omsZ,omsValor:omsValor,percentilDeZ:percentilDeZ,csvLinhas:csvLinhas,napperLer:napperLer,bebeDias:bebeDias,VACINAS_PNI:VACINAS_PNI,vacinasCalendario:vacinasCalendario,mediana:mediana,prontidao:prontidao,somaDiasISO:somaDiasISO,correlacao:correlacao,chuvaAviso:chuvaAviso,diasEntre:diasEntre,chaveProduto:chaveProduto,previsaoCompras:previsaoCompras,padraoCompras:padraoCompras,itemBate:itemBate,notaItens:notaItens,dividirItens:dividirItens,lerEmailVaga:lerEmailVaga,vagaParecida:vagaParecida};
 })(typeof window!=="undefined"?window:globalThis);

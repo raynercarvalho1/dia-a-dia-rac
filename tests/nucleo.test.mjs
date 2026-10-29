@@ -164,3 +164,29 @@ test("nota do iPhone e o que é ditado viram itens da lista", () => {
   assert.deepEqual(N.notaItens("◦ Leite\n☑ Ovos\n- [ ] Café").map((x) => x.item), ["Leite", "Café"]);
   assert.deepEqual(N.dividirItens("leite, pão de forma e café."), ["Leite", "Pão de forma", "Café"]);
 });
+
+test("e-mails de vagas: confirmação, etapa, entrevista, retorno, cancelada e alertas", () => {
+  const L = (de, assunto, trecho = "") => N.lerEmailVaga({ de, assunto, trecho });
+  let x = L("no-reply@gupy.com.br", "Candidatura recebida com sucesso!", "Tauste Supermercados ANALISTA DE DADOS (INOVAÇÃO E MELHORIA) Olá, Rayner Carvalho Obrigado pelo seu interesse em participar do processo seletivo na Tauste Supermercados. Gostaríamos");
+  assert.deepEqual([x.tipo, x.vaga, x.empresa, x.plataforma], ["candidatura", "ANALISTA DE DADOS (INOVAÇÃO E MELHORIA)", "Tauste Supermercados", "Gupy"]);
+  x = L("naoresponda@burh.com.br", "Sua candidatura foi confirmada! 💙🚀", "Você se candidatou na(s) vaga(s) Assitente de Suporte de TI. Ir para vaga Agradecemos a sua candidatura!");
+  assert.deepEqual([x.tipo, x.vaga], ["candidatura", "Assitente de Suporte de TI"]);
+  x = L("avisos@jobbol.com.br", "Sua candidatura para Analista de Suporte de TI - nºUK7934982", "Recebemos sua candidatura");
+  assert.deepEqual([x.tipo, x.vaga], ["candidatura", "Analista de Suporte de TI"]);
+  assert.equal(L("noreply@mailquickin.com", "Confirmação de inscrição - Captativa").empresa, "Captativa");
+  assert.equal(L("system@solides.com", "Candidatura efetuada em ANALISTA DE SUPORTE DE TI").vaga, "ANALISTA DE SUPORTE DE TI");
+  x = L("no-reply@gupy.com.br", "Etapa Redação desbloqueada para a vaga ANALISTA DE DADOS (INOVAÇÃO E MELHORIA)");
+  assert.deepEqual([x.tipo, x.etapa, x.vaga], ["etapa", "Redação", "ANALISTA DE DADOS (INOVAÇÃO E MELHORIA)"]);
+  assert.equal(L("reply@reply.gupy.com.br", "Agendamento de Entrevista para a vaga Especialista em Recuperação de Crédito").tipo, "entrevista");
+  x = L("no-reply@gupy.com.br", "Obrigada pelo interesse em fazer parte do nosso time!", "Bancorbrás - ANALISTA DE INFRAESTRUTURA JUNIOR Nova mensagem referente à vaga ANALISTA DE INFRAESTRUTURA JUNIOR: Olá, Rayner! Agradecemos sua participação");
+  assert.deepEqual([x.tipo, x.vaga, x.empresa], ["retorno", "ANALISTA DE INFRAESTRUTURA JUNIOR", "Bancorbrás"]);
+  x = L("no-reply@gupy.com.br", "Stefanini Group | ANALISTA SUPORTE I - Vaga Cancelada");
+  assert.deepEqual([x.tipo, x.vaga, x.empresa], ["cancelada", "ANALISTA SUPORTE I", "Stefanini Group"]);
+  x = L("jobalerts-noreply@linkedin.com", "A empresa Bridger está contratando: Analista de TI Júnior");
+  assert.deepEqual([x.tipo, x.vaga, x.empresa], ["alerta", "Analista de TI Júnior", "Bridger"]);
+  x = L("donotreply@match.indeed.com", "Analista de Suporte Técnico Sênior na empresa Clicksign");
+  assert.deepEqual([x.tipo, x.vaga, x.empresa], ["alerta", "Analista de Suporte Técnico Sênior", "Clicksign"]);
+  assert.equal(L("resposta-automatica-sac@oficial.nike.com.br", "Recebemos seu pedido 1001371153"), null);
+  assert.ok(N.vagaParecida({ vaga: "ANALISTA DE DADOS (INOVAÇÃO E MELHORIA)", empresa: "Tauste Supermercados" }, { t: "Analista de Dados - Inovação e Melhoria", e: "Tauste" }));
+  assert.ok(!N.vagaParecida({ vaga: "Analista de Suporte de TI", empresa: "" }, { t: "Analista de Dados", e: "Tauste" }));
+});

@@ -9,8 +9,8 @@
 
   /* Rotas por hash: #esportes/beisebol/liga, #esportes/beisebol/time-119, #esportes/beisebol/jogo-849805,
      #esportes/basquete/jogo-401909092, #x/jornalistas, #vagas ... */
-  var tabs=["inicio","esportes","vagas","mercado","aniversarios","em-breve","x","estudos","mba","saude","conexoes","agenda","busca","sistema","resumo","lista","carreira","documentos","eddie","olivia","veiculos"];
-  var DA_CASA=["mercado","lista","eddie","olivia","veiculos","documentos"];
+  var tabs=["inicio","esportes","vagas","mercado","aniversarios","em-breve","x","estudos","mba","saude","conexoes","agenda","busca","sistema","resumo","lista","carreira","rede","documentos","eddie","olivia","veiculos"];
+  var DA_CASA=["mercado","lista","eddie","olivia","veiculos","documentos","rede"];
   var sports=["beisebol","basquete","futebol-americano"];
   function mark(sel,attr,val){document.querySelectorAll(sel).forEach(function(a){
     if(a.dataset[attr]===val)a.setAttribute("aria-current","page");else a.removeAttribute("aria-current")})}
@@ -24,10 +24,10 @@
     n.id="pico";$("#pico").replaceWith(n);
     $("#ptitle").textContent=hit?hit.querySelector(".t").textContent:"Dia a Dia RAC"}
   /* ===== Módulos: cada seção grande fica em js/<seção>.js e só carrega quando é aberta ===== */
-  var MOD_VERSAO="2026-10-29.6",MODULOS={},MOD_OK={};
+  var MOD_VERSAO="2026-10-29.7",MODULOS={},MOD_OK={};
   var MOD_DEPS={conexoes:["mba"],sistema:["familia","mba","saude"],carreira:["sistema"],bebe:["familia","oms"],resumo:["saude","mba","familia"]};
   var ROTA_MODS={esportes:["esportes"],eddie:["familia"],olivia:["familia"],veiculos:["familia"],mba:["mba"],saude:["saude"],
-    conexoes:["conexoes"],agenda:["sistema"],busca:["sistema"],sistema:["sistema"],lista:["lista"],carreira:["carreira"],documentos:["familia"],resumo:["resumo"]};
+    conexoes:["conexoes"],agenda:["sistema"],busca:["sistema"],sistema:["sistema"],lista:["lista"],carreira:["carreira"],documentos:["familia"],resumo:["resumo"],rede:["rede"]};
   function modulo(n){
     if(MODULOS[n])return MODULOS[n];
     MODULOS[n]=Promise.all((MOD_DEPS[n]||[]).map(modulo)).then(function(){return new Promise(function(ok,erro){
@@ -65,6 +65,8 @@
     if(top==="estudos"){sideMark("estudos","estudos");renderEstudos();return}
     if(top==="mba"){sideMark("mba","mba");renderMba();return}
     if(top==="documentos"){sideMark("documentos","documentos");renderFamilia("docs");return}
+    if(top==="vagas")vgAlertas();
+    if(top==="rede"){sideMark("rede","rede");renderRede();return}
     if(top==="carreira"){sideMark("carreira","carreira");renderCarreira(parts[1],parts[2]);return}
     if(top==="lista"){sideMark("lista","lista");renderLista(parts[1]);return}
     if(top==="agenda"){sideMark("agenda","agenda");renderAgenda();return}
@@ -552,6 +554,24 @@
   $("#vg-q").addEventListener("input",function(e){VG.q=e.target.value;vgDraw()});
   $("#vg-hid").addEventListener("change",function(e){VG.verOcultas=e.target.checked;vgDraw()});
   vgLoad();
+  /* alertas de vaga que chegam por e-mail (LinkedIn e Indeed): lidos do Gmail, com compatibilidade e "Salvar no funil" */
+  function vgAlertas(){
+    var box=$("#vg-alertas");if(!box||!isOwner())return;box.innerHTML="";
+    var p=h("div",{class:"panel"},h("h2",{text:"Alertas por e-mail"}),h("p",{class:"sub",text:"As vagas que o LinkedIn e o Indeed mandam para o seu e-mail nos últimos 14 dias. Para receber mais de dados em Sorocaba, crie o alerta numa busca do LinkedIn (botão \"Criar alerta\" no topo da busca)."}));
+    var st=h("p",{class:"sub",role:"status"}),bt=h("button",{type:"button",class:"ghostbtn pri",text:"Ler os alertas"}),cx=h("div",{class:"vfil"}),ul=h("ul",{class:"wl"});
+    p.appendChild(h("div",{class:"vfil"},bt,h("a",{class:"ghostbtn",href:"#rede",text:"Rede em Sorocaba (LinkedIn)"})));p.appendChild(cx);p.appendChild(st);p.appendChild(ul);box.appendChild(p);
+    function ler(){bt.disabled=true;st.textContent="Lendo os e-mails…";cx.innerHTML="";ul.innerHTML="";
+      gmBuscar("newer_than:14d (from:jobalerts-noreply@linkedin.com OR from:match.indeed.com OR from:jobs-listings@linkedin.com)",50).then(function(res){bt.disabled=false;
+        gmBotoesConectar(res,ler).forEach(function(b){cx.appendChild(b)});
+        var vs=[];res.forEach(function(r){r.msgs.forEach(function(m){var x=NUCLEO.lerEmailVaga(m);if(x&&x.tipo==="alerta")vs.push(Object.assign(x,{data:m.data,link:gmLinkMsg(m),id:m.id}))})});
+        vs.sort(function(a,b){return b.data.localeCompare(a.data)});
+        st.textContent=vs.length?vs.length+(vs.length===1?" vaga":" vagas")+" nos alertas.":res.some(function(r){return r.semAcesso})?"Conecte a conta do Gmail para ler os alertas.":"Nenhum alerta nos últimos 14 dias.";
+        vs.forEach(function(v){var cp=vgCompat({t:v.vaga}),sv=h("button",{type:"button",class:"ghostbtn",text:"Salvar no funil"}),ja=(PESSOAL.candidaturas||[]).some(function(c){return c.emailId===v.id});
+          if(ja){sv.textContent="✓ No funil";sv.disabled=true}
+          sv.onclick=function(){var l=(PESSOAL.candidaturas||[]).slice();l.unshift({id:"a"+v.id,emailId:v.id,t:v.vaga||"(vaga do alerta)",e:v.empresa,link:v.link,fonte:v.plataforma,coluna:"salva",datas:{salva:hojeISO()}});pessoalGravar("candidaturas",l);sv.textContent="✓ No funil";sv.disabled=true};
+          ul.appendChild(h("li",null,h("span",{class:"grow"},h("b",{text:v.vaga||"(várias vagas)"}),h("span",{class:"sub",text:[v.empresa,v.plataforma,dataBR(v.data)].filter(Boolean).join(" · ")}),cp),h("span",{class:"vfil"},ext(v.link,"Abrir","ghostbtn"),sv)))})
+      }).catch(function(e){bt.disabled=false;st.textContent="Não consegui ler: "+e.message})}
+    bt.onclick=ler}
 
   /* Aniversários */
   var sel=$("#f-mes");
@@ -811,6 +831,19 @@
         error_callback:function(e){rej(new Error(e&&e.type==="popup_closed"?"janela fechada":"não abriu a janela do Google"))}});
       cli.requestAccessToken({prompt:email?"":"select_account"})})})}
   function cab(m,n){var x=(m.payload&&m.payload.headers||[]).filter(function(y){return y.name.toLowerCase()===n})[0];return x?x.value:""}
+  /* as contas do Gmail do cartão de e-mail (slot g0, g1…) e uma busca nelas: {conta, slot, i, semAcesso|erro, msgs:[{id, thread, de, assunto, trecho, data, u}]} */
+  function gmContas(){return (PESSOAL.emails||EMAILS_PADRAO).filter(function(c){return /mail\.google\.com/.test(c.u)})}
+  function gmTexto(t){var d=document.createElement("textarea");d.innerHTML=t||"";return d.value}
+  function gmBuscar(q,max){
+    return Promise.all(gmContas().map(function(c,i){var slot="g"+i,tk=gmToken(slot),o={conta:c.n,email:c.e||"",slot:slot,i:i,msgs:[]};if(!tk){o.semAcesso=true;return o}
+      return gmApi(tk,"messages?maxResults="+(max||60)+"&q="+encodeURIComponent(q)).then(function(l){
+        return Promise.all((l.messages||[]).map(function(m){return gmApi(tk,"messages/"+m.id+"?format=metadata&metadataHeaders=From&metadataHeaders=Subject")}))})
+        .then(function(ms){o.msgs=ms.map(function(m){return {id:m.id,thread:m.threadId,de:cab(m,"from"),assunto:cab(m,"subject"),trecho:gmTexto(m.snippet),data:new Date(+m.internalDate).toISOString().slice(0,10),u:i}});return o})
+        .catch(function(e){if(/expirou/.test(e.message)){o.semAcesso=true;try{localStorage.removeItem("rac-gm-"+slot)}catch(x){}}else o.erro=e.message;return o})}))}
+  function gmLinkMsg(m){return "https://mail.google.com/mail/u/"+m.u+"/#all/"+m.thread}
+  /* botões "Conectar" para as contas sem acesso agora (o Google pede um toque) */
+  function gmBotoesConectar(res,depois){return res.filter(function(r){return r.semAcesso}).map(function(r){
+    var b=h("button",{type:"button",class:"ghostbtn",text:"Conectar "+r.conta});b.onclick=function(){b.disabled=true;gmConectar(r.slot,r.email).then(depois,function(e){b.disabled=false;b.textContent="Não conectou ("+e.message+")"})};return b})}
   function remetente(v){var m=/^\s*"?([^"<]+?)"?\s*<.*>\s*$/.exec(v);return (m?m[1]:v).trim()}
   function gmailBloco(contas,i){
     var c=contas[i],slot="g"+i,box=h("div",{class:"gmbox"});

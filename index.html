@@ -131,6 +131,20 @@ img.ico{background:#fff;object-fit:contain;padding:2px;box-shadow:0 0 0 1px var(
 @media(min-width:861px){.side .closebtn{display:none}}
 .menuflut{position:fixed;left:max(14px,env(safe-area-inset-left,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:24;width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:var(--glass);color:var(--ink);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:0 6px 20px rgba(0,0,0,.25)}
 .menuflut svg{width:22px;height:22px}
+.capbtn{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:26;width:56px;height:56px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font:400 32px/1 var(--f-ui);box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.capfundo{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.4);display:flex;align-items:flex-end;justify-content:center}
+.capfolha{width:min(560px,100%);max-height:85vh;overflow:auto;margin:0;border-radius:18px 18px 0 0;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}
+@media(min-width:861px){.capfundo{align-items:center}.capfolha{border-radius:18px}}
+.caph{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}.caph b{font:700 calc(17px + var(--fz)) var(--f-ui)}
+.capgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.capop{display:flex;gap:10px;align-items:center;text-align:left;padding:12px;border-radius:12px;background:var(--bg);border:1px solid var(--line);color:var(--ink);font:600 calc(14px + var(--fz)) var(--f-ui)}
+.capico{font-size:22px}.capok{font:600 calc(16px + var(--fz)) var(--f-ui);margin:8px 0}
+.listaadd{display:flex;gap:8px}.listainp{flex:1;font-size:calc(17px + var(--fz));padding:12px}
+.listaul{list-style:none;margin:6px 0;padding:0}.listaul li{display:flex;align-items:center;gap:6px;border-top:1px solid var(--line)}.listaul li:first-child{border-top:0}
+.listaul label{flex:1;display:flex;align-items:center;gap:12px;padding:12px 4px;cursor:pointer}.listaul input{width:22px;height:22px;flex:none}
+.listat{font-size:calc(16px + var(--fz))}.listaq{margin-left:8px;color:var(--muted);font-size:calc(13px + var(--fz))}
+.listaul li.feito .listat{text-decoration:line-through;color:var(--muted)}
+.listarm{background:none;color:var(--muted);font-size:22px;padding:6px 10px}
 .syncst{display:block;font:600 calc(12px + var(--fz)) var(--f-ui);padding:6px 10px;border-radius:10px;text-decoration:none;color:var(--ink);background:var(--bg)}
 .syncst.bom{color:var(--good,#1a7f37)}.syncst.pend{color:var(--warn,#b45309)}.syncst.ruim{color:var(--bad,#c62828);background:color-mix(in srgb,#c62828 10%,var(--bg))}
 .buscares li{padding:6px 8px}.buscares li b{font-size:calc(13px + var(--fz))}
@@ -614,7 +628,7 @@ html:not(.logado) .app{display:none}
 .gate input{width:100%}
 .whoami{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
 .whoami .sub{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgrp),html.casa #navgrp a.it:not([data-k="mercado"]):not([data-k="eddie"]):not([data-k="olivia"]):not([data-k="veiculos"]),html.casa #bdalert,html.casa .syncst{display:none}
+html.casa .side .search,html.casa .side .results,html.casa .side .grp:not(#navgrp),html.casa #navgrp a.it:not([data-k="mercado"]):not([data-k="eddie"]):not([data-k="olivia"]):not([data-k="veiculos"]):not([data-k="lista"]),html.casa #bdalert,html.casa .syncst{display:none}
 /* Tela inicial */
 .home{display:grid;gap:18px}
 .hi{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px;padding:6px 2px}
@@ -820,6 +834,7 @@ code.mbaf{font:calc(12px + var(--fz))/1.4 ui-monospace,Consolas,monospace;white-
       <a class="it" href="#saude" data-k="saude"><span class="ico" style="--ic:var(--c-saude)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.8 5.6a5.2 5.2 0 0 0-7.4 0L12 7l-1.4-1.4a5.2 5.2 0 1 0-7.4 7.4L12 21.6l8.8-8.6a5.2 5.2 0 0 0 0-7.4z"/><path d="M3.5 12h4l2-3 3 6 2-3h6"/></svg></span><span class="t">Saúde e treinos</span></a>
       <a class="it" href="#mba" data-k="mba"><span class="ico" style="--ic:var(--c-inicio)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8l9-4 9 4-9 4z"/><path d="M7 10.5V15c0 1.4 2.2 3 5 3s5-1.6 5-3v-4.5M21 8v6"/></svg></span><span class="t">MBA</span><span class="cnt" id="cnt-mba"></span></a>
       <a class="it" href="#mercado" data-k="mercado"><span class="ico" style="--ic:var(--c-mercado)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L21 8H6"/><circle cx="10" cy="20" r="1.2" fill="currentColor"/><circle cx="17" cy="20" r="1.2" fill="currentColor"/></svg></span><span class="t">Mercado</span></a>
+      <a class="it" href="#lista" data-k="lista"><span class="ico" style="--ic:var(--c-mercado)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/></svg></span><span class="t">Lista de compras</span></a>
       <a class="it" href="#olivia" data-k="olivia"><span class="ico" style="--ic:var(--c-olivia)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M9 10.5h.01M15 10.5h.01M9.5 15c1.4 1.2 3.6 1.2 5 0M12 3.5c-1 1.2-1 2.6 0 3.5"/></svg></span><span class="t">Olivia</span></a>
       <a class="it" href="#eddie" data-k="eddie"><span class="ico" style="--ic:var(--c-eddie)"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><ellipse cx="6" cy="10" rx="2" ry="2.6"/><ellipse cx="10" cy="5.8" rx="2" ry="2.6"/><ellipse cx="14.5" cy="5.8" rx="2" ry="2.6"/><ellipse cx="18.5" cy="10" rx="2" ry="2.6"/><path d="M12 11.5c-3 0-6 4.2-6 6.4 0 1.6 1.3 2.4 2.8 2.4 1.2 0 2-.6 3.2-.6s2 .6 3.2.6c1.5 0 2.8-.8 2.8-2.4 0-2.2-3-6.4-6-6.4z"/></svg></span><span class="t">Eddie</span></a>
       <a class="it" href="#aniversarios" data-k="aniversarios"><span class="ico" style="--ic:var(--c-aniversarios)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21h16v-8H4zM4 16.5c2.6 1.6 5.4 1.6 8 0 2.6 1.6 5.4 1.6 8 0M12 13V9.5"/><path d="M12 7a1.6 1.6 0 0 0 1.6-1.6C13.6 4.3 12 3 12 3s-1.6 1.3-1.6 2.4A1.6 1.6 0 0 0 12 7z" fill="currentColor"/></svg></span><span class="t">Aniversários</span><span class="cnt" id="cnt-aniv"></span></a>
@@ -860,6 +875,7 @@ code.mbaf{font:calc(12px + var(--fz))/1.4 ui-monospace,Consolas,monospace;white-
   <section id="inicio" hidden><div id="inicio-view"></div></section>
   <section id="estudos" hidden><div id="estudos-view" class="stack"></div></section>
   <section id="mba" hidden><div id="mba-view" class="stack"></div></section>
+  <section id="lista" hidden><div id="lista-view" class="stack"></div></section>
   <section id="agenda" hidden><div id="agenda-view" class="stack"></div></section>
   <section id="busca" hidden><div id="busca-view" class="stack"></div></section>
   <section id="sistema" hidden><div id="sistema-view" class="stack"></div></section>

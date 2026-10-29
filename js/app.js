@@ -9,8 +9,8 @@
 
   /* Rotas por hash: #esportes/beisebol/liga, #esportes/beisebol/time-119, #esportes/beisebol/jogo-849805,
      #esportes/basquete/jogo-401909092, #x/jornalistas, #vagas ... */
-  var tabs=["inicio","esportes","vagas","mercado","aniversarios","em-breve","x","estudos","mba","saude","conexoes","agenda","busca","sistema","eddie","olivia","veiculos"];
-  var DA_CASA=["mercado","eddie","olivia","veiculos"];
+  var tabs=["inicio","esportes","vagas","mercado","aniversarios","em-breve","x","estudos","mba","saude","conexoes","agenda","busca","sistema","lista","eddie","olivia","veiculos"];
+  var DA_CASA=["mercado","lista","eddie","olivia","veiculos"];
   var sports=["beisebol","basquete","futebol-americano"];
   function mark(sel,attr,val){document.querySelectorAll(sel).forEach(function(a){
     if(a.dataset[attr]===val)a.setAttribute("aria-current","page");else a.removeAttribute("aria-current")})}
@@ -24,10 +24,10 @@
     n.id="pico";$("#pico").replaceWith(n);
     $("#ptitle").textContent=hit?hit.querySelector(".t").textContent:"Dia a Dia RAC"}
   /* ===== Módulos: cada seção grande fica em js/<seção>.js e só carrega quando é aberta ===== */
-  var MOD_VERSAO="2026-10-28.3",MODULOS={},MOD_OK={};
+  var MOD_VERSAO="2026-10-28.4",MODULOS={},MOD_OK={};
   var MOD_DEPS={conexoes:["mba"],sistema:["familia","mba","saude"]};
   var ROTA_MODS={esportes:["esportes"],eddie:["familia"],olivia:["familia"],veiculos:["familia"],mba:["mba"],saude:["saude"],
-    conexoes:["conexoes"],agenda:["sistema"],busca:["sistema"],sistema:["sistema"]};
+    conexoes:["conexoes"],agenda:["sistema"],busca:["sistema"],sistema:["sistema"],lista:["lista"]};
   function modulo(n){
     if(MODULOS[n])return MODULOS[n];
     MODULOS[n]=Promise.all((MOD_DEPS[n]||[]).map(modulo)).then(function(){return new Promise(function(ok,erro){
@@ -45,6 +45,7 @@
   function route(){
     if(!PAPEL)return;
     var parts=(location.hash||"").replace("#","").split("/");
+    if(parts[0]==="captura"){history.replaceState(null,"","#"+(isOwner()?"inicio":"lista"));setTimeout(function(){abrirCaptura()},300);parts=[isOwner()?"inicio":"lista"]}
     var top=tabs.indexOf(parts[0])<0?"inicio":parts[0];
     /* a esposa vê o Mercado, o Eddie, a Olivia e os Veículos; o resto leva ao Mercado */
     if(PAPEL==="casa"&&DA_CASA.indexOf(top)<0){top="mercado";parts=["mercado"]}
@@ -63,6 +64,7 @@
     if(top==="inicio"){sideMark("inicio","inicio");renderInicio();return}
     if(top==="estudos"){sideMark("estudos","estudos");renderEstudos();return}
     if(top==="mba"){sideMark("mba","mba");renderMba();return}
+    if(top==="lista"){sideMark("lista","lista");renderLista(parts[1]);return}
     if(top==="agenda"){sideMark("agenda","agenda");renderAgenda();return}
     if(top==="busca"){sideMark("busca","busca");$("#ptitle").textContent="Busca";renderBusca(decodeURIComponent(parts.slice(1).join("/")||""));return}
     if(top==="sistema"){sideMark("sistema","sistema");renderSistema();return}
@@ -458,6 +460,8 @@
     var html=document.documentElement;
     html.classList.add("logado");html.classList.toggle("casa",PAPEL==="casa");
     $("#gate").hidden=true;$("#quem").textContent=EU.email;syncSelo();
+    if(!$(".capbtn")){var cb=h("button",{type:"button",class:"capbtn","aria-label":"Anotar rápido",title:"Anotar rápido (lista, tarefa, lembrete, ideia, link, peso, gasto, km)",text:"+"});cb.onclick=function(){abrirCaptura()};document.body.appendChild(cb)}
+    processarFila();setTimeout(capturaCompartilhada,400);
     if(isOwner()){items=SEM_TABELA?lsRead():(PESSOAL.aniversarios||[]);render();montarSideX()}
     else $("#bdalert").hidden=true;
     route()}
@@ -923,7 +927,7 @@
   window.addEventListener("unhandledrejection",function(ev){logErro("página",ev.reason)});
 
   /* selo de sincronização no rodapé do menu: pendências, conflitos e quando sincronizou */
-  function pendentes(){var l=[];for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);if(k.indexOf("rac-p-")===0){var cp=copiaLer(k.slice(6));if(cp&&!cp.ok&&!SIS.conflitos[k.slice(6)])l.push(k.slice(6))}}return l}
+  function pendentes(){var l=[];for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);if(k.indexOf("rac-p-")===0){var cp=copiaLer(k.slice(6));if(cp&&!cp.ok&&!SIS.conflitos[k.slice(6)])l.push(k.slice(6))}}filaLer().forEach(function(op){l.push("fila: "+op.t)});return l}
   function syncSelo(){
     var el=$("#syncst");if(!el||!isOwner())return;var nc=Object.keys(SIS.conflitos).length,np=pendentes().length,txt,cls;
     if(nc){txt="⚠ "+nc+(nc===1?" conflito":" conflitos")+": resolver";cls="ruim"}
@@ -932,12 +936,84 @@
     else{txt="✓ Sincronizado"+(SIS.ultimaSinc?" · "+new Date(SIS.ultimaSinc).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"}):"");cls="bom"}
     el.textContent=txt;el.className="syncst "+cls}
   /* o que ficou pendente sobe quando a internet volta e a cada 5 minutos */
-  function reenviarPendentes(){if(!SB||!isOwner()||SEM_TABELA)return;pendentes().forEach(function(ch){var cp=copiaLer(ch);if(cp)pessoalGravar(ch,cp.v)})}
+  function reenviarPendentes(){processarFila();if(!SB||!isOwner()||SEM_TABELA)return;pendentes().forEach(function(ch){if(ch.indexOf("fila: ")===0)return;var cp=copiaLer(ch);if(cp)pessoalGravar(ch,cp.v)})}
   window.addEventListener("online",reenviarPendentes);setInterval(reenviarPendentes,5*60e3);
   var NOMES_CHAVE={mba:"MBA",mbaFeito:"MBA (o que já foi feito)",mbaLinks:"Links das aulas",aniversarios:"Aniversários","x-amigos":"Amigos do X",projetos:"Projetos",salvos:"Guardados",lembretes:"Lembretes",exercicios:"Estudos",emails:"E-mails",googleMaps:"Chave do Google Maps",ultimoBackup:"Último backup"};
   function resumoValor(v){if(Array.isArray(v))return v.length+(v.length===1?" item":" itens");if(v&&typeof v==="object")return Object.keys(v).length+" campos";return String(v).slice(0,40)}
 
 
+  /* ===== Fila sem internet: gravações no banco que esperam a conexão voltar ===== */
+  var FILA_LS="rac-fila";
+  function novoId(){return window.crypto&&crypto.randomUUID?crypto.randomUUID():"10000000-1000-4000-8000-100000000000".replace(/[018]/g,function(c){return (c^Math.random()*16>>c/4).toString(16)})}
+  function filaLer(){try{return JSON.parse(localStorage.getItem(FILA_LS)||"[]")}catch(e){return []}}
+  function filaGravar(l){try{localStorage.setItem(FILA_LS,JSON.stringify(l))}catch(e){}syncSelo()}
+  function semRede(e){return !navigator.onLine||/Failed to fetch|NetworkError|Load failed|network|fetch/i.test(String(e&&e.message||e))}
+  function executarOp(op){var q=SB.from(op.t),p=op.acao==="insert"?q.insert(op.dados):op.acao==="update"?q.update(op.dados).eq("id",op.id):q.delete().eq("id",op.id);
+    return p.then(function(r){if(r.error)throw new Error(r.error.message);return r})}
+  /* tenta gravar agora; se for falta de rede, guarda na fila deste aparelho e manda quando a internet voltar */
+  function bancoOuFila(op){
+    if(!navigator.onLine){filaGravar(filaLer().concat([Object.assign({quando:Date.now()},op)]));return Promise.resolve({enfileirado:true})}
+    return executarOp(op).catch(function(e){if(semRede(e)){filaGravar(filaLer().concat([Object.assign({quando:Date.now()},op)]));return {enfileirado:true}}throw e})}
+  var filaRodando=false;
+  function processarFila(){
+    var l=filaLer();if(!l.length||!SB||!navigator.onLine||filaRodando)return;filaRodando=true;var resto=[];
+    l.reduce(function(p,op){return p.then(function(){return executarOp(op).catch(function(e){if(semRede(e))resto.push(op);else logErro("fila",e,{t:op.t,acao:op.acao})})})},Promise.resolve())
+      .then(function(){filaGravar(resto.concat(filaLer().slice(l.length)));filaRodando=false})}
+  window.addEventListener("online",processarFila);setInterval(processarFila,60e3);
+
+  /* ===== Captura rápida: botão "+" para anotar em segundos (lista, tarefa, lembrete, ideia, link, peso, gasto, km) ===== */
+  function capOpcoes(){
+    var dono=isOwner(),o=[["compra","🛒","Item na lista de compras"],["tarefa","✅","Tarefa da casa"]];
+    if(dono)o.push(["lembrete","📌","Lembrete com data"],["ideia","💡","Ideia ou projeto"],["link","🔗","Guardar um link"]);
+    o.push(["peso","⚖️","Peso (Eddie ou Olivia)"],["gasto","💸","Gasto (família ou veículo)"],["km","🚗","Quilometragem do veículo"]);
+    return o}
+  function abrirCaptura(inicial,pre){
+    fecharCaptura();pre=pre||{};
+    var fundo=h("div",{class:"capfundo",id:"capfundo"}),folha=h("div",{class:"capfolha panel",role:"dialog","aria-label":"Captura rápida"});
+    fundo.onclick=function(e){if(e.target===fundo)fecharCaptura()};
+    var corpo=h("div");folha.appendChild(h("div",{class:"caph"},h("b",{text:"Anotar rápido"}),h("button",{type:"button",class:"ghostbtn",text:"Fechar",onclick:null})));
+    folha.querySelector(".caph button").onclick=fecharCaptura;folha.appendChild(corpo);fundo.appendChild(folha);document.body.appendChild(fundo);
+    function menu(){corpo.innerHTML="";corpo.appendChild(h("div",{class:"capgrid"},capOpcoes().map(function(op){var b=h("button",{type:"button",class:"capop"},h("span",{class:"capico",text:op[1]}),h("span",{text:op[2]}));b.onclick=function(){form(op[0])};return b})))}
+    function campo(rot,el){return h("label",null,rot,el)}
+    function pronto(msg){corpo.innerHTML="";corpo.appendChild(h("p",{class:"capok",text:msg}));var mais=h("button",{type:"button",class:"ghostbtn",text:"Anotar outra coisa"});mais.onclick=menu;corpo.appendChild(h("div",{class:"vfil"},mais));setTimeout(function(){if(document.getElementById("capfundo")===fundo&&corpo.querySelector(".capok"))fecharCaptura()},2200)}
+    function registro(quem,tipo,titulo,valor,dados,detalhes){
+      return bancoOuFila({t:"registros",acao:"insert",dados:{id:novoId(),quem:quem,tipo:tipo,data:hojeISO(),titulo:titulo,valor:valor||null,detalhes:detalhes||null,dados:dados||null}})}
+    function form(tipo){
+      corpo.innerHTML="";var f=h("div",{class:"wform"}),st=h("p",{class:"sub",role:"status"}),ok=h("button",{type:"button",text:"Salvar"}),volta=h("button",{type:"button",class:"ghostbtn",text:"Voltar"});volta.onclick=menu;
+      var a=h("input",{type:"text"}),b=h("input",{type:"text",inputmode:"decimal"}),d=h("input",{type:"date",value:hojeISO()}),sel=h("select");
+      function opcoes(l){sel.innerHTML="";l.forEach(function(x){sel.appendChild(h("option",{value:x[0],text:x[1]}))})}
+      var fim=function(r,msg){pronto((r&&r.enfileirado?"⏳ Sem internet: guardado neste aparelho, sobe sozinho. ":"✓ ")+msg)};
+      if(tipo==="compra"||tipo==="tarefa"){a.placeholder=tipo==="compra"?"Ex.: 2 leite (vírgula separa vários)":"Ex.: trocar a lâmpada da cozinha";a.value=pre.texto||"";f.appendChild(campo(tipo==="compra"?"O que comprar":"O que fazer",a));
+        ok.onclick=function(){var v=a.value.trim();if(!v)return a.focus();var itens=v.split(tipo==="compra"?/\s*[,;\n]\s*/:/\s*[;\n]\s*/).filter(Boolean).map(function(t){return {id:novoId(),tipo:tipo,item:t.slice(0,200)}});
+          bancoOuFila({t:"lista",acao:"insert",dados:itens}).then(function(r){fim(r,itens.length+(itens.length===1?" item adicionado":" itens adicionados")+(tipo==="compra"?" à lista.":" às tarefas."))}).catch(function(e){st.textContent="Não consegui salvar: "+e.message})}}
+      else if(tipo==="lembrete"){a.placeholder="Ex.: pagar o IPVA";f.appendChild(campo("O quê",a));f.appendChild(campo("Quando",d));
+        ok.onclick=function(){if(!a.value.trim())return a.focus();pessoalGravar("lembretes",[{id:"l"+Date.now().toString(36),data:d.value||hojeISO(),t:a.value.trim()}].concat(PESSOAL.lembretes||[]));pronto("✓ Lembrete na Agenda para "+dataBR(d.value||hojeISO())+".")}}
+      else if(tipo==="ideia"){var tx=h("textarea",{rows:"3",placeholder:"Detalhes (cite as tecnologias para entrar nas Conexões)"});a.placeholder="Nome da ideia";f.appendChild(campo("Ideia",a));f.appendChild(campo("Detalhes",tx));
+        ok.onclick=function(){if(!a.value.trim())return a.focus();pessoalGravar("projetos",[{id:"p"+Date.now().toString(36),t:a.value.trim(),txt:tx.value.trim(),atualizado:hojeISO()}].concat(PESSOAL.projetos||[]));pronto("✓ Ideia guardada em Conexões do dia → projetos.")}}
+      else if(tipo==="link"){var u=h("input",{type:"url",placeholder:"https://…",value:pre.link||""});a.placeholder="Título (opcional)";a.value=pre.titulo||"";f.appendChild(campo("Link",u));f.appendChild(campo("Título",a));
+        ok.onclick=function(){var url=urlAbs(u.value);if(!url)return u.focus();var l=(PESSOAL.salvos||[]).slice();if(!l.some(function(x){return x.u===url}))l.unshift({tipo:"link",t:a.value.trim()||url,u:url,f:"",quando:hojeISO()});pessoalGravar("salvos",l);pronto("✓ Link guardado em Conexões do dia → Guardados.")}}
+      else if(tipo==="peso"){opcoes([["olivia","Olivia"],["eddie","Eddie"]]);b.placeholder="Ex.: 6,8";f.appendChild(campo("De quem",sel));f.appendChild(campo("Peso (kg)",b));
+        ok.onclick=function(){var v=b.value.trim().replace(",",".");if(!(+v>0))return b.focus();registro(sel.value,"peso","Pesagem",String(v).replace(".",","),null).then(function(r){fim(r,"Peso de "+FAM_NOMES[sel.value]+" anotado.")}).catch(function(e){st.textContent="Não consegui salvar: "+e.message})}}
+      else if(tipo==="gasto"){opcoes([["olivia","Olivia"],["eddie","Eddie"],["civic","Civic"],["moto","Moto"]]);a.placeholder="Ex.: pacote de fraldas";b.placeholder="Ex.: 59,90";f.appendChild(campo("Com quem",sel));f.appendChild(campo("O quê",a));f.appendChild(campo("Valor (R$)",b));
+        f.appendChild(h("p",{class:"sub"},"Compra de mercado com nota? Use ",h("a",{href:"#mercado",class:"link",text:"Mercado → Adicionar nota"}),"."));
+        ok.onclick=function(){var v=+b.value.trim().replace(/\./g,"").replace(",",".");if(!a.value.trim())return a.focus();if(!(v>0))return b.focus();
+          var veic=/civic|moto/.test(sel.value),tp=veic?"manutencao":sel.value==="olivia"?"produto":"outro";
+          registro(sel.value,tp,a.value.trim(),null,{custo:Math.round(v*100)/100,itensCusto:[[a.value.trim(),Math.round(v*100)/100]]}).then(function(r){fim(r,"Gasto de "+v.toLocaleString("pt-BR",{style:"currency",currency:"BRL"})+" anotado em "+FAM_NOMES[sel.value]+".")}).catch(function(e){st.textContent="Não consegui salvar: "+e.message})}}
+      else if(tipo==="km"){opcoes([["civic","Civic"],["moto","Moto"]]);b.placeholder="Ex.: 104308";b.setAttribute("inputmode","numeric");f.appendChild(campo("Veículo",sel));f.appendChild(campo("Quilometragem total do painel",b));
+        ok.onclick=function(){var k=parseInt(b.value.replace(/\D/g,""),10);if(!(k>0))return b.focus();registro(sel.value,"outro","Quilometragem",null,{km:k}).then(function(r){fim(r,FAM_NOMES[sel.value]+": "+k.toLocaleString("pt-BR")+" km anotados.")}).catch(function(e){st.textContent="Não consegui salvar: "+e.message})}}
+      f.appendChild(h("div",{class:"vfil"},ok,volta));f.appendChild(st);corpo.appendChild(f);
+      setTimeout(function(){var el=f.querySelector("input,select");if(el)el.focus()},50);
+      [a,b].forEach(function(el){el.addEventListener("keydown",function(e){if(e.key==="Enter"&&el.tagName==="INPUT"){e.preventDefault();ok.click()}})})}
+    if(inicial)form(inicial);else menu()}
+  var FAM_NOMES={eddie:"Eddie",olivia:"Olivia",civic:"Civic",moto:"Moto",c3:"C3"};
+  function fecharCaptura(){var f=document.getElementById("capfundo");if(f)f.remove()}
+  document.addEventListener("keydown",function(e){if(e.key==="Escape")fecharCaptura()});
+  /* compartilhado de outro app para o RAC (PWA instalado): link vira "Guardar link"; texto vira itens da lista */
+  function capturaCompartilhada(){
+    var q=new URLSearchParams(location.search),link=q.get("link")||"",texto=q.get("texto")||"",titulo=q.get("titulo")||"";if(!link&&!texto&&!titulo)return;
+    history.replaceState(null,"",location.pathname+location.hash);
+    var m=/https?:\/\/\S+/.exec(texto);if(!link&&m){link=m[0];texto=texto.replace(link,"").trim()}
+    if(link&&isOwner())abrirCaptura("link",{link:link,titulo:titulo||texto});else abrirCaptura("compra",{texto:[titulo,texto].filter(Boolean).join(", ")})}
   /* ===== Estudos: listas de exercícios para analista de dados (SQL, BI e Python) ===== */
   var TRILHAS=[
     {k:"sql",n:"SQL",c:"#2E8BD8",itens:[

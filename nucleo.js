@@ -155,8 +155,8 @@
     var pesos={vfc:.35,fc:.25,sono:.25,bb:.15},soma=0,tot=0;Object.keys(pesos).forEach(function(k){if(c[k]){soma+=c[k].nota*pesos[k];tot+=pesos[k]}});
     if(!tot)return null;var nota=Math.round(soma/tot);
     var alertas=[];
-    if(c.vfc&&(c.vfc.z<-1.5||(x.vfc.faixaMin&&c.vfc.v<x.vfc.faixaMin)))alertas.push("VFC de "+c.vfc.v+" ms, abaixo do seu normal ("+Math.round(c.vfc.mediana)+" ms)");
-    if(c.fc&&c.fc.v>=c.fc.mediana+5)alertas.push("FC de repouso "+c.fc.v+" bpm, "+Math.round(c.fc.v-c.fc.mediana)+" acima do seu normal");
+    if(c.vfc&&(c.vfc.z<-1.5||(x.vfc.faixaMin&&c.vfc.v<x.vfc.faixaMin)))alertas.push("Variabilidade cardíaca de "+c.vfc.v+" ms, abaixo do seu normal ("+Math.round(c.vfc.mediana)+" ms)");
+    if(c.fc&&c.fc.v>=c.fc.mediana+5)alertas.push("Batimentos em repouso em "+c.fc.v+" por minuto, "+Math.round(c.fc.v-c.fc.mediana)+" acima do seu normal");
     var ontem=dias.filter(function(d){return d.data===somaDiasISO(data,-1)})[0];
     if(hs!=null&&hs<6&&ontem&&fSono(ontem.dados||{})!=null&&fSono(ontem.dados)<6)alertas.push("Duas noites seguidas com menos de 6 h de sono");
     var est=fEst(x),le=serie(fEst);if(typeof est==="number"&&le.length>=10&&est>mediana(le)+15)alertas.push("Estresse médio de "+est+", bem acima do seu normal ("+Math.round(mediana(le))+")");

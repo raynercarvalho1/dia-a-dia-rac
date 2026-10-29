@@ -21,13 +21,26 @@
   var SAUDE_MET=[
     ["sono","Sono",function(d){return d.sono&&d.sono.total?d.sono.total/3600:null},function(v){return hmDur(v*3600)},"#5B5BD6",true],
     ["nota","Nota do sono",function(d){return d.sono&&d.sono.nota},function(v){return Math.round(v)},"#7C6FE0",true],
-    ["vfc","VFC",function(d){return d.vfc&&d.vfc.noite},function(v){return Math.round(v)+" ms"},"#0E8A6A",true],
-    ["fc","FC de repouso",function(d){return d.fcRepouso},function(v){return Math.round(v)+" bpm"},"#D6283B",false],
-    ["bb","Body Battery",function(d){return d.bbMax},function(v){return Math.round(v)},"#2E8BD8",true],
+    ["vfc","Variabilidade cardíaca",function(d){return d.vfc&&d.vfc.noite},function(v){return Math.round(v)+" ms"},"#0E8A6A",true],
+    ["fc","Batimentos em repouso",function(d){return d.fcRepouso},function(v){return Math.round(v)+" por minuto"},"#D6283B",false],
+    ["bb","Energia do corpo",function(d){return d.bbMax},function(v){return Math.round(v)},"#2E8BD8",true],
     ["estresse","Estresse",function(d){return d.estresse},function(v){return Math.round(v)},"#E8A317",false],
     ["passos","Passos",function(d){return d.passos},function(v){return Math.round(v).toLocaleString("pt-BR")},"#B5641B",true]];
   /* antes desta data o relógio era de outra pessoa: nada disso entra no site, e o que tiver ficado no banco é apagado */
   var GARMIN_DESDE="2025-11-01";
+  /* o que cada número quer dizer, sem sigla */
+  function saudeGlossario(){
+    var G=[["Prontidão","Nota do site, de 0 a 100: compara a variabilidade cardíaca, os batimentos em repouso, o sono e a energia do corpo de hoje com o seu normal dos últimos 60 dias."],
+      ["Variabilidade cardíaca","Em inglês, heart rate variability (HRV). É a variação do tempo entre um batimento e outro, medida durante o sono, em milissegundos (ms). Acima do seu normal = corpo recuperado; bem abaixo = cansaço, estresse, álcool ou doença chegando."],
+      ["Batimentos em repouso","Em inglês, resting heart rate. A média mais baixa de batimentos por minuto no dia. Cinco ou mais acima do seu normal costuma ser sinal de cansaço."],
+      ["Energia do corpo","Em inglês, Body Battery (0 a 100). Estimativa da Garmin da energia que você tem: carrega dormindo e descansando, gasta com esforço e estresse."],
+      ["Estresse","De 0 a 100, calculado pela variabilidade cardíaca ao longo do dia: até 25 é descanso, de 26 a 50 é baixo, acima de 50 é alto."],
+      ["Oxigênio no sangue","Em inglês, pulse oximetry (SpO2). Porcentagem de oxigênio no sangue, medida à noite. O normal é acima de 95%."],
+      ["Efeito aeróbico e anaeróbico","Em inglês, training effect (0 a 5). Quanto o treino melhorou o condicionamento: de 2 a 3 mantém, de 3 a 4 melhora, acima de 4 é muito puxado."],
+      ["Carga de exercício","Em inglês, training load. Soma da intensidade e da duração do treino; quanto maior, mais o corpo precisa para se recuperar."],
+      ["Faixas de batimentos","Em inglês, heart rate zones: de 1 (leve, aquecimento) a 5 (esforço máximo), pela porcentagem dos seus batimentos máximos."],
+      ["Idade do condicionamento físico","Em inglês, fitness age. A idade que o seu condicionamento aparenta, comparada com a média das pessoas."]];
+    return h("details",{class:"famvals"},h("summary",{text:"O que significa cada número"}),h("dl",{class:"glos"},G.map(function(g){return [h("dt",{text:g[0]}),h("dd",{text:g[1]})]}).reduce(function(a,b){return a.concat(b)},[])))}
   function saudeCarregar(){
     function pag(t,cols,ord,from,acc){return SB.from(t).select(cols).order(ord,{ascending:false}).range(from,from+999).then(sbOk).then(function(l){acc=acc.concat(l);return l.length===1000?pag(t,cols,ord,from+1000,acc):acc})}
     return Promise.all([pag("garmin_dia","data,dados,atualizado","data",0,[]),pag("garmin_ativ","id,inicio,tipo,dados","inicio",0,[])])
@@ -69,8 +82,8 @@
       var d=dias[dias.length-1];if(!d)return null;var pr=NUCLEO.prontidao(dias,d.data);if(!pr)return null;
       var cor=pr.nota>=70?"var(--good)":pr.nota>=45?"#E8A317":"#D6283B";
       var p=panel("Prontidão "+(d.data===hojeISO()?"de hoje":"em "+dataBR(d.data)),"Comparada com o seu normal dos últimos 60 dias, não com a média da população.");
-      var P=pr.partes,itens=[P.vfc?["VFC",P.vfc.v+" ms","normal "+Math.round(P.vfc.mediana),P.vfc.nota]:null,P.fc?["FC repouso",P.fc.v+" bpm","normal "+Math.round(P.fc.mediana),P.fc.nota]:null,
-        P.sono?["Sono",hmDur(P.sono.v*3600),"",P.sono.nota]:null,P.bb?["Body Battery",String(P.bb.v),"",P.bb.nota]:null].filter(Boolean);
+      var P=pr.partes,itens=[P.vfc?["Variabilidade cardíaca",P.vfc.v+" ms","normal "+Math.round(P.vfc.mediana),P.vfc.nota]:null,P.fc?["Batimentos em repouso",P.fc.v+" por minuto","normal "+Math.round(P.fc.mediana),P.fc.nota]:null,
+        P.sono?["Sono",hmDur(P.sono.v*3600),"",P.sono.nota]:null,P.bb?["Energia do corpo",String(P.bb.v),"",P.bb.nota]:null].filter(Boolean);
       /* últimos 14 dias em barrinhas */
       var serie=dias.slice(-14).map(function(x){var q=NUCLEO.prontidao(dias,x.data);return [x.data,q&&q.nota]});
       p.appendChild(h("div",{class:"prontw"},h("div",{class:"pronto",style:"--c:"+cor},h("b",{text:String(pr.nota)}),h("span",{text:pr.rotulo})),
@@ -89,7 +102,7 @@
       var vf=[],vd=[],sf=[],sd=[];
       D.forEach(function(x){var ont=NUCLEO.somaDiasISO(x.data,-1);if(!por[ont])return;var c=carga[ont]||0,v=x.dados.vfc&&x.dados.vfc.noite,n=x.dados.sono&&x.dados.sono.nota;
         if(c>=forte){if(v)vf.push(v);if(n)sf.push(n)}else if(!c){if(v)vd.push(v);if(n)sd.push(n)}});
-      if(vf.length>=5&&vd.length>=5){var dv=media(vf)-media(vd);if(Math.abs(dv)>=2)out.push("Na noite depois de um treino forte, a sua VFC fica em média "+Math.abs(Math.round(dv))+" ms "+(dv<0?"mais baixa":"mais alta")+" do que depois de um dia sem treino ("+Math.round(media(vf))+" × "+Math.round(media(vd))+" ms).")}
+      if(vf.length>=5&&vd.length>=5){var dv=media(vf)-media(vd);if(Math.abs(dv)>=2)out.push("Na noite depois de um treino forte, a sua variabilidade cardíaca fica em média "+Math.abs(Math.round(dv))+" ms "+(dv<0?"mais baixa":"mais alta")+" do que depois de um dia sem treino ("+Math.round(media(vf))+" × "+Math.round(media(vd))+" ms).")}
       if(sf.length>=5&&sd.length>=5){var dn=media(sf)-media(sd);if(Math.abs(dn)>=3)out.push("A nota do sono é "+Math.abs(Math.round(dn))+" pontos "+(dn>0?"maior":"menor")+" nas noites depois de treino forte.")}
       /* horário de dormir contra a nota do sono */
       var cedo=[],tarde=[];D.forEach(function(x){var s2=x.dados.sono;if(!s2||!s2.inicio||!s2.nota)return;var m=+s2.inicio.slice(0,2)*60+ +s2.inicio.slice(3,5);if(m<12*60)m+=1440;(m<=23*60?cedo:m>=23*60+45?tarde:[]).push(s2.nota)});
@@ -110,17 +123,18 @@
         b.onclick=function(){SAUDE.met=k;desenhar();var t=corpo.querySelector(".saudetend");if(t)t.scrollIntoView({behavior:"smooth",block:"start"})};g.appendChild(b)}
       var s=x.sono,v=x.vfc,VS={BALANCED:"equilibrada",UNBALANCED:"desequilibrada",LOW:"baixa",POOR:"ruim"};
       if(s)kpi("sono","Sono",hmDur(s.total),(s.nota?"nota "+s.nota:"")+(s.inicio?" · "+s.inicio+"–"+s.fim:""));
-      if(v)kpi("vfc","VFC da noite",v.noite+" ms",(VS[v.status]||"")+(v.faixaMin?" (normal "+v.faixaMin+"–"+v.faixaMax+")":""));
-      if(x.fcRepouso)kpi("fc","FC de repouso",x.fcRepouso+" bpm","mín "+(x.fcMin||"—")+" · máx "+(x.fcMax||"—"));
-      if(x.bbMax!=null)kpi("bb","Body Battery",String(x.bbMax),"carregou "+(x.bbCarga||0)+" · gastou "+(x.bbGasto||0));
+      if(v)kpi("vfc","Variabilidade cardíaca (noite)",v.noite+" ms",(VS[v.status]||"")+(v.faixaMin?" (normal "+v.faixaMin+"–"+v.faixaMax+")":""));
+      if(x.fcRepouso)kpi("fc","Batimentos em repouso",x.fcRepouso+" por minuto","mín. do dia "+(x.fcMin||"—")+" · máx "+(x.fcMax||"—"));
+      if(x.bbMax!=null)kpi("bb","Energia do corpo",String(x.bbMax),"carregou "+(x.bbCarga||0)+" · gastou "+(x.bbGasto||0));
       if(x.estresse!=null)kpi("estresse","Estresse médio",String(x.estresse),x.estresseAlto!=null?Math.round(x.estresseAlto*100)+"% do dia alto":"");
       if(x.passos!=null)kpi("passos","Passos",x.passos.toLocaleString("pt-BR"),"meta "+(x.metaPassos||0).toLocaleString("pt-BR")+(x.distancia?" · "+fmtN(Math.round(x.distancia/100)/10)+" km":""));
       p.appendChild(g);
       var fit=(dias.slice().reverse().filter(function(q){return q.dados.idadeFitness})[0]||{}).dados;
       var extra=[x.minModerados!=null?"Minutos de intensidade hoje: "+((x.minModerados||0)+2*(x.minVigorosos||0))+" (meta semanal "+(x.metaMinutos||150)+")":"",
-        x.calorias?"Calorias: "+x.calorias.toLocaleString("pt-BR")+" ("+(x.caloriasAtivas||0)+" ativas)":"",x.spo2?"SpO2 média: "+x.spo2+"%":"",x.respiracao?"Respiração: "+x.respiracao+" rpm":"",
-        fit?"Idade fitness: "+fmtN(Math.round(fit.idadeFitness.fitness*10)/10)+" anos (real "+fit.idadeFitness.real+"; dá para chegar a "+fmtN(Math.round(fit.idadeFitness.possivel*10)/10)+")":""].filter(Boolean);
+        x.calorias?"Calorias: "+x.calorias.toLocaleString("pt-BR")+" ("+(x.caloriasAtivas||0)+" ativas)":"",x.spo2?"Oxigênio no sangue (média da noite): "+x.spo2+"%":"",x.respiracao?"Respiração: "+x.respiracao+" respirações por minuto":"",
+        fit?"Idade do condicionamento físico: "+fmtN(Math.round(fit.idadeFitness.fitness*10)/10)+" anos (real "+fit.idadeFitness.real+"; dá para chegar a "+fmtN(Math.round(fit.idadeFitness.possivel*10)/10)+")":""].filter(Boolean);
       if(extra.length)p.appendChild(h("ul",{class:"wl"},extra.map(function(t){return h("li",null,h("span",{class:"grow",text:t}))})));
+      p.appendChild(saudeGlossario());
       return p}
     /* tendência: 30 dias = um por dia; 90 dias = média por semana; 1 ano = média por mês */
     function saudeTendencia(dias){
@@ -191,10 +205,10 @@
       p.appendChild(seg);
       var l=ativs.filter(function(a){return !SAUDE.tipo||a.tipo===SAUDE.tipo}),ul=h("ul",{class:"wl saudeativ"});
       l.slice(0,SAUDE.mais).forEach(function(a){var d=a.dados,T=ativTipo(a.tipo);
-        var linha2=[distTxt(a),d.duracao?durTxt(d.duracao):"",ritmo(a),d.fc?"FC "+Math.round(d.fc)+(d.fcMax?"/"+Math.round(d.fcMax):""):"",d.calorias?Math.round(d.calorias)+" kcal":"",d.series?d.series+" séries":""].filter(Boolean).join(" · ");
+        var linha2=[distTxt(a),d.duracao?durTxt(d.duracao):"",ritmo(a),d.fc?"batimentos "+Math.round(d.fc)+(d.fcMax?" (máx. "+Math.round(d.fcMax)+")":""):"",d.calorias?Math.round(d.calorias)+" kcal":"",d.series?d.series+" séries":""].filter(Boolean).join(" · ");
         var li=h("li",{class:"clic",tabindex:"0",role:"button",title:"Ver o treino completo"},h("span",{class:"grow"},h("b",{text:T[1]+" "+(d.nome||T[0])+(d.recorde?" 🏅":"")}),h("span",{class:"sub",text:new Date(a.inicio).toLocaleDateString("pt-BR",{weekday:"short",day:"2-digit",month:"2-digit",year:"2-digit"})+", "+a.inicio.slice(11,16)+(d.local&&(d.nome||"").indexOf(d.local)<0?" · "+d.local:"")}),
-          h("span",{class:"sub",text:linha2})),d.efeitoAerobico?h("span",{class:"end",title:"Efeito aeróbico do treino (0 a 5)",text:fmtN(d.efeitoAerobico)}):null);
-        if(d.zonas){var tz=d.zonas.reduce(function(s,x){return s+x},0);if(tz)li.querySelector(".grow").appendChild(h("span",{class:"zonas",title:"Tempo em cada zona de FC (1 a 5)"},d.zonas.map(function(z,i){return z?h("i",{class:"z"+(i+1),style:"flex:"+z}):null})))}
+          h("span",{class:"sub",text:linha2})),d.efeitoAerobico?h("span",{class:"end",title:"Efeito aeróbico do treino (0 a 5): quanto melhorou o condicionamento",text:fmtN(d.efeitoAerobico)}):null);
+        if(d.zonas){var tz=d.zonas.reduce(function(s,x){return s+x},0);if(tz)li.querySelector(".grow").appendChild(h("span",{class:"zonas",title:"Tempo em cada faixa de batimentos (1 leve a 5 máxima)"},d.zonas.map(function(z,i){return z?h("i",{class:"z"+(i+1),style:"flex:"+z}):null})))}
         li.onclick=function(){location.hash="#saude/treino/"+a.id};li.onkeydown=function(e){if(e.key==="Enter")li.onclick()};
         ul.appendChild(li)});
       p.appendChild(ul);
@@ -306,12 +320,12 @@
         ["Tempo total",hms(r.elapsedDuration||dur)],mov&&Math.abs(mov-(r.elapsedDuration||dur))>30?["Em movimento",hms(mov)]:null,
         dist&&velMov?[nado||/running|walking/.test(tipo)?"Ritmo médio":"Velocidade média",ritmoDe(velMov,tipo)]:null,
         r.maxSpeed&&dist?[nado||/running|walking/.test(tipo)?"Melhor ritmo":"Velocidade máxima",ritmoDe(r.maxSpeed,tipo)]:null,
-        (r.averageHR||d.fc)?["FC média",Math.round(r.averageHR||d.fc)+" bpm"]:null,(r.maxHR||d.fcMax)?["FC máxima",Math.round(r.maxHR||d.fcMax)+" bpm"]:null,
+        (r.averageHR||d.fc)?["Batimentos (média)",Math.round(r.averageHR||d.fc)+" por minuto"]:null,(r.maxHR||d.fcMax)?["Batimentos (máximo)",Math.round(r.maxHR||d.fcMax)+" por minuto"]:null,
         (r.calories||d.calorias)?["Calorias",Math.round(r.calories||d.calorias)+(r.bmrCalories?" ("+Math.round(r.calories-r.bmrCalories)+" ativas)":"")]:null,
         r.elevationGain?["Subida / descida",Math.round(r.elevationGain)+" / "+Math.round(r.elevationLoss||0)+" m"]:null,
         r.minElevation!=null&&r.maxElevation!=null&&dist?["Altitude",Math.round(r.minElevation)+"–"+Math.round(r.maxElevation)+" m"]:null,
-        (r.averageRunCadence||d.cadencia)?["Cadência média",Math.round(r.averageRunCadence||d.cadencia)+" ppm"+(r.maxRunCadence?" (máx "+Math.round(r.maxRunCadence)+")":"")]:null,
-        (r.strideLength||d.passada)?["Passada",fmtN(Math.round(r.strideLength||d.passada))+" cm"]:null,
+        (r.averageRunCadence||d.cadencia)?["Passos por minuto (média)",Math.round(r.averageRunCadence||d.cadencia)+""+(r.maxRunCadence?" (máx "+Math.round(r.maxRunCadence)+")":"")]:null,
+        (r.strideLength||d.passada)?["Tamanho da passada",fmtN(Math.round(r.strideLength||d.passada))+" cm"]:null,
         (r.steps||d.passos)?["Passos",Math.round(r.steps||d.passos).toLocaleString("pt-BR")]:null,
         r.averageTemperature!=null?["Temperatura",Math.round(r.minTemperature)+"–"+Math.round(r.maxTemperature)+" °C"]:null,
         (r.trainingEffect||d.efeitoAerobico)!=null?["Efeito aeróbico",fmtN(r.trainingEffect||d.efeitoAerobico)]:null,
@@ -319,29 +333,29 @@
         (r.activityTrainingLoad||d.carga)?["Carga de exercício",Math.round(r.activityTrainingLoad||d.carga)]:null,
         (d.minModerados||d.minVigorosos)?["Minutos de intensidade",(d.minModerados||0)+" moderados · "+(d.minVigorosos||0)+" vigorosos"]:null,
         r.waterEstimated?["Suor estimado",Math.round(r.waterEstimated)+" ml"]:null,
-        x.piscinas?["Piscinas",x.piscinas+(d.piscina?" de "+fmtN(d.piscina/100)+" m":"")]:null,d.swolf?["Swolf médio",d.swolf]:null,
+        x.piscinas?["Piscinas",x.piscinas+(d.piscina?" de "+fmtN(d.piscina/100)+" m":"")]:null,d.swolf?["Eficiência do nado (braçadas + segundos por piscina; menor é melhor)",d.swolf]:null,
         (x.series||[]).length?["Séries",x.series.length+" · "+x.series.reduce(function(s,q){return s+(q.reps||0)},0)+" repetições"]:null].filter(Boolean);
-      var EF={RECOVERY:"Recuperação",AEROBIC_BASE:"Base aeróbica",TEMPO:"Ritmo (tempo)",LACTATE_THRESHOLD:"Limiar de lactato",VO2MAX:"VO2 máx",ANAEROBIC_CAPACITY:"Capacidade anaeróbica",SPEED:"Velocidade"};
+      var EF={RECOVERY:"Recuperação",AEROBIC_BASE:"Base aeróbica",TEMPO:"Ritmo (tempo)",LACTATE_THRESHOLD:"Limiar de lactato",VO2MAX:"Capacidade aeróbica máxima",ANAEROBIC_CAPACITY:"Capacidade anaeróbica",SPEED:"Velocidade"};
       var np=panel("Estatísticas",d.efeito?"Principal benefício: "+(EF[d.efeito]||d.efeito.toLowerCase().replace(/_/g," ")):null);
       np.appendChild(h("div",{class:"kgasto"},itens.map(function(it){return h("div",null,h("span",{class:"kl",text:it[0]}),h("b",{class:"kv",text:String(it[1])}))})));
       corpo.appendChild(np);
       /* gráficos */
       var s=x.serie||[],gp=panel("Gráficos","Toque no gráfico para ver o valor naquele momento. A linha tracejada é a média."),gs=[
-        grafTreino(s,"fc","Frequência cardíaca","#D6283B",function(v){return Math.round(v)+" bpm"}),
+        grafTreino(s,"fc","Batimentos por minuto","#D6283B",function(v){return Math.round(v)+" por minuto"}),
         dist?grafTreino(s,"vel",nado||/running|walking/.test(tipo)?"Ritmo":"Velocidade","#2E8BD8",function(v){return ritmoDe(v,tipo)}):null,
         grafTreino(s,"alt","Altitude","#0E8A6A",function(v){return Math.round(v)+" m"}),
-        /running|walking/.test(tipo)?grafTreino(s,"cad","Cadência","#7C6FE0",function(v){return Math.round(v*2)+" ppm"}):null,
+        /running|walking/.test(tipo)?grafTreino(s,"cad","Passos por minuto","#7C6FE0",function(v){return Math.round(v*2)+" por minuto"}):null,
         grafTreino(s,"temp","Temperatura","#E8A317",function(v){return Math.round(v)+" °C"})].filter(Boolean);
       if(gs.length){gs.forEach(function(g){gp.appendChild(g)});corpo.appendChild(gp)}
       /* zonas de FC */
-      if(d.zonas&&d.zonas.some(Boolean)){var tz=d.zonas.reduce(function(a2,b2){return a2+b2},0),zp=panel("Zonas de frequência cardíaca"),NZ=["Aquecimento","Fácil","Aeróbica","Limiar","Máxima"];
+      if(d.zonas&&d.zonas.some(Boolean)){var tz=d.zonas.reduce(function(a2,b2){return a2+b2},0),zp=panel("Faixas de batimentos","Quanto tempo o coração ficou em cada faixa de esforço."),NZ=["Aquecimento","Fácil","Aeróbica","Limiar","Máxima"];
         zp.appendChild(h("div",{class:"tzonas"},d.zonas.map(function(z,i){return h("div",{class:"tzrow"},h("span",{text:"Zona "+(i+1)+" · "+NZ[i]}),h("span",{class:"tzbar"},h("i",{class:"z"+(i+1),style:"width:"+(z/tz*100).toFixed(1)+"%"})),h("b",{text:hms(z)+" · "+Math.round(z/tz*100)+"%"}))})));
         corpo.appendChild(zp)}
       /* voltas */
       if((x.voltas||[]).length>1){var vp=panel("Voltas",x.voltas.length+" voltas"),tb=h("table",{class:"famtab"});
-        tb.appendChild(h("thead",null,h("tr",null,["Volta","Distância","Tempo",nado||/running|walking/.test(tipo)?"Ritmo":"Velocidade","FC média","FC máx","Calorias"].map(function(c){return h("th",{text:c})}))));
+        tb.appendChild(h("thead",null,h("tr",null,["Volta","Distância","Tempo",nado||/running|walking/.test(tipo)?"Ritmo":"Velocidade","Batimentos (média)","Batimentos (máx.)","Calorias"].map(function(c){return h("th",{text:c})}))));
         tb.appendChild(h("tbody",null,x.voltas.map(function(v,i){return h("tr",null,h("td",{text:String(i+1)}),h("td",{text:v.dist?(nado?fmtN(v.dist)+" m":fmtN(Math.round(v.dist/10)/100)+" km"):"—"}),h("td",{text:hms(v.tempo)}),
-          h("td",{text:v.dist&&v.tempo?ritmoDe(v.dist/v.tempo,tipo):"—"}),h("td",{text:v.fc?v.fc+" bpm":"—"}),h("td",{text:v.fcMax?v.fcMax+" bpm":"—"}),h("td",{text:v.cal!=null?String(v.cal):"—"}))})));
+          h("td",{text:v.dist&&v.tempo?ritmoDe(v.dist/v.tempo,tipo):"—"}),h("td",{text:v.fc?String(v.fc):"—"}),h("td",{text:v.fcMax?String(v.fcMax):"—"}),h("td",{text:v.cal!=null?String(v.cal):"—"}))})));
         vp.appendChild(h("div",{class:"famtabw"},tb));corpo.appendChild(vp)}
       /* séries da musculação */
       if((x.series||[]).length){var sp=panel("Séries",x.series.length+" séries"),tb2=h("table",{class:"famtab"});

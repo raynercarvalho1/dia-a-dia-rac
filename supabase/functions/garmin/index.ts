@@ -349,7 +349,7 @@ async function resumoSemana(adm: Sb, uid: string, hoje: string) {
   const { data: dias } = await adm.from("garmin_dia").select("dados").eq("user_id", uid).gte("data", ini).lte("data", hoje);
   const med = (f: (d: any) => number | undefined) => { const v = (dias ?? []).map((x: any) => f(x.dados ?? {})).filter((x): x is number => typeof x === "number"); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
   const sono = med((d) => d.sono?.total), passos = med((d) => d.passos), vfc = med((d) => d.vfc?.noite);
-  if (sono) l.push(`😴 sono médio ${hm(sono)}${vfc ? " · VFC " + Math.round(vfc) + " ms" : ""}`);
+  if (sono) l.push(`😴 sono médio ${hm(sono)}${vfc ? " · variabilidade cardíaca " + Math.round(vfc) + " ms" : ""}`);
   if (passos) l.push(`👟 ${Math.round(passos).toLocaleString("pt-BR")} passos por dia`);
   const { data: nt } = await adm.from("notas").select("total").eq("user_id", uid).gte("data", ini).lte("data", hoje);
   if (nt?.length) l.push(`🛒 mercado: R$ ${nt.reduce((s, x: any) => s + Number(x.total || 0), 0).toFixed(2).replace(".", ",")} em ${nt.length} compra${nt.length > 1 ? "s" : ""}`);

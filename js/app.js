@@ -24,7 +24,7 @@
     n.id="pico";$("#pico").replaceWith(n);
     $("#ptitle").textContent=hit?hit.querySelector(".t").textContent:"Dia a Dia RAC"}
   /* ===== Módulos: cada seção grande fica em js/<seção>.js e só carrega quando é aberta ===== */
-  var MOD_VERSAO="2026-10-29.3",MODULOS={},MOD_OK={};
+  var MOD_VERSAO="2026-10-29.4",MODULOS={},MOD_OK={};
   var MOD_DEPS={conexoes:["mba"],sistema:["familia","mba","saude"],carreira:["sistema"],bebe:["familia","oms"],resumo:["saude","mba","familia"]};
   var ROTA_MODS={esportes:["esportes"],eddie:["familia"],olivia:["familia"],veiculos:["familia"],mba:["mba"],saude:["saude"],
     conexoes:["conexoes"],agenda:["sistema"],busca:["sistema"],sistema:["sistema"],lista:["lista"],carreira:["carreira"],documentos:["familia"],resumo:["resumo"]};
@@ -90,7 +90,13 @@
 
   /* Barra lateral: no celular ela desliza por cima do conteúdo */
   var app=$("#app");
-  function setSide(open){app.classList.toggle("open",open);$("#openside").setAttribute("aria-expanded",open?"true":"false")}
+  var travaY=null;
+  function setSide(open){
+    /* no celular, trava a página de fundo enquanto o menu está aberto (no iPhone, só overflow:hidden não basta) */
+    if(open&&innerWidth<=860&&travaY==null){travaY=scrollY;document.body.style.top=-travaY+"px";document.documentElement.classList.add("travado")}
+    if(!open&&travaY!=null){document.documentElement.classList.remove("travado");document.body.style.top="";scrollTo(0,travaY);travaY=null}
+    app.classList.toggle("open",open);$("#openside").setAttribute("aria-expanded",open?"true":"false")}
+  addEventListener("resize",function(){if(travaY!=null&&innerWidth>860)setSide(false)});
   $("#openside").addEventListener("click",function(){setSide(true)});
   $("#closeside").addEventListener("click",function(){setSide(false)});
   $("#scrimbg").addEventListener("click",function(){setSide(false)});

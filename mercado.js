@@ -241,7 +241,13 @@
     p.appendChild(h("div", { class: "ulhead" },
       h("div", null, h("h2", { text: "Última compra" }), h("p", { class: "sub", text: semCidade(f.mercado) + " · " + dataBR(f.data) + " · " + ult.length + " itens" + (f.forma_pagamento ? " · " + f.forma_pagamento : "") })),
       h("b", { class: "ultot", text: money(tot) })));
-    p.appendChild(listaProdutos(agruparProdutos(ult)));
+    /* os itens começam recolhidos: compra grande ocupava a tela toda */
+    var lista = listaProdutos(agruparProdutos(ult)), ver = h("button", { type: "button", class: "ghostbtn", "aria-expanded": "false" });
+    function mostrar(abre) { lista.hidden = !abre; ver.setAttribute("aria-expanded", String(abre)); ver.textContent = abre ? "Recolher" : "Ver os " + ult.length + " itens"; }
+    ver.onclick = function () { mostrar(lista.hidden); };
+    mostrar(false);
+    p.appendChild(h("div", { class: "vfil" }, ver));
+    p.appendChild(lista);
     return p;
   }
   /* Detalhe aberto ao clicar numa barra de mercado ou de categoria */

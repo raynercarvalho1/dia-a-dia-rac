@@ -9,6 +9,13 @@ const CORS = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
+/* chaves do próprio Supabase: o formato novo é um JSON por nome ({"default": "sb_..."}); o antigo, um texto só */
+const chaveSb = (nova: string, antiga: string) => {
+  try { const j = JSON.parse(Deno.env.get(nova) ?? ""); if (j?.default) return j.default as string; } catch (_) { /* formato antigo */ }
+  return Deno.env.get(antiga) ?? "";
+};
+const chaveServidor = () => chaveSb("SUPABASE_SECRET_KEYS", "SUPABASE_SERVICE_ROLE_KEY");
+const chavePublica = () => chaveSb("SUPABASE_PUBLISHABLE_KEYS", "SUPABASE_ANON_KEY") || (Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ?? "");
 const responder = (o: unknown, status = 200) =>
   new Response(JSON.stringify(o), { status, headers: { ...CORS, "Content-Type": "application/json" } });
 
@@ -320,7 +327,7 @@ async function pushPara(adm: Sb, uid: string, msg: { titulo: string; corpo: stri
   }
   return `${res.filter((c) => c >= 200 && c < 300).length} de ${l.length} aparelhos`;
 }
-const admin = () => createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
+const admin = () => createClient(Deno.env.get("SUPABASE_URL")!, chaveServidor(), { auth: { persistSession: false } });
 
 /* ---------- chuva em Sorocaba hoje (Open-Meteo, previsão por hora, das 6h em diante) ---------- */
 async function chuvaHoje(hoje: string) {
@@ -415,7 +422,7 @@ async function backupSemanal(adm: Sb, uid: string, hoje: string) {
   return Object.fromEntries(Object.entries(out).map(([k, v]) => [k, v.length]));
 }
 async function rotina(req: Request) {
-  const url = Deno.env.get("SUPABASE_URL")!, chave = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const url = Deno.env.get("SUPABASE_URL")!, chave = chaveServidor();
   const adm = createClient(url, chave, { auth: { persistSession: false } });
   const { data: autorizado } = await adm.rpc("rac_rotina_ok", { segredo: req.headers.get("x-rac-rotina") ?? "" });
   if (autorizado !== true) return responder({ erro: "rotina não autorizada" }, 401);
@@ -462,7 +469,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   try {
     if (req.headers.get("x-rac-rotina")) return await rotina(req);
-    const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!, {
+    const sb = createClient(Deno.env.get("SUPABASE_URL")!, chavePublica(), {
       global: { headers: { Authorization: req.headers.get("Authorization") ?? "" } },
     });
     const { data: u } = await sb.auth.getUser();

@@ -181,7 +181,9 @@
     p.appendChild(h("div",{class:"vfil"},at,te,de));p.appendChild(st);
     var pode="serviceWorker" in navigator&&"PushManager" in window&&"Notification" in window;
     function reg(){return Promise.race([navigator.serviceWorker.ready,new Promise(function(_,n){setTimeout(function(){n(new Error("o app ainda está se instalando; recarregue a página"))},5000)})])}
-    function chamar(corpo){return SB.functions.invoke("garmin",{body:corpo}).then(function(r){if(r.error)throw new Error(r.error.message);if(r.data&&r.data.erro)throw new Error(r.data.erro);return r.data})}
+    function chamar(corpo){return SB.functions.invoke("garmin",{body:corpo}).then(function(r){
+      if(r.error){var c=r.error.context;return (c&&c.json?c.json().catch(function(){return {}}):Promise.resolve({})).then(function(j){throw new Error(j.erro||r.error.message)})}
+      if(r.data&&r.data.erro)throw new Error(r.data.erro);return r.data})}
     function bytes(b64){var s=atob(b64.replace(/-/g,"+").replace(/_/g,"/")+"===".slice((b64.length+3)%4)),u=new Uint8Array(s.length);for(var i=0;i<s.length;i++)u[i]=s.charCodeAt(i);return u}
     function estado(){
       if(!pode){st.textContent="Este navegador não recebe notificações do site."+(/iPhone|iPad/.test(navigator.userAgent)?" No iPhone, instale o site na tela de início e abra por lá.":"");return}

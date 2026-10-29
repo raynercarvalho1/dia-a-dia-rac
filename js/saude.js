@@ -179,11 +179,13 @@
       var ini=maisDias(hojeISO(),-(+SAUDE.per)+1),pts=dias.filter(function(d){return d.data>=ini&&M[2](d.dados)!=null});
       if(pts.length<2){p.appendChild(h("p",{class:"empty",text:"Poucos dados nesse período."}));return p}
       var grupos=[];
-      if(SAUDE.per==="30")pts.forEach(function(d){grupos.push({rot:d.data.slice(8)+"/"+d.data.slice(5,7),det:dataBR(d.data),vs:[M[2](d.dados)]})});
+      /* legenda de cada barra em duas linhas curtas (cabe em todas): dia + inicial da semana; semana: dia + mês; mês: mês + ano */
+      var MESES3=["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
+      if(SAUDE.per==="30")pts.forEach(function(d){var dt=new Date(d.data+"T12:00:00");grupos.push({rot:d.data.slice(8),rot2:"DSTQQSS".charAt(dt.getDay()),det:dt.toLocaleDateString("pt-BR",{weekday:"short",day:"2-digit",month:"2-digit",year:"numeric"}),vs:[M[2](d.dados)]})});
       else{var chave=SAUDE.per==="90"?function(s){var dt=new Date(s+"T12:00:00");dt.setDate(dt.getDate()-((dt.getDay()+6)%7));return dt.toISOString().slice(0,10)}:function(s){return s.slice(0,7)};
         var mapa={};pts.forEach(function(d){var k=chave(d.data);if(!mapa[k]){mapa[k]={k:k,vs:[]};grupos.push(mapa[k])}mapa[k].vs.push(M[2](d.dados))});
-        grupos.forEach(function(g){g.rot=SAUDE.per==="90"?g.k.slice(8)+"/"+g.k.slice(5,7):["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"][+g.k.slice(5,7)-1]+"/"+g.k.slice(2,4);
-          g.det=(SAUDE.per==="90"?"semana de "+dataBR(g.k):g.rot)+" · média de "+g.vs.length+(g.vs.length===1?" dia":" dias")})}
+        grupos.forEach(function(g){g.rot=SAUDE.per==="90"?g.k.slice(8):MESES3[+g.k.slice(5,7)-1];g.rot2=SAUDE.per==="90"?MESES3[+g.k.slice(5,7)-1]:g.k.slice(2,4);
+          g.det=(SAUDE.per==="90"?"semana de "+dataBR(g.k):g.rot+"/"+g.rot2)+" · média de "+g.vs.length+(g.vs.length===1?" dia":" dias")})}
       grupos.forEach(function(g){g.v=g.vs.reduce(function(s,x){return s+x},0)/g.vs.length});
       var vs=grupos.map(function(g){return g.v}),media=vs.reduce(function(s,x){return s+x},0)/vs.length,maxv=Math.max.apply(null,vs),minv=Math.min.apply(null,vs);
       var ult=grupos[grupos.length-1].v,dif=ult-media,bom=M[5]?dif>=0:dif<=0;
@@ -191,7 +193,7 @@
         h("div",null,h("span",{class:"kl",text:"Melhor"}),h("b",{class:"kv",text:M[3](M[5]?maxv:minv)})),
         h("div",null,h("span",{class:"kl",text:"Pior"}),h("b",{class:"kv",text:M[3](M[5]?minv:maxv)})),
         h("div",null,h("span",{class:"kl",text:"Último vs. média"}),h("b",{class:"kv "+(Math.abs(dif)<media*0.03?"":bom?"bom":"ruim"),text:(dif>0?"+":"−")+M[3](Math.abs(dif))}))));
-      var n=grupos.length,passo=Math.ceil(n/(innerWidth<600?5:10)),cap=h("p",{class:"vbcap",role:"status"}),barras=[];
+      var n=grupos.length,cap=h("p",{class:"vbcap",role:"status"}),barras=[];
       /* as colunas começam perto do menor valor, senão ficariam todas iguais (VFC, FC) */
       var base=M[0]==="passos"||M[0]==="sono"?0:Math.max(0,Math.floor(minv*0.85));
       function marcar(i){barras.forEach(function(b,j){b.classList.toggle("on",j===i)});cap.textContent=grupos[i].det+" · "+M[3](grupos[i].v)}
@@ -199,9 +201,11 @@
         var b=h("button",{type:"button",class:"vb","aria-label":g.det+" "+M[3](g.v),title:g.det+" · "+M[3](g.v)},
           h("span",{class:"vbv"+(n<=14||i===n-1||g.v===maxv||g.v===minv?"":" opc"),text:M[0]==="sono"?hmDur(g.v*3600).replace(/^(\d+)h(\d+)$/,"$1:$2"):M[0]==="passos"?(g.v>=1000?fmtN(Math.round(g.v/100)/10)+"k":Math.round(g.v)):String(Math.round(g.v))}),
           h("span",{class:"vbt"},h("span",{class:"vbf",style:"background:"+M[4]+";height:"+Math.max(2,(g.v-base)/((maxv-base)||1)*100).toFixed(1)+"%"})),
-          h("span",{class:"vbl",text:(n-1-i)%passo===0?g.rot:""}));
+          h("span",{class:"vbl"},h("b",{text:g.rot}),h("small",{text:g.rot2||""})));
         b.onclick=function(){marcar(i)};b.onmouseenter=function(){marcar(i)};barras.push(b);return b}));
       p.appendChild(vb);p.appendChild(cap);marcar(n-1);
+      /* no celular o gráfico rola para o lado: começa mostrando os dias mais recentes */
+      setTimeout(function(){vb.scrollLeft=vb.scrollWidth},0);
       return p}
     /* sono das últimas 14 noites: fases empilhadas */
     function saudeSono(dias){

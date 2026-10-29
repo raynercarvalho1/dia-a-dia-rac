@@ -29,10 +29,10 @@
       var c=h("div",{class:"kcol"},h("h3",{class:"mbag",text:col[1]+" ("+cards.length+")"}));
       cards.forEach(function(x){
         var cp=NUCLEO.compatVaga([x.t,x.desc].join(" "),meus),desde=(x.datas||{})[col[0]],dias=desde?Math.round((new Date(hojeISO()+"T12:00:00")-new Date(desde+"T12:00:00"))/864e5):null;
-        var fu=col[0]==="candidatei"&&dias>=5&&!x.followup;
-        var k=h("div",{class:"kcard"+(fu?" alerta":"")},h("b",{text:x.t}),h("span",{class:"sub",text:[x.e,dias!=null?"há "+dias+(dias===1?" dia":" dias"):""].filter(Boolean).join(" · ")}),
+        var fem=carFollowEm(x),fu=col[0]==="candidatei"&&!x.followup&&!!fem&&fem<=hojeISO();
+        var k=h("div",{class:"kcard"+(fu?" alerta":"")},h("b",{text:x.t}),h("span",{class:"sub",text:[x.e,x.local,x.modalidade,x.salario&&!/combinar/i.test(x.salario)?x.salario:"",dias!=null?"há "+dias+(dias===1?" dia":" dias"):""].filter(Boolean).join(" · ")}),
           cp.nota!=null?h("span",{class:"kcompat",title:"Pede: "+cp.pede.map(carSkillNome).join(", "),text:cp.nota+"% compatível"+(cp.falta.length?" · falta "+cp.falta.map(carSkillNome).join(", "):"")}):null,
-          x.resultado?h("span",{class:"sub",text:"Resultado: "+x.resultado}):null,x.etapa?h("span",{class:"sub",text:"Etapa liberada: "+x.etapa}):null,x.fonte?h("span",{class:"sub",text:"via "+x.fonte}):null,fu?h("span",{class:"qrwarn",text:"Fazer follow-up"}):null);
+          x.resultado?h("span",{class:"sub",text:"Resultado: "+x.resultado}):null,x.etapa?h("span",{class:"sub",text:"Etapa liberada: "+x.etapa}):null,x.fonte?h("span",{class:"sub",text:"via "+x.fonte}):null,fu?h("span",{class:"qrwarn",text:"Fazer follow-up"}):col[0]==="candidatei"&&fem&&!x.followup?h("span",{class:"sub",text:"Follow-up em "+dataBR(fem)}):null);
         var bt=h("div",{class:"vfil"});
         if(ci>0){var e=h("button",{type:"button",class:"ghostbtn",text:"◀"});e.onclick=function(){carMover(x.id,CAR_COLS[ci-1][0]);renderCarreira("funil")};bt.appendChild(e)}
         if(ci<CAR_COLS.length-1){var d=h("button",{type:"button",class:"ghostbtn",text:"▶ "+CAR_COLS[ci+1][1]});d.onclick=function(){carMover(x.id,CAR_COLS[ci+1][0]);renderCarreira("funil")};bt.appendChild(d)}
@@ -66,9 +66,9 @@
         if(c){lista=lista.map(function(k){if(k.id!==c.id)return k;var d=Object.assign({},k.datas||{});var o=Object.assign({},k,{emailId:k.emailId||m.id});
           if(x.tipo==="etapa"){o.etapa=x.etapa;o.followup=true;if(o.coluna==="salva"){o.coluna="candidatei";d.candidatei=d.candidatei||hj}}
           else{o.coluna=alvo;d[alvo]=d[alvo]||hj;if(alvo!=="candidatei")o.followup=true;if(x.tipo==="cancelada")o.resultado="vaga cancelada";else if(x.tipo==="retorno"&&neg)o.resultado="recusado"}
-          if(!o.e&&x.empresa)o.e=x.empresa;o.datas=d;return o})}
+          if(!o.e&&x.empresa)o.e=x.empresa;o.datas=d;o.interacoes=(k.interacoes||[]).concat([{d:hj,tipo:"E-mail",t:(NOMES[x.tipo]||x.tipo)+": "+m.assunto}]);return o})}
         else{var d2={};d2[alvo]=hj;if(alvo!=="candidatei")d2.candidatei=hj;
-          lista.unshift({id:"e"+m.id,emailId:m.id,t:x.vaga||"(vaga sem nome no e-mail)",e:x.empresa,link:gmLinkMsg(m),fonte:x.plataforma,coluna:alvo,datas:d2,etapa:x.etapa,followup:alvo!=="candidatei",
+          lista.unshift({id:"e"+m.id,emailId:m.id,t:x.vaga||"(vaga sem nome no e-mail)",e:x.empresa,link:gmLinkMsg(m),fonte:x.plataforma,coluna:alvo,datas:d2,etapa:x.etapa,followup:alvo!=="candidatei",interacoes:[{d:hj,tipo:"E-mail",t:(NOMES[x.tipo]||x.tipo)+": "+m.assunto}],
             resultado:x.tipo==="cancelada"?"vaga cancelada":x.tipo==="retorno"&&neg?"recusado":undefined})}
         carSalvar(lista)}}}
     function buscar(){bt.disabled=true;st.textContent="Lendo os e-mails…";ul.innerHTML="";cx.innerHTML="";
@@ -92,20 +92,60 @@
             h("span",{class:"vfil"},ext(gmLinkMsg(q.m),"E-mail","ghostbtn"),ap,ig));ul.appendChild(li)});
         if(CAR_PROPS&&!ps.length&&!st.textContent)st.textContent="Tudo aplicado. ✓"}
     bt.onclick=buscar;if(CAR_PROPS)mostrar();return p}
+  /* uma candidatura completa: a vaga (empresa, cargo, local, modalidade, salário, link e publicação), a candidatura (data e currículo enviado),
+     etapa, contatos e histórico de interações, follow-up com data (e adiar) e as anotações de entrevista */
+  var CAR_INTER=["E-mail","Mensagem","Ligação","Entrevista","Teste","Outro"];
+  function carFollowEm(x){var d=(x.datas||{}).candidatei;return x.followupEm||(d?maisDias(d,5):"")}
   function carEditar(x){
     var root=$("#carreira-view");root.innerHTML="";var novo=!x;x=x||{id:"c"+Date.now().toString(36),coluna:"salva",datas:{salva:hojeISO()}};
-    var p=panel(novo?"Nova candidatura":x.t),f=h("div",{class:"wform"});
-    var t=h("input",{type:"text",value:x.t||"",placeholder:"Cargo"}),e=h("input",{type:"text",value:x.e||"",placeholder:"Empresa"}),lk=h("input",{type:"url",value:x.link||"",placeholder:"https://…"});
+    var p=panel(novo?"Nova candidatura":x.t,novo?null:[x.e,x.local,x.modalidade].filter(Boolean).join(" · ")),f=h("div",{class:"wform"});
+    function inp(tipo,val,ph){return h("input",{type:tipo,value:val||"",placeholder:ph||""})}
+    function sec(t){f.appendChild(h("h3",{class:"mbag",text:t}))}
+    /* a vaga */
+    var t=inp("text",x.t,"Cargo"),e=inp("text",x.e,"Empresa"),loc=inp("text",x.local,"Ex.: Sorocaba (SP)"),sal=inp("text",x.salario,"Ex.: R$ 5.000 ou A combinar");
+    var mod=h("select",null,["","Remoto","Híbrido","Presencial"].map(function(m){return h("option",{value:m,selected:m===(x.modalidade||"")?"":null,text:m||"(modalidade)"})}));
+    var lk=inp("url",x.link,"https://… (link original da vaga)"),pub=inp("date",x.publicada);
+    var desc=h("textarea",{rows:"5",placeholder:"Cole aqui a descrição da vaga: a compatibilidade passa a usar o texto completo"});desc.value=x.desc||"";
+    sec("A vaga");
+    f.appendChild(h("div",{class:"two"},h("label",null,"Cargo",t),h("label",null,"Empresa",e)));
+    f.appendChild(h("div",{class:"two"},h("label",null,"Localidade",loc),h("label",null,"Modalidade",mod)));
+    f.appendChild(h("div",{class:"two"},h("label",null,"Salário",sal),h("label",null,"Publicada em",pub)));
+    f.appendChild(h("label",null,"Link original",lk));f.appendChild(h("label",null,"Descrição",desc));
+    var cpBox=h("div");f.appendChild(cpBox);
+    /* a candidatura */
+    sec("Candidatura e etapa");
     var col=h("select",null,CAR_COLS.map(function(c){return h("option",{value:c[0],selected:c[0]===x.coluna?"":null,text:c[1]})}));
     var res=h("select",null,["","aprovado","recusado","sem retorno","vaga cancelada","desisti"].map(function(r){return h("option",{value:r,selected:r===(x.resultado||"")?"":null,text:r||"(sem resultado ainda)"})}));
-    var desc=h("textarea",{rows:"6",placeholder:"Cole aqui a descrição da vaga: a compatibilidade passa a usar o texto completo"});desc.value=x.desc||"";
-    var notas=h("textarea",{rows:"3",placeholder:"Contato, salário combinado, próximos passos…"});notas.value=x.notas||"";
-    var fu=h("input",{type:"checkbox"});fu.checked=!!x.followup;
-    f.appendChild(h("div",{class:"two"},h("label",null,"Cargo",t),h("label",null,"Empresa",e)));
-    f.appendChild(h("div",{class:"two"},h("label",null,"Etapa",col),h("label",null,"Resultado",res)));
-    f.appendChild(h("label",null,"Link da vaga",lk));f.appendChild(h("label",null,"Descrição da vaga",desc));f.appendChild(h("label",null,"Notas",notas));
-    f.appendChild(h("label",{class:"chk"},fu," Follow-up feito"));
-    var cpBox=h("div");f.appendChild(cpBox);
+    var cand=inp("date",(x.datas||{}).candidatei),et=inp("text",x.etapa,"Ex.: Teste técnico, Entrevista com o gestor");
+    var ver=h("select",null,[h("option",{value:"",text:(x.versoes||[]).length?"(nenhuma marcada)":"(gere uma versão abaixo)"})].concat((x.versoes||[]).map(function(v){return h("option",{value:v.id,selected:v.id===x.versaoEnviada?"":null,text:"Versão de "+dataBR(v.data)+(v.base==="suporte"?" · Suporte":" · Dados")})})));
+    f.appendChild(h("div",{class:"two"},h("label",null,"Coluna do funil",col),h("label",null,"Resultado",res)));
+    f.appendChild(h("div",{class:"two"},h("label",null,"Me candidatei em",cand),h("label",null,"Currículo enviado",ver)));
+    f.appendChild(h("label",null,"Etapa atual",et));
+    /* follow-up */
+    sec("Follow-up");
+    var fuEm=inp("date",carFollowEm(x)),fu=h("input",{type:"checkbox"});fu.checked=!!x.followup;
+    function adiar(n){var base=fuEm.value&&fuEm.value>hojeISO()?fuEm.value:hojeISO();fuEm.value=maisDias(base,n)}
+    var a3=h("button",{type:"button",class:"ghostbtn",text:"Adiar 3 dias"}),a7=h("button",{type:"button",class:"ghostbtn",text:"Adiar 1 semana"});a3.onclick=function(){adiar(3)};a7.onclick=function(){adiar(7)};
+    cand.addEventListener("change",function(){if(cand.value&&!x.followupEm)fuEm.value=maisDias(cand.value,5)});
+    f.appendChild(h("div",{class:"two"},h("label",null,"Fazer follow-up em",fuEm),h("div",{class:"vfil",style:"align-self:end"},a3,a7)));
+    f.appendChild(h("label",{class:"chk"},fu," Follow-up feito (sai da Agenda)"));
+    /* contatos e histórico */
+    sec("Contatos e histórico");
+    var cont=h("textarea",{rows:"2",placeholder:"Um por linha: nome — cargo — e-mail, telefone ou LinkedIn"});cont.value=x.contatos||"";f.appendChild(h("label",null,"Contatos",cont));
+    var inter=(x.interacoes||[]).slice(),ul=h("ul",{class:"wl"});
+    function desenhaInter(){ul.innerHTML="";inter.slice().sort(function(a,b){return b.d.localeCompare(a.d)}).forEach(function(i){var rm=h("button",{type:"button",class:"listarm","aria-label":"Tirar",text:"×"});
+      rm.onclick=function(){inter=inter.filter(function(z){return z!==i});desenhaInter()};
+      ul.appendChild(h("li",null,h("span",{class:"grow"},h("b",{text:i.tipo+(i.t?": "+i.t:"")}),h("span",{class:"sub",text:dataBR(i.d)})),rm))});
+      if(!inter.length)ul.appendChild(h("li",null,h("span",{class:"sub",text:"Nenhuma interação ainda. Os e-mails aplicados no funil entram aqui sozinhos."})))}
+    var idt=inp("date",hojeISO()),itp=h("select",null,CAR_INTER.map(function(z){return h("option",{value:z,text:z})})),itx=inp("text","","O que aconteceu"),iad=h("button",{type:"button",class:"ghostbtn",text:"+ Interação"});
+    iad.onclick=function(){if(!itx.value.trim()&&itp.value==="Outro")return itx.focus();inter.push({d:idt.value||hojeISO(),tipo:itp.value,t:itx.value.trim()});itx.value="";desenhaInter()};
+    f.appendChild(ul);f.appendChild(h("div",{class:"listaadd"},idt,itp,itx,iad));desenhaInter();
+    /* entrevista */
+    sec("Entrevista");
+    function ta(val,ph,rows){var z=h("textarea",{rows:String(rows||3),placeholder:ph});z.value=val||"";return z}
+    var anot=ta(x.entrevista,"Como foi, com quem falou, impressões"),perg=ta(x.perguntas,"Uma pergunta por linha (ótimo para treinar as próximas)"),prox=ta(x.proximos,"Ex.: enviar portfólio até sexta; retorno prometido para dia 10",2);
+    var notas=ta(x.notas,"Outras anotações",2);
+    f.appendChild(h("label",null,"Anotações da entrevista",anot));f.appendChild(h("label",null,"Perguntas recebidas",perg));f.appendChild(h("label",null,"Próximos passos",prox));f.appendChild(h("label",null,"Notas",notas));
     function atualizaCompat(){var cp=NUCLEO.compatVaga([t.value,desc.value].join(" "),carMeus());cpBox.innerHTML="";
       if(cp.nota==null){cpBox.appendChild(h("p",{class:"sub",text:"Cole a descrição para ver a compatibilidade."}));return}
       cpBox.appendChild(h("div",{class:"kgasto"},h("div",null,h("span",{class:"kl",text:"Compatibilidade"}),h("b",{class:"kv "+(cp.nota>=70?"bom":cp.nota<40?"ruim":""),text:cp.nota+"%"})),
@@ -115,8 +155,12 @@
       if(hs.length)cpBox.appendChild(h("details",{class:"famvals",open:""},h("summary",{text:"Histórias STAR para esta vaga ("+hs.length+")"}),h("ul",{class:"wl"},hs.map(function(s){return h("li",null,h("span",{class:"grow"},h("b",{text:s.titulo}),h("span",{class:"sub",text:"R: "+(s.r||"")})))}))))}
     desc.addEventListener("input",atualizaCompat);t.addEventListener("input",atualizaCompat);atualizaCompat();
     var ok=h("button",{type:"button",text:"Salvar"}),volta=h("a",{href:"#carreira/funil",class:"ghostbtn",text:"Voltar"}),del=novo?null:h("button",{type:"button",class:"ghostbtn",text:"Apagar"});
-    ok.onclick=function(){if(!t.value.trim())return t.focus();var d=Object.assign({},x.datas||{});d[col.value]=d[col.value]||hojeISO();
-      var o=Object.assign({},x,{t:t.value.trim(),e:e.value.trim(),link:urlAbs(lk.value),coluna:col.value,resultado:res.value||null,desc:desc.value.trim(),notas:notas.value.trim(),followup:fu.checked?(x.followup||hojeISO()):null,datas:d});
+    ok.onclick=function(){if(!t.value.trim())return t.focus();var d=Object.assign({},x.datas||{});d[col.value]=d[col.value]||hojeISO();if(cand.value)d.candidatei=cand.value;
+      var padrao=d.candidatei?maisDias(d.candidatei,5):"";
+      var o=Object.assign({},x,{t:t.value.trim(),e:e.value.trim(),local:loc.value.trim()||undefined,modalidade:mod.value||undefined,salario:sal.value.trim()||undefined,publicada:pub.value||undefined,
+        link:urlAbs(lk.value),coluna:col.value,resultado:res.value||null,etapa:et.value.trim()||undefined,versaoEnviada:ver.value||undefined,desc:desc.value.trim(),
+        followupEm:fuEm.value&&fuEm.value!==padrao?fuEm.value:undefined,followup:fu.checked?(x.followup||hojeISO()):null,contatos:cont.value.trim()||undefined,interacoes:inter.length?inter:undefined,
+        entrevista:anot.value.trim()||undefined,perguntas:perg.value.trim()||undefined,proximos:prox.value.trim()||undefined,notas:notas.value.trim(),datas:d});
       var l=carCands().filter(function(c){return c.id!==x.id});l.unshift(o);carSalvar(l);location.hash="#carreira/funil";renderCarreira("funil")};
     if(del){var arm=false;del.onclick=function(){if(!arm){arm=true;del.textContent="Toque de novo para apagar";return}carSalvar(carCands().filter(function(c){return c.id!==x.id}));renderCarreira("funil")}}
     f.appendChild(h("div",{class:"vfil"},ok,volta,del));p.appendChild(f);root.appendChild(p);

@@ -487,7 +487,7 @@ async function agendaServidor(adm: Sb, uid: string, hoje: string) {
   for (const q of P.mba?.financeiro?.parcelas ?? []) if (!feito["pg:" + q.k]) ev.push({ data: q.venc, t: `MBA: boleto ${q.n} (R$ ${Number(q.v).toFixed(2).replace(".", ",")})` });
   for (const a of P.mba?.aulas ?? []) ev.push({ data: a.data, t: `MBA: aula ${a.t} às ${a.hora}` });
   for (const l of P.lembretes ?? []) if (!l.feito) ev.push({ data: l.data, t: l.t });
-  for (const c of P.candidaturas ?? []) { const d = c.datas?.candidatei; if (c.coluna === "candidatei" && d && !c.followup) ev.push({ data: somaDias(d, 5), t: `Follow-up da candidatura: ${c.t}${c.e ? " (" + c.e + ")" : ""}` }); }
+  for (const c of P.candidaturas ?? []) { const d = c.datas?.candidatei; if (c.coluna === "candidatei" && d && !c.followup) ev.push({ data: c.followupEm ?? somaDias(d, 5), t: `Follow-up da candidatura: ${c.t}${c.e ? " (" + c.e + ")" : ""}` }); }
   const ano = +hoje.slice(0, 4);
   for (const b of P.aniversarios ?? []) {
     let d = `${ano}-${String(b.mes).padStart(2, "0")}-${String(b.dia).padStart(2, "0")}`; if (d < hoje) d = `${ano + 1}` + d.slice(4);
@@ -522,10 +522,18 @@ async function backupSemanal(adm: Sb, uid: string, hoje: string) {
   const corpo = new Blob([JSON.stringify({ versao: 1, criado: new Date().toISOString(), dono: uid, tabelas: out })], { type: "application/json" });
   const { error } = await adm.storage.from("backups").upload(`${uid}/${hoje}.json`, corpo, { upsert: true, contentType: "application/json" });
   if (error) throw error;
+  /* confere o que acabou de gravar: baixa de volta e compara tabela por tabela */
+  let verificado = false;
+  try {
+    const { data: volta } = await adm.storage.from("backups").download(`${uid}/${hoje}.json`);
+    const j = JSON.parse(await volta!.text());
+    verificado = Object.keys(out).every((t) => Array.isArray(j.tabelas?.[t]) && j.tabelas[t].length === out[t].length);
+  } catch (_) { verificado = false; }
+  if (!verificado) await adm.from("erros").insert({ user_id: uid, origem: "rotina: backup", mensagem: "O backup gravado não bateu ao ler de volta", aparelho: "servidor" });
   const { data: l } = await adm.storage.from("backups").list(uid, { sortBy: { column: "name", order: "desc" } });
   const velhos = (l ?? []).slice(8).map((f) => `${uid}/${f.name}`);
   if (velhos.length) await adm.storage.from("backups").remove(velhos);
-  return Object.fromEntries(Object.entries(out).map(([k, v]) => [k, v.length]));
+  return { ...Object.fromEntries(Object.entries(out).map(([k, v]) => [k, v.length])), verificado };
 }
 async function rotina(req: Request) {
   const url = Deno.env.get("SUPABASE_URL")!, chave = chaveServidor();

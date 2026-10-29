@@ -95,7 +95,7 @@
         withDates().forEach(function(x){if(x.dias<=7||(x.fav&&x.dias<=30))add(maisDias(hoje,x.dias),"Aniversário de "+x.nome,x.fav?"marcado":"", "niver","#aniversarios")});
         (PESSOAL.lembretes||[]).forEach(function(l){if(!l.feito)add(l.data,l.t,"lembrete","lembrete","",{lembrete:l})});
         /* carreira: 5 dias depois de se candidatar sem resposta, hora do follow-up */
-        (PESSOAL.candidaturas||[]).forEach(function(c){var d=(c.datas||{}).candidatei;if(c.coluna==="candidatei"&&d&&!c.followup)add(maisDias(d,5),"Follow-up: "+c.t+(c.e?" ("+c.e+")":""),"candidatura de "+dataBR(d),"carreira","#carreira/funil")});
+        (PESSOAL.candidaturas||[]).forEach(function(c){var d=(c.datas||{}).candidatei;if(c.coluna==="candidatei"&&d&&!c.followup)add(c.followupEm||maisDias(d,5),"Follow-up: "+c.t+(c.e?" ("+c.e+")":""),"candidatura de "+dataBR(d),"carreira","#carreira/funil")});
         if(!PESSOAL.ultimoBackup||PESSOAL.ultimoBackup<maisDias(hoje,-30))add(hoje,"Baixar um backup do site",PESSOAL.ultimoBackup?"o último foi em "+dataBR(PESSOAL.ultimoBackup):"nunca foi feito","sistema","#sistema")}
       /* o backup automático de domingo (no cofre privado do servidor): se o mais novo tiver mais de 9 dias, alguma coisa parou */
       if(!isOwner())return ev.sort(function(a,b){return a.data.localeCompare(b.data)});
@@ -239,8 +239,81 @@
     te.onclick=function(){te.disabled=true;st.textContent="Mandando…";chamar({tipo:"push_teste"}).then(function(d){st.textContent="Teste enviado para "+d.resultado+". Deve chegar em alguns segundos."},function(e){st.textContent="Não consegui mandar: "+e.message}).then(function(){te.disabled=false})};
     de.onclick=function(){reg().then(function(r){return r.pushManager.getSubscription()}).then(function(s){if(!s)return;return SB.from("push_inscricoes").delete().eq("endpoint",s.endpoint).then(function(){return s.unsubscribe()})}).then(estado,function(e){st.textContent="Não consegui desativar: "+e.message})};
     estado();return p}
+  /* ===== Saúde do RAC: um quadro só com o estado do próprio sistema (cada linha carrega por conta própria) ===== */
+  function sisHa(iso){if(!iso)return "nunca";var m=Math.round((Date.now()-new Date(iso).getTime())/6e4);return m<60?"há "+Math.max(1,m)+" min":m<2880?"há "+Math.round(m/60)+" h":"há "+Math.round(m/1440)+" dias"}
+  function sisKb(n){return n>=1048576?fmtN(Math.round(n/104857.6)/10)+" MB":fmtN(Math.round(n/1024))+" KB"}
+  var SIS_TABS=["pessoal","registros","garmin_dia","garmin_ativ","mercados","produtos","notas","itens","orcamentos","lista","bebe"];
+  function sisContar(t){return Promise.resolve().then(function(){return SB.from(t).select("*",{count:"exact",head:true})}).then(function(r){return r.error?null:r.count},function(){return null})}
+  function sisQ(f){return Promise.resolve().then(f)}
+  function sisSaude(){
+    var p=panel("Saúde do RAC","O estado do próprio site: sincronização, coletas, fontes que falharam, notificações, backup, espaço e dados incompletos."),ul=h("ul",{class:"wl sissaude"});p.appendChild(ul);
+    function linha(rot){var li=h("li",null,h("span",{class:"sisdot",text:"…"}),h("span",{class:"grow"},h("b",{text:rot}),h("span",{class:"sub",text:"Conferindo…"})));ul.appendChild(li);
+      return function(nivel,txt,extra){li.querySelector(".sisdot").textContent=nivel==="ok"?"✓":nivel==="aviso"?"⚠":"✗";li.className=nivel==="ok"?null:"alerta";li.querySelector(".sub").textContent=txt;if(extra)li.querySelector(".grow").appendChild(extra)}}
+    /* 1. sincronização */
+    var l1=linha("Sincronização"),np=pendentes().length,fila=0;try{fila=(JSON.parse(localStorage.getItem("rac-fila")||"[]")||[]).length}catch(e){}
+    l1(SIS.falhaSinc||Object.keys(SIS.conflitos).length?"erro":np||fila?"aviso":"ok",(SIS.ultimaSinc?"Última sincronização bem-sucedida "+sisHa(SIS.ultimaSinc):"Ainda não sincronizou nesta sessão")+(np?" · "+np+" alterações esperando":"")+(fila?" · "+fila+" itens na fila sem internet":"")+(SIS.falhaSinc?" · ⚠ "+SIS.falhaSinc:""));
+    /* 2. coletas */
+    var l2=linha("Coletas (vagas, notícias, relógio e rotina)");
+    Promise.all([["vagas.json",30],["noticias.json",8],["tecdados.json",8]].map(function(x){return getJson(x[0]+"?v="+Date.now()).then(function(d){return [x[0],d.coletado,x[1]]},function(){return [x[0],null,x[1]]})})
+      .concat([sisQ(function(){return SB.from("garmin_dia").select("atualizado").order("atualizado",{ascending:false}).limit(1)}).then(sbOk).then(function(l){return ["relógio",l[0]&&l[0].atualizado,30]},function(){return ["relógio",null,30]}),
+        sisQ(function(){return SB.from("rotina_log").select("quando,ok").order("quando",{ascending:false}).limit(1)}).then(sbOk).then(function(l){return ["rotina das 6h",l[0]&&l[0].quando,26,l[0]&&l[0].ok]},function(){return ["rotina das 6h",null,26]})])).then(function(r){
+      var NOME={"vagas.json":"vagas","noticias.json":"notícias de Sorocaba","tecdados.json":"notícias de tecnologia"},velhas=r.filter(function(x){return !x[1]||(Date.now()-new Date(x[1]))/36e5>x[2]||x[3]===false});
+      l2(velhas.length?"aviso":"ok",r.map(function(x){return (NOME[x[0]]||x[0])+" "+sisHa(x[1])+(x[3]===false?" (com falha)":"")}).join(" · "))});
+    /* 3. fontes que falharam */
+    var l3=linha("Fontes que falharam (30 dias)");
+    Promise.resolve().then(function(){return SB.from("erros").select("quando,origem").gte("quando",new Date(Date.now()-30*864e5).toISOString()).order("quando",{ascending:false})}).then(sbOk).then(function(l){
+      var g={};l.forEach(function(x){var k=x.origem.replace(/\s*\(.*\)$/,"");(g[k]=g[k]||{n:0,ult:x.quando}).n++});var ks=Object.keys(g);
+      l3(!ks.length?"ok":ks.some(function(k){return Date.now()-new Date(g[k].ult)<2*864e5})?"aviso":"ok",ks.length?ks.map(function(k){return k+": "+g[k].n+"× (a última "+sisHa(g[k].ult)+")"}).join(" · "):"Nenhuma falha registrada.")},function(e){l3("aviso","Não consegui ler as falhas ("+e.message+").")});
+    /* 4. notificações */
+    var l4=linha("Notificações");
+    Promise.all([sisContar("push_inscricoes"),sisQ(function(){return SB.from("rotina_log").select("resumo").order("quando",{ascending:false}).limit(1)}).then(sbOk).catch(function(){return []}),
+      ("serviceWorker" in navigator&&"PushManager" in window?Promise.race([navigator.serviceWorker.ready.then(function(r){return r.pushManager.getSubscription()}),new Promise(function(ok){setTimeout(function(){ok(undefined)},3000)})]):Promise.resolve(undefined))]).then(function(r){
+      var al=((r[1][0]||{}).resumo||{}).alertas||{},push=al.push||"",tg=al.telegram||"",ruim=/^0 de|erro/i.test(push);
+      l4(r[0]===0||ruim?"aviso":"ok",(r[0]==null?"":r[0]+(r[0]===1?" aparelho inscrito":" aparelhos inscritos"))+(r[2]?" · este aparelho recebe":r[2]===null?" · este aparelho não está inscrito":"")+(push?" · último envio: "+push:"")+(tg&&!/sem Telegram/.test(tg)?" · Telegram: "+tg:""))});
+    /* 5. backup e teste de restauração */
+    var l5=linha("Backup e restauração"),tr=PESSOAL.testeRestauracao;
+    Promise.resolve().then(function(){return SB.storage.from("backups").list(EU.id,{sortBy:{column:"name",order:"desc"}})}).then(function(r){
+      var l=(r&&r.data)||[],ult=l[0],tam=l.reduce(function(s,f){return s+((f.metadata||{}).size||0)},0),dt=ult&&ult.name.slice(0,10);
+      var bt=h("button",{type:"button",class:"ghostbtn",text:"Testar restauração agora"});bt.onclick=function(){bt.disabled=true;bt.textContent="Testando…";sisTesteRestauracao(ult).then(function(){renderSistema()},function(e){bt.disabled=false;bt.textContent="Falhou: "+e.message})};
+      var velho=!dt||dt<maisDias(hojeISO(),-9),testeVelho=!tr||tr.quando<maisDias(hojeISO(),-35);
+      l5(velho||(tr&&!tr.ok)?"aviso":testeVelho?"aviso":"ok",(dt?"Último backup automático: "+dataBR(dt)+" ("+l.length+" guardados, "+sisKb(tam)+")":"Nenhum backup automático ainda")+" · baixado à mão: "+(PESSOAL.ultimoBackup?dataBR(PESSOAL.ultimoBackup):"nunca")+
+        " · teste de restauração: "+(tr?dataBR(tr.quando.slice(0,10))+(tr.ok?" ✓ ok":" ⚠ "+(tr.problemas||[]).join("; ")):"nunca feito"),ult?h("div",{class:"vfil"},bt):null)},function(e){l5("aviso","Não consegui ver os backups ("+e.message+").")});
+    /* 6. espaço */
+    var l6=linha("Espaço utilizado");
+    Promise.all([Promise.all(SIS_TABS.map(sisContar)),sisQ(function(){return SB.from("registros").select("arquivos")}).then(sbOk).catch(function(){return []})]).then(function(r){
+      var tot=r[0].reduce(function(s,n){return s+(n||0)},0),arq=0,bytes=0;r[1].forEach(function(x){(x.arquivos||[]).forEach(function(a){arq++;bytes+=a.tamanho||0})});
+      var maiores=SIS_TABS.map(function(t,i){return [t,r[0][i]]}).filter(function(x){return x[1]}).sort(function(a,b){return b[1]-a[1]}).slice(0,4);
+      l6(bytes>800*1048576?"aviso":"ok",fmtN(tot)+" registros no banco ("+maiores.map(function(x){return x[0]+" "+fmtN(x[1])}).join(", ")+") · "+arq+" arquivos no cofre ("+sisKb(bytes)+" de 1 GB do plano grátis)")});
+    /* 7. dados incompletos */
+    var l7=linha("Dados incompletos");
+    Promise.all([sisQ(function(){return SB.from("registros").select("quem,tipo,titulo,dados,valor")}).then(sbOk).catch(function(){return []}),
+      Promise.resolve().then(function(){return SB.from("notas").select("id,data,total")}).then(sbOk).catch(function(){return []}),
+      Promise.resolve().then(function(){return SB.from("compras").select("nota_id,valor_total").range(0,9999)}).then(sbOk).catch(function(){return []}),
+      Promise.resolve().then(function(){return SB.from("produtos").select("categoria")}).then(sbOk).catch(function(){return []})]).then(function(r){
+      var regs=r[0],soma={};r[2].forEach(function(x){soma[x.nota_id]=(soma[x.nota_id]||0)+(+x.valor_total||0)});
+      var achados=[],c=(PESSOAL.candidaturas||[]);
+      function add(n,txt,href){if(n)achados.push(h("li",null,h("a",{href:href,class:"link",text:n+" "+txt})))}
+      add(r[1].filter(function(n){return soma[n.id]!=null&&n.total!=null&&Math.abs(soma[n.id]-(+n.total))>1}).length,"notas do Mercado em que os itens não somam o total (resposta cortada?)","#mercado/notas");
+      add(r[3].filter(function(x){return !x.categoria||/^outros?$/i.test(x.categoria)}).length,"produtos do Mercado sem categoria","#mercado/produtos");
+      add(regs.filter(function(x){var d=x.dados||{};return x.tipo==="abastecimento"&&(typeof d.km!=="number"||!d.litros)}).length,"abastecimentos sem km ou litros","#veiculos");
+      add(regs.filter(function(x){return x.tipo==="peso"&&!x.valor&&!(x.dados||{}).peso}).length,"pesagens sem o peso","#olivia");
+      add(c.filter(function(x){return !x.e}).length,"candidaturas sem empresa","#carreira/funil");
+      add(c.filter(function(x){return x.coluna!=="salva"&&!(x.datas||{}).candidatei}).length,"candidaturas sem a data em que você se candidatou","#carreira/funil");
+      add(regs.filter(function(x){return x.quem==="rede"&&x.tipo==="contato"&&!(x.dados||{}).perfil}).length,"contatos da Rede sem o link do perfil","#rede");
+      l7(achados.length?"aviso":"ok",achados.length?"Toque para corrigir:":"Nada incompleto encontrado.",achados.length?h("ul",{class:"clean"},achados):null)});
+    return p}
+  /* baixa o backup automático mais novo e confere se ele restauraria tudo (sem gravar nada): JSON íntegro, todas as tabelas, sem ids repetidos e com a quantidade de hoje */
+  function sisTesteRestauracao(arq){
+    return SB.storage.from("backups").download(EU.id+"/"+arq.name).then(function(r){if(r.error)throw r.error;return r.data.text()}).then(function(txt){
+      var j=JSON.parse(txt),tab=j.tabelas||{},probs=[],det={};
+      return Promise.all(SIS_TABS.map(sisContar)).then(function(agora){
+        SIS_TABS.forEach(function(t,i){var l=tab[t];if(!Array.isArray(l)){if(["lista","bebe"].indexOf(t)<0||agora[i])probs.push(t+" fora do backup");return}
+          var ids={},rep=0;l.forEach(function(x){var k=x.id!=null?x.id:x.chave||x.data;if(k!=null){if(ids[k])rep++;ids[k]=1}});if(rep)probs.push(t+": "+rep+" ids repetidos");
+          det[t]=[l.length,agora[i]];if(agora[i]!=null&&l.length<agora[i]*0.8&&agora[i]-l.length>5)probs.push(t+": "+l.length+" no backup, "+agora[i]+" hoje")});
+        var res={quando:new Date().toISOString(),arquivo:arq.name,ok:!probs.length,problemas:probs,tabelas:det};pessoalGravar("testeRestauracao",res);return res})})}
   function renderSistema(){
     var root=$("#sistema-view");root.innerHTML="";
+    try{root.appendChild(sisSaude())}catch(e){logErro("saúde do RAC",e)}
     /* sincronização e conflitos */
     var ps=panel("Sincronização","Os dados pessoais ficam na sua conta e com uma cópia neste aparelho. Se o mesmo dado mudar em dois lugares, você escolhe qual vale.");
     var np=pendentes(),nc=Object.keys(SIS.conflitos);

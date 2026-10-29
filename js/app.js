@@ -24,7 +24,7 @@
     n.id="pico";$("#pico").replaceWith(n);
     $("#ptitle").textContent=hit?hit.querySelector(".t").textContent:"Dia a Dia RAC"}
   /* ===== Módulos: cada seção grande fica em js/<seção>.js e só carrega quando é aberta ===== */
-  var MOD_VERSAO="2026-10-29.9",MODULOS={},MOD_OK={};
+  var MOD_VERSAO="2026-10-29.10",MODULOS={},MOD_OK={};
   var MOD_DEPS={conexoes:["mba"],sistema:["familia","mba","saude"],carreira:["sistema"],bebe:["familia","oms"],resumo:["saude","mba","familia"]};
   var ROTA_MODS={esportes:["esportes"],eddie:["familia"],olivia:["familia"],veiculos:["familia"],mba:["mba"],saude:["saude"],
     conexoes:["conexoes"],agenda:["sistema"],busca:["sistema"],sistema:["sistema"],lista:["lista"],carreira:["carreira"],documentos:["familia"],resumo:["resumo"],rede:["rede"]};
@@ -537,7 +537,8 @@
   function vgCompat(v){if(!isOwner())return null;var cp=NUCLEO.compatVaga(v.t+" "+(v.nv||""),((PESSOAL.perfilCarreira||{}).skills)||["sql","powerbi","excel","negocio","estat"]);
     return cp.nota==null?null:h("div",{class:"vcompat "+(cp.nota>=70?"bom":cp.nota<40?"ruim":""),title:"Calculado pelo título. Para a nota exata, salve no funil e cole a descrição.",text:cp.nota+"% compatível"+(cp.falta.length?" · falta "+cp.falta.length:"")})}
   function carSalvarVaga(v){var l=(PESSOAL.candidaturas||[]).slice();if(l.some(function(c){return c.vagaId===v.id}))return false;
-    l.unshift({id:"v"+v.id,vagaId:v.id,t:v.t,e:v.e||"",link:vgLink(v)[0],coluna:"salva",datas:{salva:hojeISO()}});pessoalGravar("candidaturas",l);return true}
+    l.unshift({id:"v"+v.id,vagaId:v.id,t:v.t,e:v.e||"",link:vgLink(v)[0],local:v.cidade||undefined,modalidade:v.m||undefined,salario:v.s||undefined,nivel:v.nv||undefined,
+      publicada:isFinite(+v.d)?maisDias(hojeISO(),-(+v.d)):undefined,fonte:"Portal de vagas",coluna:"salva",datas:{salva:hojeISO()}});pessoalGravar("candidaturas",l);return true}
   function vgFunilBtn(v){if(!isOwner())return null;var ja=(PESSOAL.candidaturas||[]).some(function(c){return c.vagaId===v.id});
     var b=h("button",{type:"button",class:"ghostbtn",text:ja?"✓ No funil":"Salvar no funil"});b.disabled=ja;b.onclick=function(){carSalvarVaga(v);b.textContent="✓ No funil";b.disabled=true};return b}
   function vgHideBtn(v){

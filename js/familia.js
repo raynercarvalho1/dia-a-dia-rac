@@ -137,7 +137,7 @@
         bebe&&m[0]==="peso"?h("div",null,h("span",{class:"kl",text:"Ganho por dia"}),h("b",{class:"kv",text:fmtN(Math.round(d*1000/dias))+" g"})):null,
         bebe&&m[0]!=="peso"?h("div",null,h("span",{class:"kl",text:"Por mês"}),h("b",{class:"kv",text:(d>0?"+":"")+fmtN(Math.round(d/dias*30.4*10)/10)+" cm"})):null));
       /* colunas, uma por medição (mesmo estilo do "Mês a mês" do Mercado); tocar ou passar o mouse mostra o detalhe embaixo */
-      var n=pts.length,maxv=Math.max.apply(null,vs),minv=Math.min.apply(null,vs),passo=Math.ceil(n/10),cap=h("p",{class:"vbcap",role:"status"}),barras=[];
+      var n=pts.length,maxv=Math.max.apply(null,vs),minv=Math.min.apply(null,vs),cap=h("p",{class:"vbcap",role:"status"}),barras=[];
       function det(i){var r=pts[i],ant=pts[i-1],dd=ant?val(r)-val(ant):0;
         return dataBR(r.data)+" · "+fmt(val(r))+(ant?" ("+(dd>0?"+":"")+fmt(dd)+" desde "+dataBR(ant.data)+")":"")+(r.titulo&&!/^Pesagem$|^Pesagem e medidas$/.test(r.titulo)?" · "+r.titulo.replace(/^Pesagem\s*\(?|\)$/g,""):"")}
       function marcar(i){barras.forEach(function(b,j){b.classList.toggle("on",j===i)});cap.textContent=det(i)}
@@ -148,10 +148,11 @@
         var b=h("button",{type:"button",class:"vb","aria-label":det(i),title:det(i)},
           h("span",{class:"vbv"+(mostraV(i)?"":" opc"),text:fmtN(Math.round(v*10)/10)}),
           h("span",{class:"vbt"},h("span",{class:"vbf",style:"height:"+Math.max(2,(v-base)/((maxv-base)||1)*100).toFixed(1)+"%"})),
-          h("span",{class:"vbl",text:(n-1-i)%passo===0?(bebe?p2[2]+"/"+p2[1]:p2[1]+"/"+p2[0].slice(2)):""}));
-        b.onclick=function(){marcar(i)};b.onmouseenter=function(){marcar(i)};barras.push(b);return b}));
-      corpo.appendChild(vb);corpo.appendChild(cap);marcar(n-1);
-      corpo.appendChild(h("p",{class:"sub",text:pts.length+" medições, de "+dataBR(pts[0].data)+" a "+dataBR(pts[pts.length-1].data)+". Passe o mouse ou toque numa coluna para ver os detalhes."+(base?" As colunas começam em "+fmt(base)+".":"")}))}
+          bebe?vbRotulo(p2[2],MES3[+p2[1]-1]):vbRotulo(MES3[+p2[1]-1],p2[0].slice(2)));
+        b.onclick=function(){marcar(i)};b.onmouseenter=function(){marcar(i)};barras.push(b);
+        racDica.ligar(b,function(){var d=det(i).split(" · ");return [d[0],d.slice(1).join(" · ")]});return b}));
+      corpo.appendChild(vb);corpo.appendChild(cap);marcar(n-1);vbFim(vb);
+      corpo.appendChild(h("p",{class:"sub",text:pts.length+" medições, de "+dataBR(pts[0].data)+" a "+dataBR(pts[pts.length-1].data)+". Toque numa coluna para ver os detalhes."+(base?" As colunas começam em "+fmt(base)+".":"")}))}
     meds.forEach(function(m){var b=h("button",{type:"button",text:m[1]});b.dataset.k=m[0];b.onclick=function(){famMedida[quem]=m[0];desenhar()};segM.appendChild(b)});
     if(meds.length>1)p.appendChild(segM);
     p.appendChild(seg);p.appendChild(corpo);desenhar();

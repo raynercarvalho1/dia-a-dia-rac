@@ -273,6 +273,11 @@ form.add{display:grid;grid-template-columns:1fr 70px 130px auto;gap:8px;margin:1
 .lwrap{overflow-x:auto;position:relative}
 .ldica{position:absolute;z-index:2;pointer-events:none;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.14);padding:8px 12px;white-space:nowrap;font:600 calc(15px + var(--fz)) var(--f-ui);line-height:1.35}
 .ldica[hidden]{display:none}
+.racdica{position:fixed;z-index:400;pointer-events:none;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 22px rgba(0,0,0,.18);padding:9px 14px;max-width:min(92vw,360px);font:600 calc(15px + var(--fz)) var(--f-ui);line-height:1.35;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.racdica[hidden]{display:none}.racdica b{display:block;font-weight:800;font-size:calc(16px + var(--fz));white-space:nowrap}.racdica span{display:block}
+.vb.dicaon .vbf,.hb.dicaon .hbf{filter:brightness(.82)}.vb.dicaon .vbv,.vb.dicaon .vbl{color:var(--ink);font-weight:700}
+.pcol,.sonorow,.tzrow{cursor:pointer;border-radius:6px}.pcol.dicaon{background:var(--hover)}.sonorow.dicaon,.tzrow.dicaon{background:var(--hover)}
+.omspt{cursor:pointer}.omspt.dicaon{stroke:var(--ink);stroke-width:2.5}.tgraf{cursor:crosshair}
 .ldica b{display:block;font-weight:800;font-size:calc(16px + var(--fz))}
 .lhit{fill:transparent;cursor:pointer;outline:none}
 .lchart{width:100%;min-width:420px;height:auto;display:block}
@@ -289,7 +294,7 @@ form.add{display:grid;grid-template-columns:1fr 70px 130px auto;gap:8px;margin:1
 .vbpeso .vb{min-width:0}
 .vbpeso .vbv,.vbpeso .vbl{white-space:nowrap}
 .vbpeso .vbl{display:flex;flex-direction:column;align-items:center;line-height:1.1;font-size:calc(10.5px + var(--fz) / 2);max-width:100%;overflow:hidden}
-@media (max-width:820px){.saudetend .vbars{overflow-x:auto;overflow-y:hidden;padding-bottom:6px;scrollbar-width:thin}.saudetend .vb{flex:0 0 30px}.saudetend .vbpeso .vb .vbv.opc{visibility:visible}}
+@media (max-width:820px){.vbars.vbpeso{overflow-x:auto;overflow-y:hidden;padding-bottom:6px;scrollbar-width:thin}.vbars.vbpeso .vb{flex:1 0 30px}.vbars.vbpeso .vb .vbv.opc{visibility:visible}}
 .vbpeso .vbl b{font-weight:600}.vbpeso .vbl small{font-size:.85em;color:var(--muted);opacity:.8}.saudetend .vbl small{text-transform:uppercase}
 /* muitas colunas: no celular só ficam os números do maior, do menor e do último */
 @media (max-width:820px){.vbpeso .vbv.opc{visibility:hidden}}

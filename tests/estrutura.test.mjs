@@ -57,3 +57,14 @@ test("nenhum caractere de controle escondido no código (ex.: \b virando backspa
     assert.ok(!/[\x00-\x08\x0B\x0C\x0E-\x1F]/.test(t), `${a} tem caractere de controle`);
   }
 });
+
+// Padrão do site: todo gráfico é clicável e mostra o cartão destacado (racDica). Quem desenhar gráfico sem ele quebra este teste.
+test("todo gráfico usa a dica padrão (racDica): clicável, com o valor em destaque", () => {
+  const marcas = /class:\s*"(?:vbars|prontserie|sonol|hbars|tzonas)|class=\?"tgraf|class:\s*"lchart"/;
+  for (const a of ["mercado.js", ...arquivos]) {
+    const t = fs.readFileSync(new URL(a, raiz), "utf8");
+    if (marcas.test(t)) assert.ok(/racDica\.(ligar|em)\(/.test(t), `${a} desenha gráfico sem a dica padrão (racDica.ligar/racDica.em)`);
+  }
+  const app = fs.readFileSync(new URL("js/app.js", raiz), "utf8");
+  assert.ok(/var racDica=/.test(app) && /\.racdica\{/.test(fs.readFileSync(new URL("index.html", raiz), "utf8")), "o componente racDica e o seu visual existem");
+});

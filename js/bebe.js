@@ -18,12 +18,13 @@
     return h("div",null,h("div",{class:"vfil"},b,inp),st)}
   /* colunas simples por dia (mesmo visual dos outros gráficos do site) */
   function bebeColunas(pts,cor,fmt){
-    var n=pts.length,vs=pts.map(function(p){return p.v}),mx=Math.max.apply(null,vs.concat([1])),passo=Math.ceil(n/(innerWidth<600?5:10)),cap=h("p",{class:"vbcap",role:"status"}),bs=[];
+    var n=pts.length,vs=pts.map(function(p){return p.v}),mx=Math.max.apply(null,vs.concat([1])),cap=h("p",{class:"vbcap",role:"status"}),bs=[];
     function marcar(i){bs.forEach(function(b,j){b.classList.toggle("on",j===i)});cap.textContent=dataBR(pts[i].data)+" · "+fmt(pts[i].v)}
     var vb=h("div",{class:"vbars vbpeso"},pts.map(function(p,i){var b=h("button",{type:"button",class:"vb",title:dataBR(p.data)+" · "+fmt(p.v)},
       h("span",{class:"vbv"+(n<=14||i===n-1?"":" opc"),text:fmt(p.v).replace(/ .*/,"")}),h("span",{class:"vbt"},h("span",{class:"vbf",style:"background:"+cor+";height:"+Math.max(2,p.v/mx*100).toFixed(1)+"%"})),
-      h("span",{class:"vbl",text:(n-1-i)%passo===0?p.data.slice(8)+"/"+p.data.slice(5,7):""}));b.onclick=function(){marcar(i)};b.onmouseenter=function(){marcar(i)};bs.push(b);return b}));
-    var w=h("div",null,vb,cap);if(n)marcar(n-1);return w}
+      vbRotulo(p.data.slice(8),SEM1.charAt(new Date(p.data+"T12:00:00").getDay())));b.onclick=function(){marcar(i)};b.onmouseenter=function(){marcar(i)};bs.push(b);
+      racDica.ligar(b,function(){return [new Date(p.data+"T12:00:00").toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"2-digit"}),fmt(p.v)]});return b}));
+    var w=h("div",null,vb,cap);if(n)marcar(n-1);vbFim(vb);return w}
   var BEBE_MET=[["sono","Sono total",function(d){return d.sonoMin/60},function(v){return fmtN(Math.round(v*10)/10)+" h"},"#5B5BD6"],
     ["noite","Noite",function(d){return d.noiteMin/60},function(v){return fmtN(Math.round(v*10)/10)+" h"},"#3B3B98"],
     ["sonecas","Sonecas",function(d){return d.sonecaMin/60},function(v){return fmtN(Math.round(v*10)/10)+" h"},"#7C6FE0"],
@@ -87,10 +88,11 @@
       var linhas=OMS_CURVAS.map(function(c){var dd="";for(var d=0;d<=maxd;d+=Math.max(1,Math.round(maxd/80)))dd+=(dd?"L":"M")+X(d)+" "+Y(NUCLEO.omsValor(tab[d],c[0]));
         return '<path d="'+dd+'" fill="none" stroke="'+(c[0]===0?"#0E8A6A":"#9AA5B1")+'" stroke-width="'+(c[0]===0?2:1)+'" stroke-dasharray="'+(c[0]===0?"":"4 4")+'" vector-effect="non-scaling-stroke"/>'+
           '<text x="'+(W-2)+'" y="'+Y(NUCLEO.omsValor(tab[maxd],c[0]))+'" text-anchor="end" class="tgt">'+c[1]+'</text>'}).join("");
-      var pontos=pts.map(function(p){return '<circle cx="'+X(p.dia)+'" cy="'+Y(p.v)+'" r="4" fill="#D9468F" stroke="#fff" stroke-width="1.5"><title>'+dataBR(p.data)+": "+fmtN(p.v)+" "+m[2]+" · percentil "+fmtN(p.p)+'</title></circle>'}).join("");
+      var pontos=pts.map(function(p){return '<circle cx="'+X(p.dia)+'" cy="'+Y(p.v)+'" r="5" fill="#D9468F" stroke="#fff" stroke-width="1.5" class="omspt" tabindex="0"/>'}).join("");
       var meses="";for(var mm=0;mm*30.4375<=maxd;mm+=maxd>365?3:1)meses+='<text x="'+X(mm*30.4375)+'" y="'+(H+14)+'" text-anchor="middle" class="tgt">'+mm+'m</text>';
       var p=panel(m[1]+" (OMS)","Último: "+fmtN(ultp.v)+" "+m[2]+" em "+dataBR(ultp.data)+" · percentil "+fmtN(ultp.p)+" ("+(ultp.p<3?"abaixo do esperado, converse com o pediatra":ultp.p>97?"acima do esperado, converse com o pediatra":"dentro da faixa normal")+")");
       var g=h("div",{class:"tgbox"});g.innerHTML='<svg viewBox="0 0 '+W+' '+(H+18)+'" class="tgraf omsg" preserveAspectRatio="none">'+linhas+pontos+meses+'</svg>';p.appendChild(g);
+      [].forEach.call(g.querySelectorAll(".omspt"),function(c,i){var q=pts[i];racDica.ligar(c,function(){return [dataBR(q.data)+" · "+Math.floor(q.dia/30.4375)+" meses",fmtN(q.v)+" "+m[2]+" · percentil "+fmtN(q.p)]})});
       p.appendChild(h("details",{class:"famvals"},h("summary",{text:"Todas as medidas e percentis"}),h("ul",{class:"wl"},pts.slice().reverse().map(function(x){return h("li",null,h("span",{class:"grow",text:dataBR(x.data)+" · "+Math.floor(x.dia/30.4375)+" meses"}),h("span",{class:"end",text:fmtN(x.v)+" "+m[2]+" · P"+fmtN(Math.round(x.p))}))}))));
       box.appendChild(p)});
     /* vacinas: o que já foi (registros "Vacina" e anotações de remédio do Napper) e o que vem */

@@ -343,6 +343,7 @@
         h("span", { class: "hbt" }, h("span", { class: "hbf", style: "width:" + (x[1] / max * 100).toFixed(1) + "%" })),
         h("span", { class: "hbv" }, money(x[1]), h("small", { text: " " + PCT.format(x[1] / (total || 1)) })));
       b.onclick = function () { st.pick = on ? null : { tipo: tipo, valor: x[0], mes: st.mes }; drawApp("painel"); };
+      if (window.racDica) window.racDica.ligar(b, function () { return [x[2] || x[0], money(x[1]) + " · " + PCT.format(x[1] / (total || 1)) + " do mês" + (x[3] ? " · " + x[3] : "")]; });
       return b;
     }));
   }
@@ -355,7 +356,8 @@
         h("span", { class: "vbv", text: Math.round(x[1]).toLocaleString("pt-BR") }),
         h("span", { class: "vbt" }, h("span", { class: "vbf", style: "height:" + Math.max(2, x[1] / max * 100).toFixed(1) + "%" })),
         h("span", { class: "vbl", text: mesCurto(x[0]) }));
-    }).map(function (b, i) { b.onclick = function () { st.mes = list[i][0]; drawApp("painel"); }; return b; }));
+    }).map(function (b, i) { b.onclick = function () { st.mes = list[i][0]; drawApp("painel"); };
+      if (window.racDica) window.racDica.ligar(b, function () { return [mesNome(list[i][0]), money(list[i][1]) + " no mercado"]; }); return b; }));
   }
   function tabela(cols, linhas, nf) {
     return h("div", { class: "tblwrap" }, h("table", { class: "tbl" },

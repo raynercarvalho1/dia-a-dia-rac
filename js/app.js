@@ -24,7 +24,7 @@
     n.id="pico";$("#pico").replaceWith(n);
     $("#ptitle").textContent=hit?hit.querySelector(".t").textContent:"Dia a Dia RAC"}
   /* ===== Módulos: cada seção grande fica em js/<seção>.js e só carrega quando é aberta ===== */
-  var MOD_VERSAO="2026-10-29.17",MODULOS={},MOD_OK={};
+  var MOD_VERSAO="2026-10-29.18",MODULOS={},MOD_OK={};
   var MOD_DEPS={conexoes:["mba"],sistema:["familia","mba","saude"],carreira:["sistema"],bebe:["familia","oms"],resumo:["saude","mba","familia"]};
   var ROTA_MODS={esportes:["esportes"],eddie:["familia"],olivia:["familia"],veiculos:["familia"],mba:["mba"],saude:["saude"],
     conexoes:["conexoes"],agenda:["sistema"],busca:["sistema"],sistema:["sistema"],lista:["lista"],carreira:["carreira"],documentos:["familia"],resumo:["resumo"],rede:["rede"]};
@@ -37,6 +37,41 @@
     return MODULOS[n]}
   function precisa(l){return Promise.all(l.map(modulo))}
   /* cartão da tela inicial que depende de um módulo: aparece "carregando" e é trocado quando o módulo chega */
+  /* ===== PADRÃO DOS GRÁFICOS DO SITE (vale para todo gráfico novo) =====
+     Toda barra, ponto ou trecho de gráfico é clicável e mostra um cartão destacado: a data/rótulo em negrito e, embaixo, o valor
+     e o contexto (o mesmo visual do gráfico de preços do Mercado). No computador, passar o mouse também mostra.
+       racDica.ligar(elemento, function(){return ["25/08/2026","R$ 39,89/kg · Confiança"]})  → barras, pontos, linhas de tabela-gráfico
+       racDica.em(x, y, titulo, linha)  → gráficos contínuos (posição na tela, ex.: a linha de um treino)
+       vbRotulo(cima, baixo)  → legenda de barra em duas linhas curtas, para caber em todas as barras */
+  var racDica=(function(){
+    var el=null,dono=null,fixo=false,hover=!!(window.matchMedia&&matchMedia("(hover:hover) and (pointer:fine)").matches);
+    function caixa(){if(!el){el=h("div",{class:"racdica",role:"tooltip",hidden:""});document.body.appendChild(el)}return el}
+    function em(x,y,t,l,embaixo){var c=caixa();c.innerHTML="";c.appendChild(h("b",{text:t}));if(l)c.appendChild(h("span",{text:l}));c.hidden=false;
+      /* mede no canto (sem a posição anterior encolher a caixa) e depois posiciona */
+      c.style.left="0px";c.style.top="0px";
+      var w=c.offsetWidth,hh=c.offsetHeight,top=y-hh-12;if(top<8)top=(embaixo!=null?embaixo:y)+12;
+      c.style.left=Math.max(8,Math.min(x-w/2,innerWidth-w-8))+"px";c.style.top=top+"px"}
+    function noEl(alvo,t,l){var r=alvo.getBoundingClientRect();em(r.left+r.width/2,r.top,t,l,r.bottom)}
+    function fechar(){if(el)el.hidden=true;if(dono)dono.classList.remove("dicaon");dono=null;fixo=false}
+    function ligar(alvo,conteudo){
+      function abrir(fix){var c=conteudo();if(!c)return;if(dono&&dono!==alvo)dono.classList.remove("dicaon");dono=alvo;alvo.classList.add("dicaon");fixo=fix;noEl(alvo,c[0],c[1])}
+      alvo.addEventListener("click",function(){if(fixo&&dono===alvo){fechar();return}abrir(true);
+        /* se o clique redesenhou o gráfico, o cartão não fica solto na tela */
+        setTimeout(function(){if(dono===alvo&&!alvo.isConnected)fechar()},60)});
+      if(hover){alvo.addEventListener("mouseenter",function(){if(!fixo)abrir(false)});alvo.addEventListener("mouseleave",function(){if(!fixo&&dono===alvo)fechar()})}
+      alvo.addEventListener("focus",function(){if(!fixo)abrir(false)});alvo.addEventListener("blur",function(){if(!fixo&&dono===alvo)fechar()});
+      if(alvo.removeAttribute)alvo.removeAttribute("title");
+      return alvo}
+    document.addEventListener("click",function(e){if(dono&&!dono.contains(e.target))fechar()},true);
+    addEventListener("scroll",function(){if(!dono||!el||el.hidden)return;if(!dono.isConnected){fechar();return}var r=dono.getBoundingClientRect();
+      if(r.bottom<0||r.top>innerHeight)fechar();else{var s=el.querySelector("span");noEl(dono,el.firstChild.textContent,s?s.textContent:"")}},true);
+    addEventListener("hashchange",fechar);addEventListener("resize",fechar);document.addEventListener("keydown",function(e){if(e.key==="Escape")fechar()});
+    return {ligar:ligar,em:em,fechar:fechar}})();
+  window.racDica=racDica;
+  /* no celular as colunas rolam para o lado: começa mostrando as mais recentes */
+  function vbFim(vb){setTimeout(function(){vb.scrollLeft=vb.scrollWidth},0)}
+  function vbRotulo(cima,baixo){return h("span",{class:"vbl"},h("b",{text:cima||""}),h("small",{text:baixo||""}))}
+  var SEM1="DSTQQSS",MES3=["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
   function wLazy(mods,nome){
     var ph=h("div",{class:"panel"},h("p",{class:"sub",text:"Carregando…"}));
     precisa(mods).then(function(){var el=window[nome]();if(ph.parentNode)ph.replaceWith(el)})

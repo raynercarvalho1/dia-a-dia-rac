@@ -96,9 +96,10 @@
       /* cada barra com o valor em cima e o dia embaixo, sempre visíveis */
       p.appendChild(h("p",{class:"kl",text:"Prontidão dos últimos 14 dias"}));
       p.appendChild(h("div",{class:"prontserie"},serie.map(function(x){var dt=new Date(x[0]+"T12:00:00");
-        return h("div",{class:"pcol",title:dataBR(x[0])+": "+(x[1]==null?"sem dado":x[1])},h("span",{class:"pv",text:x[1]==null?"–":String(x[1])}),
+        return racDica.ligar(h("div",{class:"pcol",tabindex:"0"},h("span",{class:"pv",text:x[1]==null?"–":String(x[1])}),
           h("span",{class:"pbar"},h("i",{style:"height:"+(x[1]||2)+"%;background:"+(x[1]==null?"var(--line)":x[1]>=70?"#1a8a4a":x[1]>=45?"#E8A317":"#D6283B")})),
-          h("span",{class:"pd",text:dt.toLocaleDateString("pt-BR",{weekday:"narrow"}).toUpperCase()+" "+x[0].slice(8,10)}))})));
+          h("span",{class:"pd",text:dt.toLocaleDateString("pt-BR",{weekday:"narrow"}).toUpperCase()+" "+x[0].slice(8,10)})),
+          function(){return [dt.toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"2-digit"}),x[1]==null?"Sem dados do relógio":"Prontidão "+x[1]+" · "+(x[1]>=70?"pronto para treinar forte":x[1]>=45?"bom para treino moderado":"dia de recuperação")]})})));
       if(pr.alertas.length)p.appendChild(h("ul",{class:"wl"},pr.alertas.map(function(t){return h("li",{class:"qrwarn"},h("span",{class:"grow",text:"⚠ "+t}))})));
       var ins=saudeInsights(dias,ativs);
       if(ins.length){p.appendChild(h("h3",{class:"dayh",text:"O que os seus dados mostram"}));p.appendChild(h("ul",{class:"wl"},ins.map(function(t){return h("li",null,h("span",{class:"grow",text:t}))})))}
@@ -180,7 +181,7 @@
       if(pts.length<2){p.appendChild(h("p",{class:"empty",text:"Poucos dados nesse período."}));return p}
       var grupos=[];
       /* legenda de cada barra em duas linhas curtas (cabe em todas): dia + inicial da semana; semana: dia + mês; mês: mês + ano */
-      var MESES3=["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
+      var MESES3=MES3;
       if(SAUDE.per==="30")pts.forEach(function(d){var dt=new Date(d.data+"T12:00:00");grupos.push({rot:d.data.slice(8),rot2:"DSTQQSS".charAt(dt.getDay()),det:dt.toLocaleDateString("pt-BR",{weekday:"short",day:"2-digit",month:"2-digit",year:"numeric"}),vs:[M[2](d.dados)]})});
       else{var chave=SAUDE.per==="90"?function(s){var dt=new Date(s+"T12:00:00");dt.setDate(dt.getDate()-((dt.getDay()+6)%7));return dt.toISOString().slice(0,10)}:function(s){return s.slice(0,7)};
         var mapa={};pts.forEach(function(d){var k=chave(d.data);if(!mapa[k]){mapa[k]={k:k,vs:[]};grupos.push(mapa[k])}mapa[k].vs.push(M[2](d.dados))});
@@ -202,10 +203,11 @@
           h("span",{class:"vbv"+(n<=14||i===n-1||g.v===maxv||g.v===minv?"":" opc"),text:M[0]==="sono"?hmDur(g.v*3600).replace(/^(\d+)h(\d+)$/,"$1:$2"):M[0]==="passos"?(g.v>=1000?fmtN(Math.round(g.v/100)/10)+"k":Math.round(g.v)):String(Math.round(g.v))}),
           h("span",{class:"vbt"},h("span",{class:"vbf",style:"background:"+M[4]+";height:"+Math.max(2,(g.v-base)/((maxv-base)||1)*100).toFixed(1)+"%"})),
           h("span",{class:"vbl"},h("b",{text:g.rot}),h("small",{text:g.rot2||""})));
-        b.onclick=function(){marcar(i)};b.onmouseenter=function(){marcar(i)};barras.push(b);return b}));
+        b.onclick=function(){marcar(i)};b.onmouseenter=function(){marcar(i)};barras.push(b);
+        racDica.ligar(b,function(){var d=g.det.split(" · ");return [d[0],M[1]+": "+M[3](g.v)+(d[1]?" · "+d[1]:"")]});return b}));
       p.appendChild(vb);p.appendChild(cap);marcar(n-1);
       /* no celular o gráfico rola para o lado: começa mostrando os dias mais recentes */
-      setTimeout(function(){vb.scrollLeft=vb.scrollWidth},0);
+      vbFim(vb);
       return p}
     /* sono das últimas 14 noites: fases empilhadas */
     function saudeSono(dias){
@@ -214,10 +216,11 @@
       var F=[["profundo","Profundo","#3B3B98"],["rem","REM","#7C6FE0"],["leve","Leve","#9DB4E8"],["acordado","Acordado","#E8A317"]];
       p.appendChild(h("div",{class:"sonoleg"},F.map(function(f){return h("span",null,h("i",{style:"background:"+f[2]}),f[1])})));
       p.appendChild(h("div",{class:"sonol"},l.map(function(d){var s=d.dados.sono,tot=s.total+(s.acordado||0);
-        return h("div",{class:"sonorow",title:dataBR(d.data)+" · "+hmDur(s.total)+(s.nota?" · nota "+s.nota:"")},
+        return racDica.ligar(h("div",{class:"sonorow",tabindex:"0"},
           h("span",{class:"sonod",text:d.data.slice(8)+"/"+d.data.slice(5,7)}),
           h("span",{class:"sonobar",style:"width:"+(tot/mx*100).toFixed(1)+"%"},F.map(function(f){return s[f[0]]?h("i",{style:"background:"+f[2]+";flex:"+s[f[0]],title:f[1]+": "+hmDur(s[f[0]])}):null})),
-          h("span",{class:"sonot",text:hmDur(s.total)+(s.nota?" · "+s.nota:"")}))})));
+          h("span",{class:"sonot",text:hmDur(s.total)+(s.nota?" · "+s.nota:"")})),
+          function(){return [new Date(d.data+"T12:00:00").toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"2-digit"}),hmDur(s.total)+" de sono"+(s.nota?" · nota "+s.nota:"")+" · "+F.filter(function(f){return s[f[0]]}).map(function(f){return f[1].toLowerCase()+" "+hmDur(s[f[0]])}).join(", ")]})})));
       return p}
     function saudeTreinos(ativs){
       ativs=ativs.filter(function(a){return TREINO_OCULTOS.indexOf(a.tipo)<0});
@@ -277,10 +280,13 @@
       '<line class="tcur" x1="0" x2="0" y1="0" y2="'+H+'" stroke="var(--ink)" opacity="0" vector-effect="non-scaling-stroke"/></svg>';
     var box=h("div",{class:"tgbox"}),cap=h("p",{class:"vbcap",role:"status"});
     box.innerHTML=svg;var el=box.firstChild,cur=el.querySelector(".tcur");
-    function mostrar(ev){var r=el.getBoundingClientRect(),x=((ev.touches?ev.touches[0].clientX:ev.clientX)-r.left)/r.width*tm,best=pts[0];
+    /* padrão do site: o ponto tocado (ou sob o mouse) mostra o cartão destacado com o tempo de treino e o valor */
+    function mostrar(ev){var r=el.getBoundingClientRect(),cx=ev.touches?ev.touches[0].clientX:ev.clientX,x=(cx-r.left)/r.width*tm,best=pts[0];
       pts.forEach(function(p){if(Math.abs(p.t-x)<Math.abs(best.t-x))best=p});cur.setAttribute("x1",X(best.t));cur.setAttribute("x2",X(best.t));cur.setAttribute("opacity",".5");
-      cap.textContent=hms(best.t)+" · "+fmt(best[campo])+(best.dist?" · "+fmtN(Math.round(best.dist/10)/100)+" km":"")}
-    el.addEventListener("mousemove",mostrar);el.addEventListener("touchmove",mostrar,{passive:true});el.addEventListener("click",mostrar);
+      var py=r.top+(+Y(best[campo]))/(H+18)*r.height;
+      racDica.em(r.left+(+X(best.t))/W*r.width,py,hms(best.t)+" de treino",rot+": "+fmt(best[campo])+(best.dist?" · "+fmtN(Math.round(best.dist/10)/100)+" km":""))}
+    el.addEventListener("mousemove",mostrar);el.addEventListener("touchmove",mostrar,{passive:true});el.addEventListener("click",function(e){e.stopPropagation();mostrar(e)});
+    el.addEventListener("mouseleave",function(){racDica.fechar();cur.setAttribute("opacity","0")});
     cap.textContent="Média "+fmt(media)+" · mín "+fmt(inverter?mx-pad:mn+pad)+" · máx "+fmt(inverter?mn+pad:mx-pad);
     /* ritmo/velocidade: paradas puxam o mínimo para valores sem sentido, então mostra só média e o mais rápido */
     if(campo==="vel")cap.textContent="Média "+fmt(media)+" · mais rápido "+fmt(Math.max.apply(null,vs));
@@ -384,7 +390,7 @@
       if(gs.length){gs.forEach(function(g){gp.appendChild(g)});corpo.appendChild(gp)}
       /* zonas de FC */
       if(d.zonas&&d.zonas.some(Boolean)){var tz=d.zonas.reduce(function(a2,b2){return a2+b2},0),zp=panel("Faixas de batimentos","Quanto tempo o coração ficou em cada faixa de esforço."),NZ=["Aquecimento","Fácil","Aeróbica","Limiar","Máxima"];
-        zp.appendChild(h("div",{class:"tzonas"},d.zonas.map(function(z,i){return h("div",{class:"tzrow"},h("span",{text:"Zona "+(i+1)+" · "+NZ[i]}),h("span",{class:"tzbar"},h("i",{class:"z"+(i+1),style:"width:"+(z/tz*100).toFixed(1)+"%"})),h("b",{text:hms(z)+" · "+Math.round(z/tz*100)+"%"}))})));
+        zp.appendChild(h("div",{class:"tzonas"},d.zonas.map(function(z,i){return racDica.ligar(h("div",{class:"tzrow",tabindex:"0"},h("span",{text:"Zona "+(i+1)+" · "+NZ[i]}),h("span",{class:"tzbar"},h("i",{class:"z"+(i+1),style:"width:"+(z/tz*100).toFixed(1)+"%"})),h("b",{text:hms(z)+" · "+Math.round(z/tz*100)+"%"})),function(){return ["Zona "+(i+1)+" · "+NZ[i],hms(z)+" nesta faixa · "+Math.round(z/tz*100)+"% do treino"]})})));
         corpo.appendChild(zp)}
       /* voltas */
       if((x.voltas||[]).length>1){var vp=panel("Voltas",x.voltas.length+" voltas"),tb=h("table",{class:"famtab"});

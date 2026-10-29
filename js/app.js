@@ -24,7 +24,7 @@
     n.id="pico";$("#pico").replaceWith(n);
     $("#ptitle").textContent=hit?hit.querySelector(".t").textContent:"Dia a Dia RAC"}
   /* ===== Módulos: cada seção grande fica em js/<seção>.js e só carrega quando é aberta ===== */
-  var MOD_VERSAO="2026-10-29.20",MODULOS={},MOD_OK={};
+  var MOD_VERSAO="2026-10-29.21",MODULOS={},MOD_OK={};
   var MOD_DEPS={conexoes:["mba"],sistema:["familia","mba","saude"],carreira:["sistema"],bebe:["familia","oms"],resumo:["saude","mba","familia"]};
   var ROTA_MODS={esportes:["esportes"],eddie:["familia"],olivia:["familia"],veiculos:["familia"],mba:["mba"],saude:["saude"],
     conexoes:["conexoes"],agenda:["sistema"],busca:["sistema"],sistema:["sistema"],lista:["lista"],carreira:["carreira"],documentos:["familia"],resumo:["resumo"],rede:["rede"]};
@@ -108,7 +108,7 @@
     if(top==="carreira"){sideMark("carreira","carreira");renderCarreira(parts[1],parts[2]);return}
     if(top==="lista"){sideMark("lista","lista");renderLista(parts[1]);return}
     if(top==="agenda"){sideMark("agenda","agenda");renderAgenda();return}
-    if(top==="resumo"){sideMark("resumo","resumo");renderResumo(parts[1]);return}
+    if(top==="resumo"){sideMark("resumo","resumo");renderResumo(parts[1],parts[2]);return}
     if(top==="busca"){sideMark("busca","busca");$("#ptitle").textContent="Busca";renderBusca(decodeURIComponent(parts.slice(1).join("/")||""));return}
     if(top==="sistema"){sideMark("sistema","sistema");renderSistema();return}
     if(top==="conexoes"){sideMark("conexoes","conexoes");renderConexoes(parts[1],decodeURIComponent(parts[2]||""));return}
@@ -221,8 +221,10 @@
     {k:"jornalistas",n:"Jornalistas",c:"#1D6FE0",h:["SamPancher","reporterenato","GugaNoblat","demori","reinaldoazevedo","demetriovec","RenanPeixoto_"]},
     {k:"dodgers",n:"Dodgers",c:"#005A9C",h:["dodgernate","LADodgersMuse","SleeperDodgers","ShotimeLAD","DoyersDave","ChadMoriyama","DodgersNation","Dodgers"]},
     {k:"oficiais",n:"Oficiais",c:"#0E7C86",h:["TSEjusbr"]},
-    {k:"beisebol",n:"Beisebol",c:"#0B9A4B",h:["KutterIsKing","DMAC_LA"]},
-    {k:"politicos",n:"Políticos",c:"#7A3FE0",h:["AndreJanonesMG","jonesmanoel_PE","ErikakHilton"]}];
+    {k:"beisebol",n:"Esporte",c:"#0B9A4B",h:["KutterIsKing","DMAC_LA"]},
+    {k:"politicos",n:"Políticos",c:"#7A3FE0",h:["AndreJanonesMG","jonesmanoel_PE","ErikakHilton"]},
+    /* começa vazia: os perfis entram pelo "Editar pessoas" da categoria */
+    {k:"bons",n:"Bons Perfis",c:"#C2410C",h:[]}];
   /* As listas acima são o ponto de partida; o que você editar fica na sua conta (PESSOAL["x-perfis"]) e vale no lugar delas.
      Os links das Listas do X de cada categoria ficam em PESSOAL["x-listas"] {categoria: "https://x.com/i/lists/…"} */
   XCATS.forEach(function(c){c.padrao=c.h.slice()});

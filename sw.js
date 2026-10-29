@@ -1,7 +1,7 @@
 /* Service worker do Dia a Dia RAC: deixa o site instalável como app.
    Sempre busca a versão nova na rede; a cópia guardada só é usada quando não há internet. */
-const CACHE = "rac-v1";
-const SHELL = ["./", "./index.html", "./manifest.webmanifest", "./icons/icon-192.png", "./icons/icon-512.png"];
+const CACHE = "rac-v2";
+const SHELL = ["./", "./index.html", "./manifest.webmanifest", "./nucleo.js", "./mercado.js", "./icons/icon-192.png", "./icons/icon-512.png"];
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

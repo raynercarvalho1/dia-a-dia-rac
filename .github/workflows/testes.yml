@@ -1,0 +1,22 @@
+# A cada publicação: roda os testes do site (tests/*.test.mjs). O resultado aparece na página Sistema.
+name: Testes
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ["noticias.json", "tecdados.json", "vagas.json"]
+  workflow_dispatch: {}
+  schedule:
+    - cron: "30 10 * * 1"   # toda segunda, para pegar mudanças no Supabase mesmo sem publicação
+
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Rodar os testes
+        run: node --test tests/*.test.mjs

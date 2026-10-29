@@ -211,9 +211,144 @@ function resumirFit(msgs: Record<number, Record<number, unknown>[]>) {
   return { inicio: t0 ? new Date((t0 + EPOCA) * 1000).toISOString() : undefined, serie, rota, voltas, series, piscinas };
 }
 
+/* ---------- sincronização (usada pelo site e pela rotina diária) ---------- */
+type Sb = ReturnType<typeof createClient>;
+/* atividades em páginas de 100, da mais nova para a mais antiga; para quando acha uma página toda conhecida */
+async function sincAtiv(sb: Sb, tok: string, uid: string | null, corpo: Record<string, unknown>) {
+  let inicio = Number(corpo.inicio ?? 0), salvas = 0, mais = false;
+  for (let i = 0; i < 6; i++) {
+    const l = await garmin(tok, `/activitylist-service/activities/search/activities?start=${inicio}&limit=100`);
+    if (!Array.isArray(l) || !l.length) { mais = false; break; }
+    const ids = l.map((a: any) => a.activityId);
+    let q = sb.from("garmin_ativ").select("id").in("id", ids); if (uid) q = q.eq("user_id", uid);
+    const { data: ja } = await q;
+    const linhas = l.map((a: any) => (uid ? { user_id: uid, ...ativ(a) } : ativ(a)));
+    const { error } = await sb.from("garmin_ativ").upsert(linhas);
+    if (error) throw error;
+    salvas += linhas.length; inicio += l.length;
+    mais = l.length === 100 && !(corpo.completo !== true && (ja?.length ?? 0) === ids.length);
+    if (!mais) break;
+  }
+  return { salvas, mais, inicio };
+}
+/* dias: continua de onde parou (refaz os 2 últimos dias, que ainda mudam); a 1ª vez volta um ano */
+async function sincDias(sb: Sb, tok: string, uid: string | null, corpo: Record<string, unknown>, hoje: string, blocos = 4) {
+  let q = sb.from("garmin_dia").select("data").order("data", { ascending: false }).limit(1); if (uid) q = q.eq("user_id", uid);
+  const { data: ult } = await q;
+  let ini = (corpo.desde as string) ?? (ult?.[0]?.data ? somaDias(ult[0].data, -2) : somaDias(hoje, -364));
+  let salvos = 0;
+  for (let i = 0; i < blocos && ini <= hoje; i++) {
+    let fim = somaDias(ini, 27); if (fim > hoje) fim = hoje;
+    const dias = await bloco(tok, ini, fim);
+    if (fim === hoje) {
+      const f = await garmin(tok, `/fitnessage-service/fitnessage/v2/${hoje}`).catch(() => null);
+      if (f?.fitnessAge) (dias[hoje] = dias[hoje] || {}).idadeFitness = limpa({ fitness: n(f.fitnessAge), real: n(f.chronologicalAge), possivel: n(f.achievableFitnessAge) });
+    }
+    const linhas = Object.entries(dias).filter(([, d]) => Object.keys(d).length)
+      .map(([data, dados]) => ({ ...(uid ? { user_id: uid } : {}), data, dados, atualizado: new Date().toISOString() }));
+    if (linhas.length) { const { error } = await sb.from("garmin_dia").upsert(linhas); if (error) throw error; }
+    salvos += linhas.length; ini = somaDias(fim, 1);
+  }
+  return { salvos, mais: ini <= hoje, desde: ini };
+}
+
+/* ---------- rotina diária (chamada pelo agendamento do banco, sem ninguém com o site aberto) ---------- */
+const NOMES: Record<string, string> = { eddie: "Eddie", olivia: "Olivia", civic: "Civic", moto: "Moto", c3: "C3" };
+const dBR = (s: string) => s.slice(8, 10) + "/" + s.slice(5, 7);
+/* o que vence (ou passou) perto de hoje, nas mesmas fontes da página Agenda */
+async function agendaServidor(adm: Sb, uid: string, hoje: string) {
+  const ev: { data: string; t: string }[] = [];
+  const { data: regs } = await adm.from("registros").select("quem,tipo,data,titulo,proxima,dados").eq("user_id", uid).order("data", { ascending: false });
+  const visto: Record<string, boolean> = {};
+  for (const r of regs ?? []) {
+    const k = r.quem + "|" + r.tipo, quem = NOMES[r.quem] ?? r.quem;
+    /* vale só o registro mais novo de cada tipo (um mais novo sem "próxima" substitui o aviso do anterior) */
+    if (!visto[k + "|p"]) { visto[k + "|p"] = true; if (r.proxima) ev.push({ data: r.proxima, t: `${quem}: ${r.titulo}` }); }
+    const d = (r.dados ?? {}) as Record<string, string>;
+    if (d.vigenciaFim && !visto[k + "|v"]) { visto[k + "|v"] = true; ev.push({ data: d.vigenciaFim, t: `${quem}: fim da vigência de ${r.titulo}` }); }
+  }
+  const { data: pes } = await adm.from("pessoal").select("chave,valor").eq("user_id", uid);
+  const P: Record<string, any> = {}; for (const x of pes ?? []) P[x.chave] = x.valor;
+  const feito = P.mbaFeito ?? {};
+  for (const a of P.mba?.avaliacoes ?? []) if (!feito["av:" + a.id]) ev.push({ data: a.ate, t: `MBA: responder ${a.t}${a.disc ? " (" + a.disc + ")" : ""}` });
+  for (const q of P.mba?.financeiro?.parcelas ?? []) if (!feito["pg:" + q.k]) ev.push({ data: q.venc, t: `MBA: boleto ${q.n} (R$ ${Number(q.v).toFixed(2).replace(".", ",")})` });
+  for (const a of P.mba?.aulas ?? []) ev.push({ data: a.data, t: `MBA: aula ${a.t} às ${a.hora}` });
+  for (const l of P.lembretes ?? []) if (!l.feito) ev.push({ data: l.data, t: l.t });
+  const ano = +hoje.slice(0, 4);
+  for (const b of P.aniversarios ?? []) {
+    let d = `${ano}-${String(b.mes).padStart(2, "0")}-${String(b.dia).padStart(2, "0")}`; if (d < hoje) d = `${ano + 1}` + d.slice(4);
+    if (d <= somaDias(hoje, 1)) ev.push({ data: d, t: `Aniversário de ${b.nome}` });
+  }
+  if (!P.ultimoBackup || P.ultimoBackup < somaDias(hoje, -30)) ev.push({ data: hoje, t: "Baixar um backup do site (Sistema → Exportar tudo)" });
+  /* janela do aviso: até 7 dias atrasado e os próximos 3 dias */
+  return ev.filter((e) => e.data && e.data >= somaDias(hoje, -7) && e.data <= somaDias(hoje, 3)).sort((a, b) => a.data.localeCompare(b.data));
+}
+async function telegram(texto: string) {
+  const bot = Deno.env.get("TELEGRAM_BOT_TOKEN"), chat = Deno.env.get("TELEGRAM_CHAT_ID");
+  if (!bot || !chat) return "sem Telegram configurado";
+  const r = await fetch(`https://api.telegram.org/bot${bot}/sendMessage`, { method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ chat_id: chat, text: texto, disable_web_page_preview: true }) });
+  return r.ok ? "enviado" : "Telegram respondeu " + r.status;
+}
+/* backup semanal (domingo): todas as tabelas da conta num JSON, no cofre privado "backups"; ficam os 8 mais novos */
+async function backupSemanal(adm: Sb, uid: string, hoje: string) {
+  const out: Record<string, unknown[]> = {};
+  for (const t of ["pessoal", "registros", "garmin_dia", "garmin_ativ", "mercados", "produtos", "notas", "itens", "orcamentos"]) {
+    const linhas: unknown[] = [];
+    for (let de = 0; ; de += 1000) {
+      const { data, error } = await adm.from(t).select("*").eq("user_id", uid).range(de, de + 999);
+      if (error) break; linhas.push(...(data ?? [])); if ((data ?? []).length < 1000) break;
+    }
+    out[t] = linhas;
+  }
+  const corpo = new Blob([JSON.stringify({ versao: 1, criado: new Date().toISOString(), dono: uid, tabelas: out })], { type: "application/json" });
+  const { error } = await adm.storage.from("backups").upload(`${uid}/${hoje}.json`, corpo, { upsert: true, contentType: "application/json" });
+  if (error) throw error;
+  const { data: l } = await adm.storage.from("backups").list(uid, { sortBy: { column: "name", order: "desc" } });
+  const velhos = (l ?? []).slice(8).map((f) => `${uid}/${f.name}`);
+  if (velhos.length) await adm.storage.from("backups").remove(velhos);
+  return Object.fromEntries(Object.entries(out).map(([k, v]) => [k, v.length]));
+}
+async function rotina(req: Request) {
+  const url = Deno.env.get("SUPABASE_URL")!, chave = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const adm = createClient(url, chave, { auth: { persistSession: false } });
+  const { data: autorizado } = await adm.rpc("rac_rotina_ok", { segredo: req.headers.get("x-rac-rotina") ?? "" });
+  if (autorizado !== true) return responder({ erro: "rotina não autorizada" }, 401);
+  /* de quem é o site: quem tem dados pessoais e não é membro da casa */
+  const { data: membros } = await adm.from("membros").select("membro");
+  const naoDono = new Set((membros ?? []).map((m: any) => m.membro));
+  const { data: pes } = await adm.from("pessoal").select("user_id").limit(50);
+  const uid = (pes ?? []).map((x: any) => x.user_id).find((u: string) => !naoDono.has(u));
+  if (!uid) return responder({ erro: "dono não encontrado" }, 404);
+  const hoje = iso(new Date(Date.now() - 3 * 3600e3)), res: Record<string, unknown> = {};
+  let tudoOk = true;
+  const passo = async (nome: string, f: () => Promise<unknown>) => {
+    try { res[nome] = await f(); } catch (e) {
+      tudoOk = false; res[nome] = { erro: (e as Error).message ?? String(e) };
+      await adm.from("erros").insert({ user_id: uid, origem: "rotina: " + nome, mensagem: (e as Error).message ?? String(e), aparelho: "servidor" });
+    }
+  };
+  let tok: string | null = null;
+  await passo("garmin_token", async () => { tok = await token(); return "ok"; });
+  if (tok) {
+    await passo("garmin_dias", () => sincDias(adm, tok!, uid, {}, hoje, 13));
+    await passo("garmin_treinos", () => sincAtiv(adm, tok!, uid, {}));
+  }
+  await passo("alertas", async () => {
+    const ev = await agendaServidor(adm, uid, hoje);
+    if (!ev.length) return { itens: 0 };
+    const linhas = ev.map((e) => (e.data < hoje ? "⚠ atrasado: " : e.data === hoje ? "• hoje: " : "• " + dBR(e.data) + ": ") + e.t);
+    return { itens: ev.length, telegram: await telegram("Dia a Dia RAC — próximos dias\n\n" + linhas.join("\n")) };
+  });
+  if (new Date(hoje + "T12:00:00Z").getUTCDay() === 0) await passo("backup", () => backupSemanal(adm, uid, hoje));
+  await adm.from("rotina_log").insert({ user_id: uid, ok: tudoOk, resumo: res });
+  return responder({ ok: tudoOk, ...res });
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   try {
+    if (req.headers.get("x-rac-rotina")) return await rotina(req);
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!, {
       global: { headers: { Authorization: req.headers.get("Authorization") ?? "" } },
     });
@@ -241,40 +376,8 @@ Deno.serve(async (req) => {
       return responder({ ok: true, nome: a?.activityName, local: a?.locationName, tipo: a?.activityTypeDTO?.typeKey, resumo, ...(fit ?? { serie: [], rota: [], voltas: [], series: [] }) });
     }
 
-    if (corpo.tipo === "ativ") {
-      /* atividades em páginas de 100, da mais nova para a mais antiga; para quando acha uma página toda conhecida */
-      let inicio = Number(corpo.inicio ?? 0), salvas = 0, mais = false;
-      for (let i = 0; i < 6; i++) {
-        const l = await garmin(tok, `/activitylist-service/activities/search/activities?start=${inicio}&limit=100`);
-        if (!Array.isArray(l) || !l.length) { mais = false; break; }
-        const ids = l.map((a: any) => a.activityId);
-        const { data: ja } = await sb.from("garmin_ativ").select("id").in("id", ids);
-        const linhas = l.map(ativ);
-        const { error } = await sb.from("garmin_ativ").upsert(linhas);
-        if (error) throw error;
-        salvas += linhas.length; inicio += l.length;
-        mais = l.length === 100 && !(corpo.completo !== true && (ja?.length ?? 0) === ids.length);
-        if (!mais) break;
-      }
-      return responder({ ok: true, salvas, mais, inicio });
-    }
-
-    /* dias: continua de onde parou (refaz os 2 últimos dias, que ainda mudam); a 1ª vez volta um ano */
-    const { data: ult } = await sb.from("garmin_dia").select("data").order("data", { ascending: false }).limit(1);
-    let ini = corpo.desde ?? (ult?.[0]?.data ? somaDias(ult[0].data, -2) : somaDias(hoje, -364));
-    let salvos = 0;
-    for (let i = 0; i < 4 && ini <= hoje; i++) {
-      let fim = somaDias(ini, 27); if (fim > hoje) fim = hoje;
-      const dias = await bloco(tok, ini, fim);
-      if (fim === hoje) {
-        const f = await garmin(tok, `/fitnessage-service/fitnessage/v2/${hoje}`).catch(() => null);
-        if (f?.fitnessAge) (dias[hoje] = dias[hoje] || {}).idadeFitness = limpa({ fitness: n(f.fitnessAge), real: n(f.chronologicalAge), possivel: n(f.achievableFitnessAge) });
-      }
-      const linhas = Object.entries(dias).filter(([, d]) => Object.keys(d).length).map(([data, dados]) => ({ data, dados, atualizado: new Date().toISOString() }));
-      if (linhas.length) { const { error } = await sb.from("garmin_dia").upsert(linhas); if (error) throw error; }
-      salvos += linhas.length; ini = somaDias(fim, 1);
-    }
-    return responder({ ok: true, salvos, mais: ini <= hoje, desde: ini });
+    if (corpo.tipo === "ativ") return responder({ ok: true, ...(await sincAtiv(sb, tok, null, corpo)) });
+    return responder({ ok: true, ...(await sincDias(sb, tok, null, corpo, hoje)) });
   } catch (e) {
     return responder({ erro: (e as Error).message ?? String(e) }, 500);
   }

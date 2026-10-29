@@ -290,13 +290,7 @@
       if (!aberta) return;
       itens.appendChild(h("h3", { class: "dayh", text: semCidade(aberta[0].mercado) + " · " + dataBR(aberta[0].data) }));
       itens.appendChild(listaProdutos(agruparProdutos(aberta)));
-      var apagar = h("button", { type: "button", class: "ghostbtn", text: "Apagar esta nota" }), sta = h("span", { class: "sub", role: "status" });
-      apagar.onclick = function () {
-        if (!confirm("Apagar a nota de " + money(sum(aberta, function (x) { return x.valor_total; })) + " do " + semCidade(aberta[0].mercado) + " em " + dataBR(aberta[0].data) + "? Os " + aberta.length + " itens saem das contas.")) return;
-        apagar.disabled = true; sta.textContent = "Apagando…";
-        apagarNota(aberta).then(function () { return loadRows(true); }).then(function () { st.kpiNota = null; drawApp("painel"); }, function (e) { apagar.disabled = false; sta.textContent = "Não consegui apagar (" + e.message + ")."; });
-      };
-      itens.appendChild(h("div", { class: "vfil" }, apagar, sta));
+      itens.appendChild(botaoApagar(aberta, function () { st.kpiNota = null; drawApp("painel"); }));
     }
     compras.forEach(function (l) {
       var f = l[0], tot = sum(l, function (x) { return x.valor_total; }), dsc = sum(l, function (x) { return x.desconto || 0; });
@@ -564,7 +558,7 @@
       var d = h("details", { class: "mknota" },
         h("summary", null, h("span", { class: "when", text: dataBR(n.data) }), h("span", { class: "mkn" }, h("b", { text: n.mercado.replace(/\s*\(.*\)$/, "") }), h("span", { class: "sub", text: " · " + n.itens.length + " itens" + (n.numero ? " · NF " + n.numero.replace(/^0+/, "") : "") })), h("b", { class: "mkt", text: money(n.total) })),
         tabela(["Item", "Categoria", "Qtd", "Unit.", "Total"], n.itens.map(function (x) { return [x.descricao, x.categoria, fmtQtd(x.quantidade, x.unidade), money(x.valor_unitario), money(x.valor_total)]; }), 2),
-        n.pag ? h("p", { class: "sub", text: "Pagamento: " + n.pag }) : null);
+        n.pag ? h("p", { class: "sub", text: "Pagamento: " + n.pag }) : null, botaoApagar(n.itens, function () { drawApp("notas"); }));
       p.appendChild(d);
     });
     body.appendChild(p);
@@ -1077,6 +1071,16 @@
     }
   }
 
+  /* "Apagar esta nota" (pede confirmação), no detalhe da compra no painel e em Notas */
+  function botaoApagar(linhas, depois) {
+    var apagar = h("button", { type: "button", class: "ghostbtn", text: "Apagar esta nota" }), sta = h("span", { class: "sub", role: "status" });
+    apagar.onclick = function () {
+      if (!confirm("Apagar a nota de " + money(sum(linhas, function (x) { return x.valor_total; })) + " do " + semCidade(linhas[0].mercado) + " em " + dataBR(linhas[0].data) + "? Os " + linhas.length + " itens saem das contas.")) return;
+      apagar.disabled = true; sta.textContent = "Apagando…";
+      apagarNota(linhas).then(function () { return loadRows(true); }).then(depois, function (e) { apagar.disabled = false; sta.textContent = "Não consegui apagar (" + e.message + ")."; });
+    };
+    return h("div", { class: "vfil" }, apagar, sta);
+  }
   function apagarNota(linhas) {
     return sb.from("itens").select("nota_id").in("id", linhas.map(function (x) { return x.id; })).then(ok).then(function (l) {
       var ids = Object.keys(groupBy(l, function (x) { return x.nota_id; }));

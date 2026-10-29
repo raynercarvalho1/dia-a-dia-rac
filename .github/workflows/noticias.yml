@@ -1,4 +1,4 @@
-# A cada 3 horas: atualiza noticias.json com as notícias de Sorocaba para a tela inicial.
+# A cada 3 horas: atualiza noticias.json (Sorocaba, tela inicial) e tecdados.json (dados e tecnologia, Conexões do dia).
 name: Atualizar notícias
 
 on:
@@ -27,15 +27,19 @@ jobs:
       - name: Buscar notícias
         run: python scripts/atualizar_noticias.py
 
+      - name: Buscar notícias de dados e tecnologia (Conexões do dia)
+        run: python scripts/atualizar_tecdados.py
+
       - name: Salvar se mudou
         run: |
-          if git diff --quiet -- noticias.json; then
+          git add -N tecdados.json 2>/dev/null || true
+          if git diff --quiet -- noticias.json tecdados.json; then
             echo "Nenhuma notícia nova."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add noticias.json
-          git commit -m "Notícias de Sorocaba atualizadas"
+          git add noticias.json tecdados.json
+          git commit -m "Notícias atualizadas"
           git pull --rebase --autostash
           git push

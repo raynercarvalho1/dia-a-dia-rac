@@ -54,6 +54,6 @@ revoke all on public.compras from anon;
 --
 -- insert into public.membros (membro, dono)
 -- select m.id, d.id from auth.users m, auth.users d
--- where m.email = 'EMAIL_DA_ESPOSA' and d.email = 'rayner.a.carvalho@gmail.com'
+-- where m.email = 'EMAIL_DA_ESPOSA' and d.email = 'SEU_EMAIL'
 -- on conflict (membro) do update set dono = excluded.dono;
 -- ============================================================================================

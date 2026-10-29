@@ -1,29 +1,65 @@
-/* Service worker do Dia a Dia RAC: deixa o site instalável como app.
-   Sempre busca a versão nova na rede; a cópia guardada só é usada quando não há internet. */
-const CACHE = "rac-v2";
+/* Service worker do Dia a Dia RAC: deixa o site instalável como app, funcionando também sem internet.
+   - Arquivos do site (páginas e módulos): rede primeiro; sem internet, a última versão guardada.
+   - Dados que os robôs atualizam (notícias, vagas, tecnologia): abre na hora com a cópia guardada e atualiza por trás.
+   - Bibliotecas de CDN (mapa, gráficos de PDF, Supabase): guardadas na primeira vez, porque o endereço já tem a versão.
+   - Notificações push: mostra o aviso e, ao tocar, abre a página certa.
+   A cada publicação, VERSAO muda: os caches velhos do site são apagados na ativação. */
+const VERSAO = "2026-10-28.3";
+const APP = "rac-app-" + VERSAO, DADOS = "rac-dados", LIBS = "rac-libs";
 const SHELL = ["./", "./index.html", "./manifest.webmanifest", "./nucleo.js", "./mercado.js", "./icons/icon-192.png", "./icons/icon-512.png"];
+const LIB_HOSTS = ["cdnjs.cloudflare.com", "cdn.jsdelivr.net", "unpkg.com"];
 
 self.addEventListener("install", e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(APP).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
 });
 
 self.addEventListener("activate", e => {
   e.waitUntil(caches.keys()
-    .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+    .then(keys => Promise.all(keys.filter(k => ![APP, DADOS, LIBS].includes(k)).map(k => caches.delete(k))))
     .then(() => self.clients.claim()));
 });
 
-/* Só as páginas e arquivos do próprio site; dados ao vivo (MLB, ESPN etc.) passam direto */
+function redePrimeiro(req) {
+  return fetch(req).then(res => {
+    if (res.ok) { const copia = res.clone(); caches.open(APP).then(c => c.put(req, copia)); }
+    return res;
+  }).catch(() => caches.match(req, { ignoreSearch: true }).then(r => r || (req.mode === "navigate" ? caches.match("./index.html") : undefined)));
+}
+function guardadoEAtualiza(req, chave) {
+  return caches.open(DADOS).then(c => c.match(chave).then(guardado => {
+    const rede = fetch(req).then(res => { if (res.ok) c.put(chave, res.clone()); return res; }).catch(() => guardado);
+    return guardado || rede;
+  }));
+}
+function guardadoPrimeiro(req) {
+  return caches.open(LIBS).then(c => c.match(req).then(r => r || fetch(req).then(res => { if (res.ok || res.type === "opaque") c.put(req, res.clone()); return res; })));
+}
+
 self.addEventListener("fetch", e => {
-  const url = new URL(e.request.url);
-  if (e.request.method !== "GET" || url.origin !== self.location.origin) return;
-  e.respondWith(
-    fetch(e.request)
-      .then(res => {
-        const copy = res.clone();
-        caches.open(CACHE).then(c => c.put(e.request, copy));
-        return res;
-      })
-      .catch(() => caches.match(e.request).then(r => r || caches.match("./index.html")))
-  );
+  const req = e.request, url = new URL(req.url);
+  if (req.method !== "GET") return;
+  if (url.origin === self.location.origin) {
+    if (/\.json$/.test(url.pathname) && !/manifest/.test(url.pathname)) { e.respondWith(guardadoEAtualiza(req, url.origin + url.pathname)); return; }
+    e.respondWith(redePrimeiro(req));
+    return;
+  }
+  if (LIB_HOSTS.includes(url.hostname)) e.respondWith(guardadoPrimeiro(req));
+  /* o resto (Supabase, MLB, ESPN, Garmin, mapas) sempre ao vivo */
+});
+
+/* ---------- notificações ---------- */
+self.addEventListener("push", e => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (_) { d = { corpo: e.data && e.data.text() }; }
+  e.waitUntil(self.registration.showNotification(d.titulo || "Dia a Dia RAC", {
+    body: d.corpo || "", icon: "./icons/icon-192.png", badge: "./icons/icon-192.png", tag: d.tag || undefined, data: { url: d.url || "./#agenda" },
+  }));
+});
+self.addEventListener("notificationclick", e => {
+  e.notification.close();
+  const alvo = new URL(e.notification.data && e.notification.data.url || "./", self.location.href).href;
+  e.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(l => {
+    for (const c of l) if (c.url.startsWith(self.location.origin)) { c.navigate(alvo); return c.focus(); }
+    return self.clients.openWindow(alvo);
+  }));
 });

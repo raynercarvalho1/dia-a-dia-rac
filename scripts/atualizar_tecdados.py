@@ -6,6 +6,7 @@ Fica só o que é dos últimos 7 dias, sem repetir manchete. Usa apenas a biblio
 import json
 import os
 import re
+import sys
 import urllib.parse
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
@@ -24,13 +25,14 @@ ARQ = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "tecdados.j
 
 def main():
     agora = datetime.now(timezone.utc)
-    vistos, saida = set(), []
+    vistos, saida, falhas = set(), [], 0
     for busca in BUSCAS:
         url = "https://news.google.com/rss/search?q=" + urllib.parse.quote(f'"{busca}" when:7d') + "&hl=pt-BR&gl=BR&ceid=BR:pt-419"
         try:
             raiz = ElementTree.fromstring(baixar(url))
         except Exception as e:  # uma busca fora do ar não derruba as outras
             print("falhou", busca, e)
+            falhas += 1
             continue
         n = 0
         for item in raiz.iter("item"):
@@ -56,6 +58,10 @@ def main():
                 break
     saida.sort(key=lambda x: x["d"], reverse=True)
     saida = saida[:LIMITE]
+    # metade das buscas falhou ou não veio nada: falha de propósito para o GitHub avisar
+    if falhas > len(BUSCAS) // 2 or not saida:
+        print("ALERTA: coleta de tecnologia com problema (%d buscas falharam, %d notícias)" % (falhas, len(saida)), file=sys.stderr)
+        sys.exit(1)
     try:
         with open(ARQ, encoding="utf-8") as f:
             if [x["u"] for x in json.load(f).get("noticias", [])] == [x["u"] for x in saida]:

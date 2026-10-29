@@ -883,16 +883,6 @@ code.mbaf{font:calc(12px + var(--fz))/1.4 ui-monospace,Consolas,monospace;white-
     <p class="foot">Tudo carregado ao vivo sempre que você abre a página: beisebol da API oficial da MLB, basquete e futebol americano da ESPN. As redes sociais dos jogadores vêm do Wikidata e só aparecem quando o jogador tem perfil cadastrado lá. Horários de Brasília.</p>
   </section>
 
-  <!-- Mercado de inverno dos Dodgers: curadoria manual, atualize quando sair notícia nova -->
-  <template id="tpl-mercado">
-    <ul class="clean nowrap">
-      <li><span class="pc"><img class="ph s" src="https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_96,q_auto:best/v1/people/669373/headshot/67/current" alt="" loading="lazy" onerror="this.style.visibility='hidden'"><span><a class="link" href="https://bleacherreport.com/articles/25505146-dodgers-2026-offseason-guide-free-agents-trade-targets-more-roster-shakeups-after-nlcs-sweep" target="_blank" rel="noopener">Tarik Skubal</a> <span class="sub">(veio do <img class="lg sm" src="https://www.mlbstatic.com/team-logos/116.svg" alt="">Tigers no meio do ano)</span></span><span data-soc="mlb:669373"></span></span><span class="tag">free agent</span></li>
-      <li><span class="pc"><img class="ph s" src="https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_96,q_auto:best/v1/people/681911/headshot/67/current" alt="" loading="lazy" onerror="this.style.visibility='hidden'"><img class="ph s" src="https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_96,q_auto:best/v1/people/623465/headshot/67/current" alt="" loading="lazy" onerror="this.style.visibility='hidden'"><img class="ph s" src="https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_96,q_auto:best/v1/people/595014/headshot/67/current" alt="" loading="lazy" onerror="this.style.visibility='hidden'"><a class="link" href="https://bleacherreport.com/articles/25505146-dodgers-2026-offseason-guide-free-agents-trade-targets-more-roster-shakeups-after-nlcs-sweep" target="_blank" rel="noopener">Relievers: Vesia, Phillips, Treinen</a></span><span class="tag">free agents</span></li>
-      <li><span class="pc"><img class="ph s" src="https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_96,q_auto:best/v1/people/500743/headshot/67/current" alt="" loading="lazy" onerror="this.style.visibility='hidden'"><a class="link" href="https://www.si.com/mlb/dodgers/whats-next-for-dodgers-2026-27-offseason-preview" target="_blank" rel="noopener">Miguel Rojas anunciou aposentadoria</a><span data-soc="mlb:500743"></span></span><span class="tag">saída</span></li>
-      <li><span class="pc"><img class="ph s" src="https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_96,q_auto:best/v1/people/608324/headshot/67/current" alt="" loading="lazy" onerror="this.style.visibility='hidden'"><span><a class="link" href="https://www.si.com/mlb/dodgers/onsi/news/dodgers-linked-to-120-million-all-star-likely-to-hit-free-agency-this-offseason" target="_blank" rel="noopener">Alex Bregman</a> <span class="sub">(3B, opt-out do <img class="lg sm" src="https://www.mlbstatic.com/team-logos/111.svg" alt="">Red Sox)</span></span><span data-soc="mlb:608324"></span></span><span class="tag">rumor</span></li>
-    </ul>
-    <p class="note">O bullpen é a prioridade, com tantos relievers saindo. Fontes: <a class="link" href="https://www.si.com/mlb/dodgers/whats-next-for-dodgers-2026-27-offseason-preview" target="_blank" rel="noopener">Sports Illustrated</a>, <a class="link" href="https://bleacherreport.com/articles/25505146-dodgers-2026-offseason-guide-free-agents-trade-targets-more-roster-shakeups-after-nlcs-sweep" target="_blank" rel="noopener">Bleacher Report</a> e <a class="link" href="https://www.si.com/mlb/dodgers/onsi/news/dodgers-linked-to-120-million-all-star-likely-to-hit-free-agency-this-offseason" target="_blank" rel="noopener">SI sobre Bregman</a>.</p>
-  </template>
 
   <section id="vagas" hidden>
     <div class="stack">
@@ -1622,13 +1612,12 @@ code.mbaf{font:calc(12px + var(--fz))/1.4 ui-monospace,Consolas,monospace;white-
       }).catch(function(e){body.innerHTML="";body.appendChild(failed(load,e))})}
     load();return p}
 
-  function mercado(){
-    var f=document.getElementById("tpl-mercado").content.cloneNode(true);
-    var box=h("div",null,f);hydrateSoc(box);return box}
+  /* mercado de inverno dos Dodgers: direto das transações oficiais da MLB (contratações, trocas, dispensas), sem curadoria manual */
+  function mercadoDodgers(){var hj=new Date();return txPanel("Mercado de inverno","/transactions?teamId="+DODGERS+"&startDate="+ymd(addDays(hj,-60))+"&endDate="+ymd(hj),{sub:"Contratações, trocas e dispensas dos últimos 60 dias, direto da MLB. Atualiza sozinho."})}
   function rumorPanel(){
     var p=panel("Rumores");
     p.appendChild(h("h3",{class:"dayh"},img(logoUrl(DODGERS),"lg sm"),"Dodgers no mercado de inverno"));
-    p.appendChild(mercado());
+    p.appendChild(h("p",null,h("a",{class:"link",href:"#esportes/beisebol/dodgers",text:"Movimentações oficiais dos últimos 60 dias, na página dos Dodgers"})," · ",ext("https://www.mlbtraderumors.com/los-angeles-dodgers","Rumores no MLB Trade Rumors")));
     p.appendChild(h("h3",{class:"dayh",text:"Onde acompanhar a liga toda"}));
     p.appendChild(h("ul",{class:"clean"},
       [["MLB Trade Rumors: tudo sobre trocas e contratos","https://www.mlbtraderumors.com/"],
@@ -1788,7 +1777,7 @@ code.mbaf{font:calc(12px + var(--fz))/1.4 ui-monospace,Consolas,monospace;white-
   /* ---- Dodgers ---- */
   function viewDodgers(root){
     root.appendChild(dodgersBanner([["Elenco e estatísticas","#esportes/beisebol/time-"+DODGERS],["@Dodgers no X","https://x.com/Dodgers"],["Instagram","https://www.instagram.com/dodgers/"]]));
-    var mp=panel("Mercado de inverno");mp.appendChild(mercado());root.appendChild(mp);
+    root.appendChild(mercadoDodgers());
     root.appendChild(section("Últimos jogos dos Dodgers",null,function(body){
       return dodgersGames(6).then(function(fin){body.innerHTML="";
         if(!fin.length){body.appendChild(h("p",{class:"empty",text:"Sem jogos recentes."}));return}

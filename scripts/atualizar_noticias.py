@@ -6,6 +6,7 @@ Fica só o que é das últimas 48 horas, sem repetir manchete. Usa apenas a bibl
 import gzip
 import json
 import re
+import sys
 import urllib.request
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
@@ -33,12 +34,13 @@ def chave(titulo):
 
 def main():
     agora = datetime.now(timezone.utc)
-    vistos, saida = set(), []
+    vistos, saida, falhas = set(), [], []
     for nome, url in FONTES:
         try:
             raiz = ElementTree.fromstring(baixar(url))
         except Exception as e:  # uma fonte fora do ar não derruba a outra
             print("falhou", nome, e)
+            falhas.append(nome)
             continue
         for item in raiz.iter("item"):
             titulo = (item.findtext("title") or "").strip()
@@ -70,6 +72,10 @@ def main():
             vistos.add(k)
             saida.append({"t": titulo, "u": link, "f": fonte, "d": data.astimezone(timezone.utc).isoformat()})
     saida.sort(key=lambda x: x["d"], reverse=True)
+    # todas as fontes fora do ar ou nenhuma notícia: o robô falha de propósito, e o GitHub avisa por e-mail
+    if len(falhas) == len(FONTES) or not saida:
+        print("ALERTA: nenhuma notícia coletada (fontes com falha: %s)" % (", ".join(falhas) or "nenhuma"), file=sys.stderr)
+        sys.exit(1)
     # sem notícia nova o arquivo fica igual, para o robô não gravar uma versão nova à toa
     try:
         with open("noticias.json", encoding="utf-8") as f:

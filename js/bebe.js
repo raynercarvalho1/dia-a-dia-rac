@@ -130,6 +130,65 @@
       /* carta do mês: quando o mês termina, um rascunho com os números e as fotos dele, para editar e guardar na cápsula */
       if(mesDe(hojeISO())>m&&!cartas.some(function(c){return (c.dados||{}).mes===m}))p.appendChild(bebeCartaBtn(quem,nasc,m,l,dm,peso,urls));
       box.appendChild(p)})}
+  /* ===== Caderneta: a caderneta de saúde inteira num lugar só (capa, Olá mundo, pezinhos, parto e alta, documentos, vacinas, medidas, consultas e as páginas) ===== */
+  function bebeCaderneta(box,quem,regs,urls){
+    var cad=regs.filter(function(r){return dadosDe(r).caderneta===true})[0],nasc=regs.filter(function(r){return r.tipo==="nascimento"})[0],nd=nasc?dadosDe(nasc).nasc||{}:{},fi=cad?dadosDe(cad).ficha||{}:{};
+    function urlDe(r,nome){var a=((r||{}).arquivos||[]).filter(function(x){return !nome||x.nome===nome})[0];return a&&urls[a.path]}
+    function foto(u,cls,alt){return u?h("a",{href:u,target:"_blank",rel:"noopener",class:cls},h("img",{src:u,alt:alt||"",loading:"lazy"})):null}
+    if(!cad&&!nasc){box.appendChild(h("div",{class:"panel"},h("p",{class:"empty",text:"Importe a caderneta (Importar histórico → olivia-caderneta.json e as fotos) para montar esta página."})));return}
+    /* capa e "Olá, mundo!" */
+    var capa=cad&&urlDe(cad,dadosDe(cad).capa),ola=h("div",{class:"panel cadola"});
+    var dn=nasc?new Date(nasc.data+"T12:00:00"):null,meses=0,dias=0;
+    /* idade em meses de calendário + dias (30/05 → 29/10 = 4 meses e 29 dias) */
+    if(dn){var hj=new Date(hojeISO()+"T12:00:00");meses=(hj.getFullYear()-dn.getFullYear())*12+hj.getMonth()-dn.getMonth();if(hj.getDate()<dn.getDate())meses--;
+      var base=new Date(dn);base.setMonth(base.getMonth()+meses);dias=Math.round((hj-base)/864e5)}
+    ola.appendChild(h("div",{class:"cadolagrid"},capa?foto(capa,"cadcapa","Capa da caderneta"):null,h("div",null,
+      h("p",{class:"cadoi",text:"Olá, mundo!"}),h("h2",{class:"cadnome",text:fi["Nome completo"]||"Olívia"}),
+      h("ul",{class:"cadfatos"},[["📅","Nasceu em",dn?dn.toLocaleDateString("pt-BR",{day:"numeric",month:"long",year:"numeric"})+(nd.hora?" às "+nd.hora:""):"—"],["🏥","No",nd.hospital||(nasc&&nasc.valor)||"—"],
+        ["⚖️","Pesando",nd.peso?(nd.peso/1000).toLocaleString("pt-BR",{minimumFractionDigits:3})+" kg":"—"],["📏","Medindo",nd.comprimento?fmtN(nd.comprimento)+" cm":"—"],["🧠","Cabeça",nd.cabeca?fmtN(nd.cabeca)+" cm":"—"],["💗","Apgar",nd.apgar1?nd.apgar1+" e "+nd.apgar5:"—"],
+        ["🎂","Hoje tem",meses+(meses===1?" mês":" meses")+" e "+dias+(dias===1?" dia":" dias")]].map(function(x){return h("li",null,h("span",{class:"cadico",text:x[0]}),h("span",{class:"sub",text:x[1]}),h("b",{text:x[2]}))})))));
+    box.appendChild(ola);
+    /* pezinhos */
+    var pes=regs.filter(function(r){return r.tipo==="momento"&&/pezinho/i.test(r.titulo)})[0],upes=urlDe(pes);
+    if(upes){var pp=panel("Meus pezinhos",dn?"Carimbados no dia em que ela nasceu, "+dataBR(nasc.data)+".":null);pp.appendChild(foto(upes,"cadpes","Pezinhos da Olívia"));box.appendChild(pp)}
+    /* parto, internação e alta */
+    if(nd.prenatal||nd.internacao||nd.alta){var pa=panel("Pré-natal, parto e alta","Da caderneta.");
+      pa.appendChild(h("ul",{class:"wl cadtxt"},[["Pré-natal",nd.prenatal],["Ao nascer",nd.diagnosticos],["Internação",nd.internacao],["Alta",nd.alta?dataBR(nd.alta)+(nd.pesoAlta?" · "+fmtN(nd.pesoAlta/1000)+" kg":"")+(nd.comprimentoAlta?" · "+fmtN(nd.comprimentoAlta)+" cm":""):""]]
+        .filter(function(x){return x[1]}).map(function(x){return h("li",null,h("span",{class:"grow"},h("b",{text:x[0]}),h("span",{class:"sub",text:x[1]})))})));box.appendChild(pa)}
+    /* documentos: os números ficam escondidos até tocar em Mostrar */
+    var chaves=Object.keys(fi);
+    if(chaves.length){var pd=panel("Documentos e contatos","Os números aparecem só quando você tocar em Mostrar."),ul=h("ul",{class:"wl cadficha cadtxt"}),aberto=false,bt=h("button",{type:"button",class:"ghostbtn",text:"Mostrar os números"});
+      /* escondidos: números de documentos e telefone (ficam só os 4 últimos dígitos) e o endereço */
+      function mascara(k,v){if(/endere/i.test(k))return "•••••• (toque em Mostrar)";return /dnv|sus|sis|telefone/i.test(k)?String(v).replace(/\d(?=(?:\D*\d){4})/g,"•"):v}
+      function desenhaFicha(){ul.innerHTML="";chaves.forEach(function(k){var v=fi[k];ul.appendChild(h("li",null,h("span",{class:"grow"},h("span",{class:"sub",text:k}),h("b",{text:aberto?v:mascara(k,v)}))))});bt.textContent=aberto?"Esconder os números":"Mostrar os números"}
+      bt.onclick=function(){aberto=!aberto;desenhaFicha()};pd.appendChild(h("div",{class:"vfil"},bt));pd.appendChild(ul);desenhaFicha();box.appendChild(pd)}
+    /* vacinas */
+    var vs=regs.filter(function(r){return r.tipo==="vacina"}).sort(function(a,b){return a.data.localeCompare(b.data)}),prox=vs.filter(function(r){return r.proxima&&r.proxima>=hojeISO()}).map(function(r){return r.proxima}).sort()[0];
+    if(vs.length){var pv=panel("Vacinas",vs.filter(function(r){return !r.proxima}).length+" doses registradas"+(prox?" · próxima ida ao posto: "+dataBR(prox):""));
+      var tb=h("table",{class:"famtab"});tb.appendChild(h("thead",null,h("tr",null,["Data","Vacina","Dose","Onde","Lote"].map(function(c){return h("th",{text:c})}))));
+      tb.appendChild(h("tbody",null,vs.filter(function(r){return !r.proxima}).map(function(r){var d=dadosDe(r);return h("tr",null,h("td",{text:dataBR(r.data)}),h("td",null,h("b",{text:r.titulo.replace(/ · .*$/,"")})),h("td",{text:r.valor||""}),h("td",{text:d.clinica||""}),h("td",{text:d.lote||""}))})));
+      pv.appendChild(h("div",{class:"famtabw"},tb));
+      var cal=h("button",{type:"button",class:"ghostbtn",text:"Ver o calendário do SUS (o que falta)"});cal.onclick=function(){famVista[quem]="crescimento";renderFamilia(quem)};pv.appendChild(h("div",{class:"vfil"},cal));box.appendChild(pv)}
+    /* medidas: peso, comprimento, cabeça e ganho por dia */
+    var ps=regs.filter(function(r){return r.tipo==="peso"&&pesoNum(r)}).sort(function(a,b){return a.data.localeCompare(b.data)});
+    if(ps.length){var pm=panel("Medidas",ps.length+" medições, do nascimento até hoje"),tm=h("table",{class:"famtab"});
+      tm.appendChild(h("thead",null,h("tr",null,["Data","Idade","Peso","Comprimento","Cabeça","Ganho por dia"].map(function(c){return h("th",{text:c})}))));
+      tm.appendChild(h("tbody",null,ps.slice().reverse().map(function(r,i,l){var d=dadosDe(r),ant=l[i+1],dd=dn?Math.round((new Date(r.data+"T12:00:00")-dn)/864e5):null,mm=dd!=null?Math.floor(dd/30.4375):null;
+        var ganho=ant?Math.round((pesoNum(r)-pesoNum(ant))*1000/Math.max(1,(new Date(r.data)-new Date(ant.data))/864e5)):null;
+        return h("tr",null,h("td",{text:dataBR(r.data)}),h("td",{text:dd==null?"":mm?mm+"m "+Math.round(dd-mm*30.4375)+"d":dd+" dias"}),h("td",null,h("b",{text:fmtN(pesoNum(r))+" kg"})),h("td",{text:d.altura?fmtN(d.altura)+" cm":"—"}),h("td",{text:d.cabeca?fmtN(d.cabeca)+" cm":"—"}),h("td",{class:ganho!=null&&ganho<15?"cadbaixo":null,text:ganho==null?"—":(ganho>0?"+":"")+ganho+" g"}))})));
+      pm.appendChild(h("div",{class:"famtabw"},tm));box.appendChild(pm)}
+    /* consultas */
+    var cs=regs.filter(function(r){return r.tipo==="consulta"}).sort(function(a,b){return b.data.localeCompare(a.data)});
+    if(cs.length){var pc=panel("Consultas",cs.length+" consultas");pc.appendChild(h("ul",{class:"wl cadtxt"},cs.map(function(r){var d=dadosDe(r);
+      return h("li",null,h("span",{class:"grow"},h("b",{text:dataBR(r.data)+" · "+r.titulo+(r.valor&&r.titulo.indexOf(r.valor)<0?" — "+r.valor:"")}),h("span",{class:"sub",text:[r.detalhes,d.notasCaderneta].filter(Boolean).join(" ")})))})));box.appendChild(pc)}
+    /* as páginas da caderneta, em miniaturas que abrem em tamanho grande */
+    var pgs=(cad&&cad.arquivos||[]).filter(function(a){return /^image\//.test(a.tipo)&&urls[a.path]});
+    if(pgs.length){var pg=panel("Páginas da caderneta","Toque numa página para ver em tamanho grande.");
+      pg.appendChild(h("div",{class:"cadpags"},pgs.map(function(a){return h("a",{href:urls[a.path],target:"_blank",rel:"noopener",title:a.nome},h("img",{src:urls[a.path],alt:a.nome,loading:"lazy"}),h("span",{text:cadRotulo(a.nome)}))})));box.appendChild(pg)}}
+  /* nome do arquivo → rótulo bonito ("2026-07-07 Caderneta - consulta do 1o mes.jpg" → "Consulta do 1º mês") */
+  var CAD_ACENTO={ola:"olá",identificacao:"identificação",cartao:"cartão","pre-natal":"pré-natal",mes:"mês",ate:"até",apos:"após",triagens:"triagens"};
+  function cadRotulo(n){var t=String(n).replace(/^\d{4}-\d{2}-\d{2} (Caderneta - )?/,"").replace(/\.\w+$/,"").replace(/\b(\d)o\b/g,"$1º").replace(/\b(\d)a\b/g,"$1ª")
+    .split(" ").map(function(w){return CAD_ACENTO[w]||w}).join(" ");return t.charAt(0).toUpperCase()+t.slice(1)}
   function bebeMesData(nasc,m){var d=new Date(nasc+"T12:00:00");d.setMonth(d.getMonth()+m);return d.toISOString().slice(0,10)}
   function bebeCartaBtn(quem,nasc,m,l,dm,peso,urls){
     var w=h("div",{class:"stack"}),b=h("button",{type:"button",class:"ghostbtn pri",text:"✉️ Escrever a carta do "+(m===0?"primeiro":(m+1)+"º")+" mês"});w.appendChild(b);

@@ -443,7 +443,7 @@
       if(!regs.length){root.appendChild(h("div",{class:"panel"},h("p",{class:"empty",text:F.docs?"Nada guardado ainda. Toque em “Adicionar registro” para guardar o primeiro documento, garantia ou nota fiscal (com foto ou PDF e a validade).":"Nada registrado ainda. Toque em “Adicionar registro” para lançar o primeiro exame, vacina ou foto, ou em “Importar histórico”."})));return}
       /* quatro jeitos de ver: resumo, exames, remédios e a linha do tempo completa */
       var temSaude=ehVeic(quem)||F.bebe||regs.some(function(r){var d=dadosDe(r);return d.laudo||d.orgaos||d.meds});
-      var vistas=ehVeic(quem)?[["resumo","Resumo"],["linha","Linha do tempo"]]:F.bebe?[["resumo","Resumo"],["diadia","Dia a dia"],["crescimento","Crescimento e vacinas"],["meses","Mês a mês"],["exames","Exames"],["remedios","Remédios"],["linha","Linha do tempo"]]:[["resumo","Resumo"],["exames","Exames"],["remedios","Remédios"],["linha","Linha do tempo"]];
+      var vistas=ehVeic(quem)?[["resumo","Resumo"],["linha","Linha do tempo"]]:F.bebe?[["resumo","Resumo"],["caderneta","Caderneta"],["diadia","Dia a dia"],["crescimento","Crescimento e vacinas"],["meses","Mês a mês"],["exames","Exames"],["remedios","Remédios"],["linha","Linha do tempo"]]:[["resumo","Resumo"],["exames","Exames"],["remedios","Remédios"],["linha","Linha do tempo"]];
       if(!temSaude)famVista[quem]="linha";
       var vista=famVista[quem],seg=h("div",{class:"seg famseg famvista",role:"group","aria-label":"Ver"});
       if(temSaude){vistas.forEach(function(v){var b=h("button",{type:"button","aria-pressed":vista===v[0]?"true":"false",text:v[1]});b.onclick=function(){famVista[quem]=v[0];desenhar(regs,urls)};seg.appendChild(b)});root.appendChild(seg)}
@@ -494,8 +494,8 @@
         cards(regs.filter(function(r){return r.tipo==="exame"||r.tipo==="pedido"}),box);irAoAlvo();return}
       if(vista==="remedios"){var t=famTratamentos(regs);if(t)box.appendChild(t);return}
       /* bebê: diário do Napper, curvas da OMS e vacinas, e mês a mês (módulo js/bebe.js, carregado aqui) */
-      if(/^(diadia|crescimento|meses)$/.test(vista)){box.appendChild(h("p",{class:"sub",text:"Carregando…"}));precisa(["bebe"]).then(function(){box.innerHTML="";
-        if(vista==="diadia")bebeDiaDia(box,quem);else if(vista==="crescimento")bebeCrescimento(box,quem,regs);else{(BEBE.evs?Promise.resolve():bebeCarregar(quem).catch(function(){})).then(function(){bebeMeses(box,quem,regs,urls)})}})
+      if(/^(diadia|crescimento|meses|caderneta)$/.test(vista)){box.appendChild(h("p",{class:"sub",text:"Carregando…"}));precisa(["bebe"]).then(function(){box.innerHTML="";
+        if(vista==="caderneta")bebeCaderneta(box,quem,regs,urls);else if(vista==="diadia")bebeDiaDia(box,quem);else if(vista==="crescimento")bebeCrescimento(box,quem,regs);else{(BEBE.evs?Promise.resolve():bebeCarregar(quem).catch(function(){})).then(function(){bebeMeses(box,quem,regs,urls)})}})
         .catch(function(e){box.innerHTML="";box.appendChild(h("p",{class:"empty",text:"Não consegui abrir ("+e.message+")."}))});return}
       /* linha do tempo: filtro por tipo */
       var usados=tiposDe(quem).filter(function(t){return regs.some(function(r){return r.tipo===t[0]})});

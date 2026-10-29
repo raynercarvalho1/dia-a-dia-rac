@@ -24,7 +24,7 @@
     n.id="pico";$("#pico").replaceWith(n);
     $("#ptitle").textContent=hit?hit.querySelector(".t").textContent:"Dia a Dia RAC"}
   /* ===== Módulos: cada seção grande fica em js/<seção>.js e só carrega quando é aberta ===== */
-  var MOD_VERSAO="2026-10-29.14",MODULOS={},MOD_OK={};
+  var MOD_VERSAO="2026-10-29.16",MODULOS={},MOD_OK={};
   var MOD_DEPS={conexoes:["mba"],sistema:["familia","mba","saude"],carreira:["sistema"],bebe:["familia","oms"],resumo:["saude","mba","familia"]};
   var ROTA_MODS={esportes:["esportes"],eddie:["familia"],olivia:["familia"],veiculos:["familia"],mba:["mba"],saude:["saude"],
     conexoes:["conexoes"],agenda:["sistema"],busca:["sistema"],sistema:["sistema"],lista:["lista"],carreira:["carreira"],documentos:["familia"],resumo:["resumo"],rede:["rede"]};
@@ -188,13 +188,17 @@
     {k:"oficiais",n:"Oficiais",c:"#0E7C86",h:["TSEjusbr"]},
     {k:"beisebol",n:"Beisebol",c:"#0B9A4B",h:["KutterIsKing","DMAC_LA"]},
     {k:"politicos",n:"Políticos",c:"#7A3FE0",h:["AndreJanonesMG","jonesmanoel_PE","ErikakHilton"]}];
-  /* Links das Listas do X por categoria. Quando criar uma lista no X, cole o link aqui, ex.: amigos:"https://x.com/i/lists/123" */
+  /* As listas acima são o ponto de partida; o que você editar fica na sua conta (PESSOAL["x-perfis"]) e vale no lugar delas.
+     Os links das Listas do X de cada categoria ficam em PESSOAL["x-listas"] {categoria: "https://x.com/i/lists/…"} */
+  XCATS.forEach(function(c){c.padrao=c.h.slice()});
   var XLISTS={};
   var AMIGOSLS="rac-x-amigos";
   function lerAmigos(){return PESSOAL["x-amigos"]||[]}
   /* Categorias que quem está vendo pode ver */
-  function xCats(){var own=isOwner();
-    return XCATS.filter(function(c){if(c.priv){c.h=own?lerAmigos():[];return own}return true})}
+  function xCats(){var own=isOwner(),ed=PESSOAL["x-perfis"]||{};XLISTS=PESSOAL["x-listas"]||{};
+    return XCATS.filter(function(c){if(c.priv){c.h=own?lerAmigos():[];return own}c.h=Array.isArray(ed[c.k])?ed[c.k]:c.padrao;return true})}
+  /* "@fulano, https://x.com/ciclano" → ["fulano","ciclano"] */
+  function xHandles(t){return String(t||"").split(/[\s,;]+/).map(function(x){return x.replace(/^https?:\/\/(www\.)?(x|twitter)\.com\//i,"").replace(/[/?#].*$/,"").replace(/^@/,"").replace(/[^A-Za-z0-9_]/g,"")}).filter(function(x){return x&&x.length<=15})}
   function x36(handles){
     var since=Math.floor(Date.now()/1000)-36*3600;
     return "https://x.com/search?q="+encodeURIComponent("("+handles.map(function(x){return "from:"+x}).join(" OR ")+") since_time:"+since)+"&src=typed_query&f=live"}
@@ -229,35 +233,43 @@
   function renderX(cat){
     var root=$("#x-view");root.innerHTML="";
     if(!cat){
-      var how=panel("Como funciona");
-      how.appendChild(h("ul",{class:"how"},
-        h("li",null,h("b",{text:"Posts das últimas 36h: "}),"abre a busca do X em “Mais recentes”, só com os perfis da categoria e só das últimas 36 horas, do mais novo para o mais antigo."),
-        h("li",null,h("b",{text:"Curtir, responder e repostar: "}),"cada post aberto no X já tem esses botões, e a ação sai da sua conta. Contas privadas aparecem se você as segue."),
-        h("li",null,h("b",{text:"Listas do X: "}),"crie uma lista para cada categoria no X e me mande o link. Aí o botão “Abrir a lista no X” aparece aqui.")));
-      root.appendChild(how);
       xCats().forEach(function(c){root.appendChild(xCatHead(c,true))});
       return}
     var c=xCats().filter(function(x){return x.k===cat})[0];
     root.appendChild(xCatHead(c,false));
-    if(c.priv)root.appendChild(editarAmigos(c));
+    if(isOwner())root.appendChild(editarPerfis(c));
     root.appendChild(h("div",{class:"xgrid"},c.h.map(function(x){
       return h("div",{class:"panel xp"},avatar(x,"av big"),h("b",{text:"@"+x}),
         h("div",{class:"xacts"},x36link([x],"Últimas 36h","pri"),ext("https://x.com/"+x,"Perfil",""),ext("https://x.com/intent/post?text="+encodeURIComponent("@"+x+" "),"Mencionar","")))})));
-    if(!XLISTS[c.k]&&!c.priv)root.appendChild(h("p",{class:"foot",text:"Ainda não há lista no X para "+c.n+". Crie a lista no X com estes perfis e me mande o link para eu colocar o botão aqui."}))}
-  /* Editor dos perfis de Amigos: ficam na sua conta (e numa cópia neste aparelho), nunca no código */
-  function editarAmigos(c){
-    var p=panel("Só você vê esta categoria","Os perfis ficam guardados na sua conta, nunca no código do site.");
-    var inp=h("input",{type:"text",value:c.h.map(function(x){return "@"+x}).join(", "),placeholder:"@perfil1, @perfil2",autocomplete:"off","aria-label":"Perfis dos amigos"});
-    var b=h("button",{type:"button",text:"Salvar perfis"});
-    b.onclick=function(){
-      var l=inp.value.split(/[\s,;]+/).map(function(x){return x.replace(/^@/,"").replace(/^https?:\/\/(www\.)?(x|twitter)\.com\//i,"").replace(/[^A-Za-z0-9_]/g,"")}).filter(Boolean);
-      if(!l.length&&c.h.length&&!confirm("Apagar todos os perfis dos amigos?"))return;
-      b.disabled=true;msg.textContent="Salvando…";
-      pessoalGravar("x-amigos",l,function(erro){
-        montarSideX();renderX("amigos");
-        var m=$("#x-view .amsg");if(m){m.textContent=erro||"Salvo na sua conta.";m.classList.toggle("erro",!!erro)}})};
+  }
+  /* Editor de qualquer categoria: tirar (×), adicionar um ou vários perfis, o link da Lista do X e voltar ao padrão.
+     Fica na sua conta (Amigos em "x-amigos", as outras em "x-perfis"), nunca no código do site. */
+  function editarPerfis(c){
+    var p=panel("Editar "+c.n,c.priv?"Só você vê esta categoria. Os perfis ficam na sua conta, nunca no código do site.":"Tire quem não quer mais acompanhar e adicione novos perfis. Fica salvo na sua conta.");
     var msg=h("p",{class:"sub amsg",role:"status"});
-    p.appendChild(h("div",{class:"vfil"},inp,b));p.appendChild(msg);
+    function gravar(l,txt){l=l.filter(function(x,i){return l.map(function(y){return y.toLowerCase()}).indexOf(x.toLowerCase())===i});
+      var fim=function(erro){montarSideX();renderX(c.k);var m=$("#x-view .amsg");if(m){m.textContent=erro||txt;m.classList.toggle("erro",!!erro)}};
+      if(c.priv)pessoalGravar("x-amigos",l,fim);else{var o=Object.assign({},PESSOAL["x-perfis"]||{});o[c.k]=l;pessoalGravar("x-perfis",o,fim)}}
+    var chips=h("div",{class:"xchips"});
+    c.h.forEach(function(x){var rm=h("button",{type:"button","aria-label":"Tirar @"+x,title:"Tirar @"+x,text:"×"});
+      rm.onclick=function(){gravar(c.h.filter(function(y){return y!==x}),"@"+x+" saiu de "+c.n+".")};chips.appendChild(h("span",{class:"xchip"},"@"+x,rm))});
+    if(!c.h.length)chips.appendChild(h("span",{class:"sub",text:"Nenhum perfil nesta categoria."}));
+    p.appendChild(chips);
+    var inp=h("input",{type:"text",placeholder:"@perfil ou link do perfil (pode colar vários)",autocomplete:"off","aria-label":"Perfis para adicionar"}),add=h("button",{type:"button",text:"Adicionar"});
+    function adicionar(){var n=xHandles(inp.value).filter(function(x){return c.h.map(function(y){return y.toLowerCase()}).indexOf(x.toLowerCase())<0});
+      if(!n.length){msg.textContent=inp.value.trim()?"Esses perfis já estão na lista (ou o nome não é válido).":"Digite um @perfil.";inp.focus();return}
+      gravar(c.h.concat(n),n.map(function(x){return "@"+x}).join(", ")+(n.length===1?" entrou em ":" entraram em ")+c.n+".")}
+    add.onclick=adicionar;inp.addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();adicionar()}});
+    p.appendChild(h("div",{class:"listaadd"},inp,add));
+    /* link da Lista do X desta categoria */
+    var lk=h("input",{type:"url",value:XLISTS[c.k]||"",placeholder:"https://x.com/i/lists/… (opcional)","aria-label":"Link da lista no X"}),slk=h("button",{type:"button",class:"ghostbtn",text:"Salvar link da lista"});
+    slk.onclick=function(){var v=lk.value.trim();if(v&&!/^https:\/\/(x|twitter)\.com\/i\/lists\/\d+/.test(v)){msg.textContent="O link precisa ser de uma lista do X (https://x.com/i/lists/…).";return}
+      var o=Object.assign({},PESSOAL["x-listas"]||{});if(v)o[c.k]=v;else delete o[c.k];pessoalGravar("x-listas",o,function(erro){renderX(c.k);var m=$("#x-view .amsg");if(m)m.textContent=erro||(v?"Link da lista salvo.":"Link da lista removido.")})};
+    p.appendChild(h("details",{class:"famvals"},h("summary",{text:"Lista do X desta categoria"}),h("div",{class:"listaadd"},lk,slk),h("p",{class:"sub",text:"Com o link, aparece o botão \"Abrir a lista no X\". Sem ele, \"Posts das últimas 36h\" já mostra tudo de quem está aqui."})));
+    if(!c.priv&&(PESSOAL["x-perfis"]||{})[c.k]){var pad=h("button",{type:"button",class:"ghostbtn",text:"Voltar à lista padrão"});
+      pad.onclick=function(){if(!confirm("Voltar "+c.n+" para a lista padrão do site?"))return;var o=Object.assign({},PESSOAL["x-perfis"]||{});delete o[c.k];pessoalGravar("x-perfis",o,function(){montarSideX();renderX(c.k)})};
+      p.appendChild(h("div",{class:"vfil"},pad))}
+    p.appendChild(msg);
     return p}
   /* Categorias do X na barra lateral; refeito quando a senha é digitada ou o acesso é travado */
   function montarSideX(){
@@ -1052,7 +1064,7 @@
   /* o que ficou pendente sobe quando a internet volta e a cada 5 minutos */
   function reenviarPendentes(){processarFila();if(!SB||!isOwner()||SEM_TABELA)return;pendentes().forEach(function(ch){if(ch.indexOf("fila: ")===0)return;var cp=copiaLer(ch);if(cp)pessoalGravar(ch,cp.v)})}
   window.addEventListener("online",reenviarPendentes);setInterval(reenviarPendentes,5*60e3);
-  var NOMES_CHAVE={mba:"MBA",mbaFeito:"MBA (o que já foi feito)",mbaLinks:"Links das aulas",aniversarios:"Aniversários","x-amigos":"Amigos do X",projetos:"Projetos",salvos:"Guardados",lembretes:"Lembretes",exercicios:"Estudos",emails:"E-mails",googleMaps:"Chave do Google Maps",ultimoBackup:"Último backup"};
+  var NOMES_CHAVE={mba:"MBA",mbaFeito:"MBA (o que já foi feito)",mbaLinks:"Links das aulas",aniversarios:"Aniversários","x-amigos":"Amigos do X","x-perfis":"Perfis no X","x-listas":"Listas do X",projetos:"Projetos",salvos:"Guardados",lembretes:"Lembretes",exercicios:"Estudos",emails:"E-mails",googleMaps:"Chave do Google Maps",ultimoBackup:"Último backup"};
   function resumoValor(v){if(Array.isArray(v))return v.length+(v.length===1?" item":" itens");if(v&&typeof v==="object")return Object.keys(v).length+" campos";return String(v).slice(0,40)}
 
 

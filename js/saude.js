@@ -93,7 +93,12 @@
       var serie=dias.slice(-14).map(function(x){var q=NUCLEO.prontidao(dias,x.data);return [x.data,q&&q.nota]});
       p.appendChild(h("div",{class:"prontw"},h("div",{class:"pronto",style:"--c:"+cor},h("b",{text:String(pr.nota)}),h("span",{text:pr.rotulo})),
         h("div",{class:"prontp"},itens.map(function(i){return h("div",{class:"prontl"},h("span",{class:"kl",text:i[0]}),h("i",{class:"prontb"},h("i",{style:"width:"+i[3]+"%"})),h("span",{class:"sub",text:i[1]+(i[2]?" · "+i[2]:"")}))}))));
-      p.appendChild(h("div",{class:"prontserie",title:"Prontidão dos últimos 14 dias"},serie.map(function(x){return h("i",{title:dataBR(x[0])+": "+(x[1]==null?"sem dado":x[1]),style:"height:"+(x[1]||2)+"%;background:"+(x[1]==null?"var(--line)":x[1]>=70?"#1a8a4a":x[1]>=45?"#E8A317":"#D6283B")})})));
+      /* cada barra com o valor em cima e o dia embaixo, sempre visíveis */
+      p.appendChild(h("p",{class:"kl",text:"Prontidão dos últimos 14 dias"}));
+      p.appendChild(h("div",{class:"prontserie"},serie.map(function(x){var dt=new Date(x[0]+"T12:00:00");
+        return h("div",{class:"pcol",title:dataBR(x[0])+": "+(x[1]==null?"sem dado":x[1])},h("span",{class:"pv",text:x[1]==null?"–":String(x[1])}),
+          h("span",{class:"pbar"},h("i",{style:"height:"+(x[1]||2)+"%;background:"+(x[1]==null?"var(--line)":x[1]>=70?"#1a8a4a":x[1]>=45?"#E8A317":"#D6283B")})),
+          h("span",{class:"pd",text:dt.toLocaleDateString("pt-BR",{weekday:"narrow"}).toUpperCase()+" "+x[0].slice(8,10)}))})));
       if(pr.alertas.length)p.appendChild(h("ul",{class:"wl"},pr.alertas.map(function(t){return h("li",{class:"qrwarn"},h("span",{class:"grow",text:"⚠ "+t}))})));
       var ins=saudeInsights(dias,ativs);
       if(ins.length){p.appendChild(h("h3",{class:"dayh",text:"O que os seus dados mostram"}));p.appendChild(h("ul",{class:"wl"},ins.map(function(t){return h("li",null,h("span",{class:"grow",text:t}))})))}

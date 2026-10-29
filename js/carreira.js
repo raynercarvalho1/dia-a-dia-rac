@@ -10,6 +10,8 @@
   function renderCarreira(sub,arg){
     var root=$("#carreira-view");root.innerHTML="";var aba=CAR_ABAS.some(function(a){return a[0]===sub})?sub:"funil";
     root.appendChild(h("div",{class:"seg famseg"},CAR_ABAS.map(function(a){return h("a",{href:"#carreira/"+a[0],"aria-pressed":String(a[0]===aba),text:a[1]})}).concat([h("a",{href:"#rede",text:"Rede (LinkedIn)"})])));
+    /* uma candidatura tem endereço próprio (#carreira/editar/<id>): o Voltar do topo e o do navegador funcionam */
+    if(sub==="editar"){var c=arg==="novo"?null:carCands().filter(function(k){return k.id===arg})[0];if(c||arg==="novo"){carEditar(c);return}}
     ({funil:carFunil,cv:carCv,compat:carCompat,star:carStar,sql:carSql,portfolio:carPortfolio})[aba](root,arg)}
 
   /* ---------- funil ---------- */
@@ -18,7 +20,7 @@
   function carFunil(root){
     var l=carCands(),meus=carMeus();
     var topo=panel("Funil de candidaturas","Salve vagas da página Vagas (ou cadastre aqui), avance pelas colunas e, 5 dias depois de se candidatar sem resposta, o follow-up aparece na Agenda.");
-    var nv=h("button",{type:"button",class:"ghostbtn pri",text:"+ Vaga de fora do portal"});nv.onclick=function(){carEditar(null)};
+    var nv=h("button",{type:"button",class:"ghostbtn pri",text:"+ Vaga de fora do portal"});nv.onclick=function(){location.hash="#carreira/editar/novo"};
     topo.appendChild(h("div",{class:"vfil"},nv,h("a",{href:"#vagas",class:"ghostbtn",text:"Ver vagas abertas"})));
     var tot=CAR_COLS.map(function(c){return c[1]+": "+l.filter(function(x){return x.coluna===c[0]}).length});topo.appendChild(h("p",{class:"sub",text:tot.join(" · ")}));
     root.appendChild(topo);
@@ -36,7 +38,7 @@
         var bt=h("div",{class:"vfil"});
         if(ci>0){var e=h("button",{type:"button",class:"ghostbtn",text:"◀"});e.onclick=function(){carMover(x.id,CAR_COLS[ci-1][0]);renderCarreira("funil")};bt.appendChild(e)}
         if(ci<CAR_COLS.length-1){var d=h("button",{type:"button",class:"ghostbtn",text:"▶ "+CAR_COLS[ci+1][1]});d.onclick=function(){carMover(x.id,CAR_COLS[ci+1][0]);renderCarreira("funil")};bt.appendChild(d)}
-        var ed=h("button",{type:"button",class:"ghostbtn",text:"Abrir"});ed.onclick=function(){carEditar(x)};bt.appendChild(ed);
+        var ed=h("button",{type:"button",class:"ghostbtn",text:"Abrir"});ed.onclick=function(){location.hash="#carreira/editar/"+x.id};bt.appendChild(ed);
         if(x.link)bt.appendChild(ext(x.link,"Vaga","ghostbtn"));
         k.appendChild(bt);c.appendChild(k)});
       kb.appendChild(c)});
@@ -99,6 +101,7 @@
   function carEditar(x){
     var root=$("#carreira-view");root.innerHTML="";var novo=!x;x=x||{id:"c"+Date.now().toString(36),coluna:"salva",datas:{salva:hojeISO()}};
     var p=panel(novo?"Nova candidatura":x.t,novo?null:[x.e,x.local,x.modalidade].filter(Boolean).join(" · ")),f=h("div",{class:"wform"});
+    var okTopo=h("button",{type:"button",text:"Salvar"}),fun=h("a",{href:"#carreira/funil",class:"ghostbtn",text:"‹ Funil"});p.appendChild(h("div",{class:"vfil"},fun,okTopo));
     function inp(tipo,val,ph){return h("input",{type:tipo,value:val||"",placeholder:ph||""})}
     function sec(t){f.appendChild(h("h3",{class:"mbag",text:t}))}
     /* a vaga */
@@ -154,15 +157,17 @@
       var hs=(PESSOAL.historias||[]).filter(function(s){var sk=NUCLEO.compatVaga([s.titulo,s.s,s.t,s.a,s.r,s.tags].join(" "),cp.pede).tem;return sk.length});
       if(hs.length)cpBox.appendChild(h("details",{class:"famvals",open:""},h("summary",{text:"Histórias STAR para esta vaga ("+hs.length+")"}),h("ul",{class:"wl"},hs.map(function(s){return h("li",null,h("span",{class:"grow"},h("b",{text:s.titulo}),h("span",{class:"sub",text:"R: "+(s.r||"")})))}))))}
     desc.addEventListener("input",atualizaCompat);t.addEventListener("input",atualizaCompat);atualizaCompat();
-    var ok=h("button",{type:"button",text:"Salvar"}),volta=h("a",{href:"#carreira/funil",class:"ghostbtn",text:"Voltar"}),del=novo?null:h("button",{type:"button",class:"ghostbtn",text:"Apagar"});
+    var ok=h("button",{type:"button",text:"Salvar"}),volta=h("button",{type:"button",class:"ghostbtn",text:"Voltar sem salvar"}),del=novo?null:h("button",{type:"button",class:"ghostbtn",text:"Apagar"});
+    volta.onclick=function(){location.hash="#carreira/funil"};
     ok.onclick=function(){if(!t.value.trim())return t.focus();var d=Object.assign({},x.datas||{});d[col.value]=d[col.value]||hojeISO();if(cand.value)d.candidatei=cand.value;
       var padrao=d.candidatei?maisDias(d.candidatei,5):"";
       var o=Object.assign({},x,{t:t.value.trim(),e:e.value.trim(),local:loc.value.trim()||undefined,modalidade:mod.value||undefined,salario:sal.value.trim()||undefined,publicada:pub.value||undefined,
         link:urlAbs(lk.value),coluna:col.value,resultado:res.value||null,etapa:et.value.trim()||undefined,versaoEnviada:ver.value||undefined,desc:desc.value.trim(),
         followupEm:fuEm.value&&fuEm.value!==padrao?fuEm.value:undefined,followup:fu.checked?(x.followup||hojeISO()):null,contatos:cont.value.trim()||undefined,interacoes:inter.length?inter:undefined,
         entrevista:anot.value.trim()||undefined,perguntas:perg.value.trim()||undefined,proximos:prox.value.trim()||undefined,notas:notas.value.trim(),datas:d});
-      var l=carCands().filter(function(c){return c.id!==x.id});l.unshift(o);carSalvar(l);location.hash="#carreira/funil";renderCarreira("funil")};
-    if(del){var arm=false;del.onclick=function(){if(!arm){arm=true;del.textContent="Toque de novo para apagar";return}carSalvar(carCands().filter(function(c){return c.id!==x.id}));renderCarreira("funil")}}
+      var l=carCands().filter(function(c){return c.id!==x.id});l.unshift(o);carSalvar(l);location.hash="#carreira/funil"};
+    if(del){var arm=false;del.onclick=function(){if(!arm){arm=true;del.textContent="Toque de novo para apagar";return}carSalvar(carCands().filter(function(c){return c.id!==x.id}));location.hash="#carreira/funil"}}
+    okTopo.onclick=function(){ok.onclick()};
     f.appendChild(h("div",{class:"vfil"},ok,volta,del));p.appendChild(f);root.appendChild(p);
     if(!novo)root.appendChild(carVersoesPainel(x,function(){return {t:t.value.trim(),e:e.value.trim(),desc:desc.value.trim()}}))}
 

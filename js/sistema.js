@@ -205,7 +205,7 @@
   function renderBusca(q){
     var root=$("#busca-view");root.innerHTML="";var inp=h("input",{type:"search",value:q||"",placeholder:"Busque em tudo: registros, treinos, MBA, vagas, notícias, produtos, datas…"});
     var p=panel("Busca"),box=h("div");p.appendChild(inp);p.appendChild(box);root.appendChild(p);
-    var tmr;function ir(){clearTimeout(tmr);tmr=setTimeout(function(){var v=inp.value.trim();history.replaceState(null,"","#busca/"+encodeURIComponent(v));box.innerHTML="";if(v.length<2)return;
+    var tmr;function ir(){clearTimeout(tmr);tmr=setTimeout(function(){var v=inp.value.trim();history.replaceState(history.state,"","#busca/"+encodeURIComponent(v));box.innerHTML="";if(v.length<2)return;
       box.appendChild(h("p",{class:"sub",text:"Procurando…"}));
       buscar(v).then(function(l){box.innerHTML="";if(!l.length){box.appendChild(h("p",{class:"empty",text:"Nada encontrado para “"+v+"”."}));return}
         var G={};l.forEach(function(x){(G[x.tipo]=G[x.tipo]||[]).push(x)});box.appendChild(h("p",{class:"sub",text:l.length+(l.length===1?" resultado":" resultados")}));

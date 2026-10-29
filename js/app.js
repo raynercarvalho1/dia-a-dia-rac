@@ -24,7 +24,7 @@
     n.id="pico";$("#pico").replaceWith(n);
     $("#ptitle").textContent=hit?hit.querySelector(".t").textContent:"Dia a Dia RAC"}
   /* ===== Módulos: cada seção grande fica em js/<seção>.js e só carrega quando é aberta ===== */
-  var MOD_VERSAO="2026-10-29.11",MODULOS={},MOD_OK={};
+  var MOD_VERSAO="2026-10-29.12",MODULOS={},MOD_OK={};
   var MOD_DEPS={conexoes:["mba"],sistema:["familia","mba","saude"],carreira:["sistema"],bebe:["familia","oms"],resumo:["saude","mba","familia"]};
   var ROTA_MODS={esportes:["esportes"],eddie:["familia"],olivia:["familia"],veiculos:["familia"],mba:["mba"],saude:["saude"],
     conexoes:["conexoes"],agenda:["sistema"],busca:["sistema"],sistema:["sistema"],lista:["lista"],carreira:["carreira"],documentos:["familia"],resumo:["resumo"],rede:["rede"]};
@@ -45,7 +45,7 @@
   function route(){
     if(!PAPEL)return;
     var parts=(location.hash||"").replace("#","").split("/");
-    if(parts[0]==="captura"){history.replaceState(null,"","#"+(isOwner()?"inicio":"lista"));setTimeout(function(){abrirCaptura()},300);parts=[isOwner()?"inicio":"lista"]}
+    if(parts[0]==="captura"){history.replaceState(history.state,"","#"+(isOwner()?"inicio":"lista"));setTimeout(function(){abrirCaptura()},300);parts=[isOwner()?"inicio":"lista"]}
     var top=tabs.indexOf(parts[0])<0?"inicio":parts[0];
     /* a esposa vê o Mercado, o Eddie, a Olivia e os Veículos; o resto leva ao Mercado */
     if(PAPEL==="casa"&&DA_CASA.indexOf(top)<0){top="mercado";parts=["mercado"]}
@@ -57,6 +57,9 @@
     if(top!=="eddie"&&top!=="olivia"&&top!=="veiculos")fundoPagina(null);
     /* voltar ao Início em todas as páginas (a esposa não tem o Início) */
     $("#homebtn").hidden=top==="inicio"||PAPEL==="casa";
+    /* Voltar no topo: volta pelo histórico quando ele é deste site; senão, sobe um nível (ex.: da candidatura para a Carreira) */
+    marcarProfundidade();VOLTAR_PAI=parts.length>1&&parts[1]?"#"+parts[0]:(top==="inicio"?"":PAPEL==="casa"?"":"#inicio");
+    $("#voltarbtn").hidden=!(PROF>0||VOLTAR_PAI);
     setSide(false);
     window.scrollTo(0,0);
     if(top==="x"){var cat=xCats().some(function(c){return c.k===parts[1]})?parts[1]:"";sideMark(cat?"x/"+cat:"x","x");renderX(cat);return}
@@ -89,6 +92,10 @@
     else renderEspn(sp==="basquete"?"nba":"nfl",v)
   }
   window.addEventListener("hashchange",route);
+  /* profundidade da navegação dentro do site, guardada no próprio histórico: o Voltar só usa o histórico se for daqui */
+  var PROF=-1,VOLTAR_PAI="";
+  function marcarProfundidade(){var st=history.state;if(st&&typeof st.racD==="number")PROF=st.racD;else{PROF=PROF+1;try{history.replaceState({racD:PROF},"")}catch(e){}}}
+  $("#voltarbtn").addEventListener("click",function(){if(PROF>0)history.back();else if(VOLTAR_PAI)location.hash=VOLTAR_PAI});
 
   /* Barra lateral: no celular ela desliza por cima do conteúdo */
   var app=$("#app");
@@ -461,7 +468,7 @@
     f.onsubmit=function(e){e.preventDefault();
       if(p1.value.length<8){m.textContent="Use pelo menos 8 caracteres.";return}if(p1.value!==p2.value){m.textContent="As duas senhas estão diferentes.";return}
       b.disabled=true;m.textContent="Salvando…";
-      SB.auth.updateUser({password:p1.value}).then(function(r){if(r.error)throw r.error;m.textContent="✓ Senha nova salva. Entrando…";RECUPERAR=false;history.replaceState(null,"",location.pathname+"#inicio");
+      SB.auth.updateUser({password:p1.value}).then(function(r){if(r.error)throw r.error;m.textContent="✓ Senha nova salva. Entrando…";RECUPERAR=false;history.replaceState(history.state,"",location.pathname+"#inicio");
         setTimeout(function(){f.remove();$("#gate-form").hidden=false;entrar()},900)}).catch(function(e){b.disabled=false;m.textContent="Não consegui salvar: "+(e.message||e)})};
     $("#gate").appendChild(f);setTimeout(function(){p1.focus()},50)}
   $("#gate-esqueci").addEventListener("click",function(){
@@ -1118,7 +1125,7 @@
   /* compartilhado de outro app para o RAC (PWA instalado): link vira "Guardar link"; texto vira itens da lista */
   function capturaCompartilhada(){
     var q=new URLSearchParams(location.search),link=q.get("link")||"",texto=q.get("texto")||"",titulo=q.get("titulo")||"";if(!link&&!texto&&!titulo)return;
-    history.replaceState(null,"",location.pathname+location.hash);
+    history.replaceState(history.state,"",location.pathname+location.hash);
     var m=/https?:\/\/\S+/.exec(texto);if(!link&&m){link=m[0];texto=texto.replace(link,"").trim()}
     if(link&&isOwner())abrirCaptura("link",{link:link,titulo:titulo||texto});else abrirCaptura("compra",{texto:[titulo,texto].filter(Boolean).join(", ")})}
   /* ===== Estudos: listas de exercícios para analista de dados (SQL, BI e Python) ===== */

@@ -123,17 +123,33 @@
     if(!novo)root.appendChild(carVersoesPainel(x,function(){return {t:t.value.trim(),e:e.value.trim(),desc:desc.value.trim()}}))}
 
   /* ===== Currículo base (uma vez) e versões sob medida por vaga ===== */
-  function carCv(root){
-    var cv=PESSOAL.curriculo||{},p=panel("Meu currículo (base)","Preencha uma vez. Para cada vaga, o site monta uma versão enxuta: o que a vaga pede vem primeiro, as suas histórias STAR viram resultados em destaque e sai uma carta de apresentação. Fica guardado na sua conta (não vai para o código público).");
+  /* dois currículos base: Dados (o alvo) e Suporte/Ativos; cada vaga usa o que combina com ela */
+  var CAR_BASES=[["dados","Análise de dados"],["suporte","Suporte técnico e ativos"]];
+  function carBase(nome){var b=PESSOAL.curriculos||{};return b[nome]||(nome==="dados"?PESSOAL.curriculo:null)||null}
+  function carBaseDaVaga(v){var t=NUCLEO.norm([v.t,v.desc].join(" "));
+    var dados=/\b(dados|data|bi|power bi|analytics|sql|cientista|engenheir[oa] de dados|indicadores|dashboard)/.test(t),sup=/\b(suporte|field|service desk|help ?desk|infraestrutura|ativos|tecnico|n1|n2|campo)/.test(t);
+    return sup&&!dados&&carBase("suporte")?"suporte":"dados"}
+  function carCv(root,arg){
+    var qual=CAR_BASES.some(function(b){return b[0]===arg})?arg:"dados",cv=carBase(qual)||{};
+    var p=panel("Meu currículo (base)","Dois currículos base: Análise de dados (o alvo) e Suporte técnico e ativos. Para cada vaga, o site escolhe a base pelo que a vaga pede e monta uma versão enxuta: o que a vaga pede vem primeiro, as histórias STAR viram resultados em destaque e sai uma carta. Fica só na sua conta (não vai para o código público).");
+    p.appendChild(h("div",{class:"seg famseg"},CAR_BASES.map(function(b){return h("a",{href:"#carreira/cv/"+b[0],"aria-pressed":String(b[0]===qual),text:b[1]+(carBase(b[0])?"":" (vazio)")})})));
+    var imp=h("input",{type:"file",accept:".json,application/json",hidden:""}),ib=h("button",{type:"button",class:"ghostbtn",text:"Importar os currículos (arquivo .json)"}),ist=h("span",{class:"sub",role:"status"});
+    ib.onclick=function(){imp.click()};
+    imp.onchange=function(){var fl=imp.files[0];if(!fl)return;fl.text().then(function(t){var j=JSON.parse(t),n=Object.assign({},PESSOAL.curriculos||{});
+      CAR_BASES.forEach(function(b){if(j[b[0]]&&j[b[0]].nome)n[b[0]]=j[b[0]]});if(!Object.keys(n).length)throw new Error("o arquivo não tem os currículos");
+      pessoalGravar("curriculos",n);renderCarreira("cv",qual)}).catch(function(e){ist.textContent="Não consegui importar: "+e.message})};
+    p.appendChild(h("div",{class:"vfil"},ib,imp,ist));
     var f=h("div",{class:"wform"}),C={};
     function campo(k,rot,ph,linhas){var el=linhas?h("textarea",{rows:String(linhas),placeholder:ph}):h("input",{type:"text",placeholder:ph});el.value=cv[k]||"";C[k]=el;f.appendChild(h("label",null,rot,el))}
     campo("nome","Nome","Rayner Carvalho");campo("titulo","Título","Ex.: Analista de Dados | SQL · Power BI · Python");campo("contato","Contato","Sorocaba/SP · e-mail · telefone · linkedin.com/in/…");
     campo("resumo","Resumo","3 ou 4 linhas sobre você",4);
     campo("experiencias","Experiências","Uma por bloco, separadas por uma linha em branco. Primeira linha: Cargo — Empresa (período). Depois, uma conquista por linha.",10);
+    campo("competencias","Competências técnicas","Uma área por linha. Ex.: Dados e automação: Power BI, SQL…",4);
     campo("formacao","Formação","Ex.: MBA em Data Science e Analytics — USP/Esalq (2026–2027)",3);campo("cursos","Cursos e certificações","Um por linha",3);
-    campo("ferramentas","Ferramentas","Separadas por vírgula: SQL, Power BI, Excel, Python…");
+    campo("idiomas","Idiomas","Ex.: Português: nativo · Inglês: intermediário");
+    campo("ferramentas","Ferramentas (para ordenar por vaga)","Separadas por vírgula: SQL, Power BI, Excel, Python…");
     var ok=h("button",{type:"button",text:"Salvar"}),st=h("span",{class:"sub",role:"status"});
-    ok.onclick=function(){var o={};Object.keys(C).forEach(function(k){o[k]=C[k].value.trim()});pessoalGravar("curriculo",o);st.textContent="✓ Salvo. Abra uma candidatura no funil e toque em Gerar versão."};
+    ok.onclick=function(){var o={};Object.keys(C).forEach(function(k){o[k]=C[k].value.trim()});var n=Object.assign({},PESSOAL.curriculos||{});n[qual]=o;pessoalGravar("curriculos",n);st.textContent="✓ Salvo. Abra uma candidatura no funil e toque em Gerar versão."};
     f.appendChild(h("div",{class:"vfil"},ok,st));p.appendChild(f);root.appendChild(p)}
   /* monta a versão para a vaga: ferramentas pedidas primeiro, 2 histórias que mais combinam, resumo e carta */
   function carGerar(cv,v){
@@ -155,9 +171,9 @@
     var exps=String(cv.experiencias||"").split(/\n\s*\n/).map(function(b){var ls=b.split("\n").map(function(x){return x.trim()}).filter(Boolean);return ls.length?h("div",{class:"cvexp"},h("b",{text:ls[0]}),ls.length>1?h("ul",null,ls.slice(1).map(function(x){return h("li",{text:x.replace(/^[-•*]\s*/,"")})})):null):null}).filter(Boolean);
     function sec(t,c){return c&&(!Array.isArray(c)||c.length)?h("section",null,h("h3",{text:t}),c):null}
     var cvEl=h("article",{class:"cvdoc"},h("h1",{text:cv.nome||""}),h("p",{class:"cvtit",text:cv.titulo||""}),h("p",{class:"cvcont",text:cv.contato||""}),
-      sec("Resumo",h("p",{class:"cvp",text:v.resumo})),sec("Ferramentas",h("p",{text:v.ferramentas.join(" · ")})),
+      sec("Resumo",h("p",{class:"cvp",text:v.resumo})),sec("Principais ferramentas",h("p",{text:v.ferramentas.join(" · ")})),cv.competencias?sec("Competências técnicas",h("p",{class:"cvp",text:cv.competencias})):null,
       sec("Resultados em destaque",v.historias.length?h("ul",null,v.historias.map(function(s){return h("li",null,h("b",{text:s.titulo}),s.r?" — "+s.r:"")})):null),
-      sec("Experiência",exps),sec("Formação",h("p",{class:"cvp",text:cv.formacao||""})),cv.cursos?sec("Cursos e certificações",h("p",{class:"cvp",text:cv.cursos})):null);
+      sec("Experiência",exps),sec("Formação",h("p",{class:"cvp",text:cv.formacao||""})),cv.cursos?sec("Cursos e certificações",h("p",{class:"cvp",text:cv.cursos})):null,cv.idiomas?sec("Idiomas",h("p",{class:"cvp",text:cv.idiomas})):null);
     var carta=h("article",{class:"cvdoc cvcarta"},h("p",{class:"cvp",text:v.carta}));
     var fechar=h("button",{type:"button",class:"ghostbtn",text:"Fechar"}),imp=h("button",{type:"button",text:"Imprimir / salvar PDF"});
     var w=h("div",{id:"impressao"},h("div",{class:"impbar"},h("span",{class:"sub",text:"Versão de "+dataBR(v.data)+" para "+(vaga.t||"")+(vaga.e?" · "+vaga.e:"")}),imp,fechar),cvEl,carta);
@@ -165,19 +181,20 @@
     document.body.appendChild(w);document.documentElement.classList.add("imprimindo");window.scrollTo(0,0)}
   function carVersoesPainel(x,atual){
     var p=panel("Currículo e carta para esta vaga","Gera uma versão enxuta com o que a vaga pede primeiro. Cada versão fica guardada aqui: dá para saber o que foi para onde.");
-    var cv=PESSOAL.curriculo;
-    if(!cv||!cv.nome){p.appendChild(h("p",{class:"sub"},"Primeiro preencha o ",h("a",{href:"#carreira/cv",class:"link",text:"currículo base"}),"."));return p}
+    if(!carBase("dados")&&!carBase("suporte")){p.appendChild(h("p",{class:"sub"},"Primeiro preencha ou importe o ",h("a",{href:"#carreira/cv",class:"link",text:"currículo base"}),"."));return p}
+    var auto=carBaseDaVaga(atual()),sb=h("select",{"aria-label":"Currículo base"},CAR_BASES.filter(function(b){return carBase(b[0])}).map(function(b){return h("option",{value:b[0],selected:b[0]===auto?"":null,text:"Base: "+b[1]+(b[0]===auto?" (combina com a vaga)":"")})}));
+    function base(){return carBase(sb.value)||carBase("dados")||carBase("suporte")}
     var gerar=h("button",{type:"button",class:"ghostbtn pri",text:"Gerar versão para esta vaga"}),cl=h("button",{type:"button",class:"ghostbtn",text:"Copiar pedido para o Claude"}),st=h("p",{class:"sub",role:"status"});
-    gerar.onclick=function(){var v=carGerar(cv,atual()),l=carCands().map(function(c){return c.id===x.id?Object.assign({},c,{versoes:[v].concat(c.versoes||[])}):c});
+    gerar.onclick=function(){var cv=base(),v=Object.assign(carGerar(cv,atual()),{base:sb.value}),l=carCands().map(function(c){return c.id===x.id?Object.assign({},c,{versoes:[v].concat(c.versoes||[])}):c});
       x.versoes=[v].concat(x.versoes||[]);carSalvar(l);desenha();carImprimir(cv,v,atual())};
-    cl.onclick=function(){var a=atual(),v=carGerar(cv,a);
+    cl.onclick=function(){var a=atual(),cv=base(),v=carGerar(cv,a);
       var txt="Monte um currículo de 1 página e uma carta de apresentação curta, em português, para a vaga abaixo. Use só as informações do meu currículo e das minhas histórias; não invente experiência. Coloque primeiro o que a vaga pede.\n\nVAGA: "+a.t+(a.e?" — "+a.e:"")+"\n"+(a.desc||"(sem descrição)")+
-        "\n\nMEU CURRÍCULO:\n"+[cv.nome,cv.titulo,cv.resumo,"Experiências:\n"+cv.experiencias,"Formação: "+cv.formacao,"Cursos: "+(cv.cursos||""),"Ferramentas: "+cv.ferramentas].join("\n")+
+        "\n\nMEU CURRÍCULO:\n"+[cv.nome,cv.titulo,cv.resumo,"Competências:\n"+(cv.competencias||""),"Experiências:\n"+cv.experiencias,"Formação: "+cv.formacao,"Cursos: "+(cv.cursos||""),"Idiomas: "+(cv.idiomas||""),"Ferramentas: "+cv.ferramentas].join("\n")+
         "\n\nHISTÓRIAS (STAR):\n"+(PESSOAL.historias||[]).map(function(s){return "- "+s.titulo+": "+[s.s,s.t,s.a,s.r].filter(Boolean).join(" / ")}).join("\n")+"\n\nCompatibilidade calculada: "+(v.nota==null?"—":v.nota+"%")+"; tenho "+v.skills.join(", ")+"; falta "+(v.falta.join(", ")||"nada");
       try{navigator.clipboard.writeText(txt).then(function(){st.textContent="✓ Pedido copiado. Cole numa conversa nova do Claude.";window.open("https://claude.ai/new","_blank","noopener")})}catch(e){prompt("Copie:",txt)}};
-    p.appendChild(h("div",{class:"vfil"},gerar,cl));p.appendChild(st);var ul=h("ul",{class:"wl"});p.appendChild(ul);
-    function desenha(){ul.innerHTML="";(x.versoes||[]).forEach(function(v){var ver=h("button",{type:"button",class:"ghostbtn",text:"Ver / imprimir"});ver.onclick=function(){carImprimir(cv,v,x)};
-      ul.appendChild(h("li",null,h("span",{class:"grow"},h("b",{text:"Versão de "+dataBR(v.data)+(v.nota!=null?" · "+v.nota+"% compatível":"")}),h("span",{class:"sub",text:"Destaque: "+(v.skills.join(", ")||"—")+(v.historias.length?" · histórias: "+v.historias.map(function(s){return s.titulo}).join("; "):"")})),ver))});
+    p.appendChild(h("div",{class:"vfil"},sb,gerar,cl));p.appendChild(st);var ul=h("ul",{class:"wl"});p.appendChild(ul);
+    function desenha(){ul.innerHTML="";(x.versoes||[]).forEach(function(v){var ver=h("button",{type:"button",class:"ghostbtn",text:"Ver / imprimir"});ver.onclick=function(){carImprimir(carBase(v.base||"dados")||base(),v,x)};
+      ul.appendChild(h("li",null,h("span",{class:"grow"},h("b",{text:"Versão de "+dataBR(v.data)+(v.base==="suporte"?" · base Suporte":" · base Dados")+(v.nota!=null?" · "+v.nota+"% compatível":"")}),h("span",{class:"sub",text:"Destaque: "+(v.skills.join(", ")||"—")+(v.historias.length?" · histórias: "+v.historias.map(function(s){return s.titulo}).join("; "):"")})),ver))});
       if(!(x.versoes||[]).length)ul.appendChild(h("li",null,h("span",{class:"sub",text:"Nenhuma versão ainda."})))}
     desenha();return p}
 

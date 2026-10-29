@@ -200,16 +200,26 @@
     return p}
 
   /* itens das notas do Mercado que são dela, no formato de registro (só para os Gastos).
-     Se no mesmo dia já houver um registro com custo de fralda/fórmula, vale o registro, para não contar duas vezes. */
+     Se no mesmo dia já houver um registro com custo de fralda/fórmula, vale o registro, para não contar duas vezes;
+     e a compra que virou "Lata N aberta" (dados.compra.id) sai daqui, porque o registro da lata já leva o preço dela. */
   function famMercado(quem,regs){
     var M=FAM[quem].merc;if(!M)return Promise.resolve([]);
     var or=M.termos.map(function(t){return "produto.ilike.*"+t+"*,descricao.ilike.*"+t+"*"}).join(",");
     return SB.from("compras").select("id,data,mercado,descricao,produto,quantidade,unidade,valor_total").or(or).order("data",{ascending:false}).then(sbOk).then(function(l){
-      var dias={};regs.forEach(function(r){if(/^(produto|alimentacao)$/.test(r.tipo)&&typeof dadosDe(r).custo==="number")dias[r.data]=1});
-      return l.filter(function(x){return M.re.test(x.produto||"")||M.re.test(x.descricao||"")}).filter(function(x){return !dias[x.data]&&+x.valor_total>0}).map(function(x){
+      var dias={},usadas={};regs.forEach(function(r){var d=dadosDe(r);if(d.compra&&d.compra.id)usadas[d.compra.id]=1;else if(/^(produto|alimentacao)$/.test(r.tipo)&&typeof d.custo==="number")dias[r.data]=1});
+      return l.filter(function(x){return M.re.test(x.produto||"")||M.re.test(x.descricao||"")}).filter(function(x){return !dias[x.data]&&!usadas[x.id]&&+x.valor_total>0}).map(function(x){
         var n=x.produto||x.descricao,q=+x.quantidade;
         return {id:"m-"+x.id,merc:true,tipo:"produto",data:x.data,titulo:n+(q>1&&x.unidade!=="kg"?" ("+fmtN(q)+" un)":""),dados:{custo:Math.round(+x.valor_total*100)/100,clinica:x.mercado}}})
     }).catch(function(){return []})}
+  function famAbrirLata(quem,regs,r){
+    var n=regs.reduce(function(m,x){var k=/^Lata (\d+)\b/i.exec(x.titulo||"");return k?Math.max(m,+k[1]):m},0)+1;
+    var num=prompt("Número da lata (a sequência está na "+(n-1)+")",String(n));if(num==null)return;num=parseInt(num,10);if(!(num>0))return;
+    var dt=prompt("Data em que a lata foi aberta (dd/mm/aaaa). A compra foi em "+dataBR(r.data)+".",dataBR(hojeISO()));if(dt==null)return;
+    var m=/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/.exec(dt.trim());if(!m){alert("Use o formato dd/mm/aaaa.");return}
+    var data=(m[3].length===2?"20"+m[3]:m[3])+"-"+("0"+m[2]).slice(-2)+"-"+("0"+m[1]).slice(-2),c=r.dados.custo,merc=r.dados.clinica||"";
+    SB.from("registros").insert({quem:quem,tipo:"produto",data:data,titulo:"Lata "+num+" de fórmula NAN aberta",valor:"NAN",
+      detalhes:"Comprada em "+dataBR(r.data)+(merc?" no "+merc:""),dados:{custo:c,clinica:merc||undefined,itensCusto:[["Lata de fórmula NAN",c]],compra:{id:r.id.replace(/^m-/,""),data:r.data,mercado:merc}}})
+      .then(sbOk).then(function(){renderFamilia(quem)},function(e){alert("Não consegui salvar: "+e.message)})}
   function famGastos(regs,ir,quem){
     var cs=regs.filter(function(r){return typeof dadosDe(r).custo==="number"}).sort(function(a,b){return b.data.localeCompare(a.data)});if(!cs.length)return null;
     var anos={};cs.forEach(function(r){var a=r.data.slice(0,4);anos[a]=(anos[a]||0)+r.dados.custo});
@@ -222,6 +232,9 @@
     p.appendChild(h("ul",{class:"wl famagora"},cs.map(function(r){var li=h("li",{class:"clic",tabindex:"0",role:"button"},h("span",{class:"grow"},h("b",{text:r.titulo}),h("span",{class:"sub",text:dataBR(r.data)+(r.dados.clinica?" · "+r.dados.clinica:"")+(r.merc?" · nota do Mercado":"")})),h("span",{class:"end",text:brl(r.dados.custo)}));
       function abre(){if(r.merc&&window.RACmercado)window.RACmercado.verProduto(r.titulo.replace(/ \(\S+ un\)$/,""));else ir({r:r,custo:true})}
       if(r.merc)li.title="Compra do Mercado: toque para ver o histórico de preço";
+      /* lata de NAN que veio da nota: vira "Lata N de fórmula NAN aberta", com a data em que foi aberta (não a da compra) */
+      if(r.merc&&quem==="olivia"&&/(^|[^a-zà-ú])nan([^a-zà-ú]|$)/i.test(r.titulo)){var ab=h("button",{type:"button",class:"ghostbtn",text:"Abrir como lata"});
+        ab.onclick=function(e){e.stopPropagation();famAbrirLata(quem,regs,r)};li.appendChild(ab)}
       li.onclick=abre;li.onkeydown=function(e){if(e.key==="Enter")abre()};return li})));
     return p}
 

@@ -97,7 +97,43 @@
         /* carreira: 5 dias depois de se candidatar sem resposta, hora do follow-up */
         (PESSOAL.candidaturas||[]).forEach(function(c){var d=(c.datas||{}).candidatei;if(c.coluna==="candidatei"&&d&&!c.followup)add(maisDias(d,5),"Follow-up: "+c.t+(c.e?" ("+c.e+")":""),"candidatura de "+dataBR(d),"carreira","#carreira/funil")});
         if(!PESSOAL.ultimoBackup||PESSOAL.ultimoBackup<maisDias(hoje,-30))add(hoje,"Baixar um backup do site",PESSOAL.ultimoBackup?"o último foi em "+dataBR(PESSOAL.ultimoBackup):"nunca foi feito","sistema","#sistema")}
-      return ev.sort(function(a,b){return a.data.localeCompare(b.data)})})}
+      /* o backup automático de domingo (no cofre privado do servidor): se o mais novo tiver mais de 9 dias, alguma coisa parou */
+      if(!isOwner())return ev.sort(function(a,b){return a.data.localeCompare(b.data)});
+      return Promise.resolve().then(function(){return SB.storage.from("backups").list(EU.id,{sortBy:{column:"name",order:"desc"},limit:1})}).then(function(r){
+        var ult=r&&r.data&&r.data[0]&&r.data[0].name.slice(0,10);
+        if(!r.error&&(!ult||ult<maisDias(hoje,-9)))add(hoje,"O backup automático de domingo não rodou",ult?"o último é de "+dataBR(ult):"ainda não há nenhum no servidor","sistema","#sistema")},function(){})
+        .then(function(){return ev.sort(function(a,b){return a.data.localeCompare(b.data)})})})}
+  /* ===== Próxima melhor ação: tudo o que pede algo de você, numa ordem só =====
+     Agenda (atrasado > hoje > amanhã > semana, com peso por tipo), vagas muito compatíveis ainda fora do funil e a prontidão para treinar. */
+  function proximasAcoes(){
+    var hoje=hojeISO(),PESO={mba:12,familia:10,veiculo:8,carreira:8,docs:6,lembrete:6,niver:4,sistema:2};
+    var pAg=agendaColetar().catch(function(){return []});
+    var pVg=(typeof vgPronto!=="undefined"&&vgPronto?vgPronto:Promise.resolve()).then(function(){return VG.all||[]}).catch(function(){return []});
+    var pSa=Promise.resolve().then(function(){return Promise.all([SB.from("garmin_dia").select("data,dados").gte("data",maisDias(hoje,-61)).order("data").then(sbOk),
+      SB.from("garmin_ativ").select("inicio").gte("inicio",maisDias(hoje,-3)).then(sbOk)])}).catch(function(){return null});
+    return Promise.all([pAg,pVg,pSa]).then(function(r){
+      var out=[];
+      r[0].forEach(function(e){var dd=Math.round((new Date(e.data+"T12:00:00")-new Date(hoje+"T12:00:00"))/864e5);if(dd>7)return;
+        var base=dd<0?100+Math.min(-dd,20):dd===0?90:dd===1?70:dd<=3?50:30;
+        out.push({p:base+(PESO[e.tipo]||0),t:e.t,sub:(dd<0?"atrasado há "+(-dd)+(dd===-1?" dia":" dias"):dd===0?"hoje":dd===1?"amanhã":"em "+dd+" dias")+(e.sub?" · "+e.sub:""),href:e.href,ext:e.ext,tipo:e.tipo})});
+      /* vagas: só as novas (até 7 dias), bem compatíveis e que ainda não estão no funil nem escondidas */
+      var meus=((PESSOAL.perfilCarreira||{}).skills)||["sql","powerbi","excel","negocio","estat"],noFunil=(PESSOAL.candidaturas||[]).map(function(c){return c.vagaId});
+      r[1].filter(function(v){return v.d<=7&&noFunil.indexOf(v.id)<0&&!(typeof vgHidden!=="undefined"&&vgHidden[v.id])}).map(function(v){return [v,NUCLEO.compatVaga(v.t+" "+(v.nv||""),meus).nota]})
+        .filter(function(x){return x[1]!=null&&x[1]>=70}).sort(function(a,b){return b[1]-a[1]}).slice(0,2)
+        .forEach(function(x){out.push({p:40+(x[1]-70)/2,t:"Vaga "+x[1]+"% compatível: "+x[0].t,sub:(x[0].e||"")+(x[0].d<=1?" · publicada hoje":" · há "+x[0].d+" dias"),href:"#vagas",tipo:"carreira"})});
+      /* treino: pela prontidão de hoje e pelos dias sem treinar */
+      if(r[2]&&r[2][0].length){var pr=NUCLEO.prontidao(r[2][0],r[2][0][r[2][0].length-1].data),sem=!r[2][1].length;
+        if(pr&&pr.nota<45)out.push({p:60,t:"Hoje é dia de recuperação",sub:"prontidão "+pr.nota+(pr.alertas[0]?" · "+pr.alertas[0]:""),href:"#saude",tipo:"saude"});
+        else if(pr&&sem)out.push({p:pr.nota>=70?55:45,t:pr.nota>=70?"Bom dia para treinar forte":"Que tal um treino moderado?",sub:"prontidão "+pr.nota+" · 3 dias sem treino",href:"#saude",tipo:"saude"})}
+      return out.sort(function(a,b){return b.p-a.p})})}
+  function wProxima(){
+    var p=wCard("Próxima melhor ação","alvo","#E5484D",["#agenda","agenda"],"w5 wprox"),ul=h("ul",{class:"wl"},h("li",null,h("span",{class:"sub",text:"Pensando…"})));p.appendChild(ul);
+    proximasAcoes().then(function(l){ul.innerHTML="";
+      if(!l.length){ul.appendChild(h("li",null,h("span",{class:"sub",text:"Nada pedindo a sua atenção agora. 🎉"})));return}
+      l.slice(0,5).forEach(function(a,i){var li=h("li",{class:(i===0?"top ":"")+(/atrasado/.test(a.sub)?"alerta":"")||null},h("span",{class:"grow"},h("b",{text:a.t}),h("span",{class:"sub",text:a.sub})));
+        if(a.href){li.classList.add("clic");li.tabIndex=0;li.onclick=function(){if(a.ext)window.open(a.href,"_blank","noopener");else location.hash=a.href}}
+        ul.appendChild(li)})}).catch(function(e){ul.innerHTML="";ul.appendChild(h("li",null,h("span",{class:"sub",text:"Não consegui montar agora."})));logErro("próxima ação",e)});
+    return p}
   function agendaLinha(e,redesenhar){
     var T=AGENDA_TIPOS[e.tipo]||["•",""],hoje=hojeISO(),dd=Math.round((new Date(e.data+"T12:00:00")-new Date(hoje+"T12:00:00"))/864e5);
     var quando=dd<0?"há "+(-dd)+(dd===-1?" dia":" dias"):dd===0?"hoje":dd===1?"amanhã":new Date(e.data+"T12:00:00").toLocaleDateString("pt-BR",{weekday:"short",day:"2-digit",month:"2-digit"});

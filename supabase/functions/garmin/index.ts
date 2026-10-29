@@ -507,14 +507,18 @@ async function telegram(texto: string) {
 /* backup semanal (domingo): todas as tabelas da conta num JSON, no cofre privado "backups"; ficam os 8 mais novos */
 async function backupSemanal(adm: Sb, uid: string, hoje: string) {
   const out: Record<string, unknown[]> = {};
-  for (const t of ["pessoal", "registros", "garmin_dia", "garmin_ativ", "mercados", "produtos", "notas", "itens", "orcamentos"]) {
+  const falhas: string[] = [];
+  for (const t of ["pessoal", "registros", "garmin_dia", "garmin_ativ", "mercados", "produtos", "notas", "itens", "orcamentos", "lista", "bebe"]) {
     const linhas: unknown[] = [];
     for (let de = 0; ; de += 1000) {
       const { data, error } = await adm.from(t).select("*").eq("user_id", uid).range(de, de + 999);
-      if (error) break; linhas.push(...(data ?? [])); if ((data ?? []).length < 1000) break;
+      if (error) { falhas.push(t + ": " + error.message); break; }
+      linhas.push(...(data ?? [])); if ((data ?? []).length < 1000) break;
     }
     out[t] = linhas;
   }
+  /* uma tabela que não abriu não pode passar em silêncio: o backup sai, mas a rotina fica marcada com falha */
+  if (falhas.length) await adm.from("erros").insert({ user_id: uid, origem: "rotina: backup", mensagem: "Tabelas fora do backup: " + falhas.join("; "), aparelho: "servidor" });
   const corpo = new Blob([JSON.stringify({ versao: 1, criado: new Date().toISOString(), dono: uid, tabelas: out })], { type: "application/json" });
   const { error } = await adm.storage.from("backups").upload(`${uid}/${hoje}.json`, corpo, { upsert: true, contentType: "application/json" });
   if (error) throw error;

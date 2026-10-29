@@ -25,7 +25,10 @@
     ["fc","Batimentos em repouso",function(d){return d.fcRepouso},function(v){return Math.round(v)+" por minuto"},"#D6283B",false],
     ["bb","Energia do corpo",function(d){return d.bbMax},function(v){return Math.round(v)},"#2E8BD8",true],
     ["estresse","Estresse",function(d){return d.estresse},function(v){return Math.round(v)},"#E8A317",false],
-    ["passos","Passos",function(d){return d.passos},function(v){return Math.round(v).toLocaleString("pt-BR")},"#B5641B",true]];
+    ["passos","Passos",function(d){return d.passos},function(v){return Math.round(v).toLocaleString("pt-BR")},"#B5641B",true],
+    ["humor","Humor (diário)",function(d){return d.humor},function(v){return HUMOR[Math.round(v)-1]+" "+fmtN(Math.round(v*10)/10)},"#D9468F",true]];
+  /* diário de uma linha: humor de 1 a 5 e uma frase por dia, em PESSOAL.diario {"AAAA-MM-DD": {h, t}} */
+  var HUMOR=["😞","🙁","😐","🙂","😄"];
   /* antes desta data o relógio era de outra pessoa: nada disso entra no site, e o que tiver ficado no banco é apagado */
   var GARMIN_DESDE="2025-11-01";
   /* o que cada número quer dizer, sem sigla */
@@ -76,7 +79,9 @@
     function desenhar(){
       corpo.innerHTML="";var dias=SAUDE.dias||[],ativs=SAUDE.ativs||[];
       if(!dias.length&&!ativs.length){corpo.appendChild(h("div",{class:"panel"},h("p",{class:"empty",text:"Ainda sem dados. Toque em Atualizar agora."})));return}
-      [saudeProntidao(dias,ativs),saudeHoje(dias),saudeTendencia(dias),saudeSono(dias),saudeTreinos(ativs)].forEach(function(x){if(x)corpo.appendChild(x)})}
+      /* o humor do diário entra nos dados do dia (só na tela), para a tendência e os cruzamentos */
+      var di=PESSOAL.diario||{};dias.forEach(function(d){var x=di[d.data];if(d.dados)d.dados.humor=x?x.h:undefined});
+      [saudeDiario(),saudeProntidao(dias,ativs),saudeHoje(dias),saudeTendencia(dias),saudeSono(dias),saudeTreinos(ativs)].forEach(function(x){if(x)corpo.appendChild(x)})}
     /* prontidão do dia (VFC, FC de repouso, sono e Body Battery contra a sua faixa dos últimos 60 dias) e cruzamentos dos últimos 120 dias */
     function saudeProntidao(dias,ativs){
       var d=dias[dias.length-1];if(!d)return null;var pr=NUCLEO.prontidao(dias,d.data);if(!pr)return null;
@@ -93,6 +98,17 @@
       var ins=saudeInsights(dias,ativs);
       if(ins.length){p.appendChild(h("h3",{class:"dayh",text:"O que os seus dados mostram"}));p.appendChild(h("ul",{class:"wl"},ins.map(function(t){return h("li",null,h("span",{class:"grow",text:t}))})))}
       return p}
+    function saudeDiario(){
+      if(!isOwner())return null;var hoje=hojeISO(),di=PESSOAL.diario||{},x=di[hoje]||{};
+      var p=panel("Como foi hoje?","Uma linha por dia. Com algumas semanas, dá para ver o que o sono, o treino e o estresse fazem com o seu humor.");
+      var esc=h("div",{class:"humor",role:"group","aria-label":"Humor de hoje"}),sel=x.h||0;
+      HUMOR.forEach(function(e,i){var b=h("button",{type:"button","aria-pressed":String(sel===i+1),title:["Péssimo","Ruim","Normal","Bom","Ótimo"][i],text:e});b.onclick=function(){sel=i+1;[].forEach.call(esc.children,function(c,j){c.setAttribute("aria-pressed",String(j===i))})};esc.appendChild(b)});
+      var t=h("input",{type:"text",maxlength:"140",placeholder:"Uma linha sobre o dia (opcional)",value:x.t||""}),sv=h("button",{type:"button",text:x.h?"Atualizar":"Salvar"}),st=h("span",{class:"sub",role:"status"});
+      sv.onclick=function(){if(!sel){st.textContent="Escolha um rosto.";return}var n=Object.assign({},PESSOAL.diario||{});n[hoje]={h:sel,t:t.value.trim()||undefined};pessoalGravar("diario",n);st.textContent="✓ Anotado.";sv.textContent="Atualizar";desenhar()};
+      p.appendChild(esc);p.appendChild(h("div",{class:"listaadd"},t,sv));p.appendChild(st);
+      /* últimas 2 semanas */
+      var fx=h("div",{class:"humorfx"});for(var i=13;i>=0;i--){var dt=maisDias(hoje,-i),y=di[dt];fx.appendChild(h("span",{title:dataBR(dt)+(y&&y.t?": "+y.t:""),class:y?null:"vazio",text:y?HUMOR[y.h-1]:"·"}))}
+      p.appendChild(fx);return p}
     function saudeInsights(dias,ativs){
       var ini=NUCLEO.somaDiasISO(hojeISO(),-120),D=dias.filter(function(x){return x.data>=ini}),por={},out=[];D.forEach(function(x){por[x.data]=x.dados||{}});
       function media(l){return l.length?l.reduce(function(a,b){return a+b},0)/l.length:null}
@@ -115,6 +131,16 @@
       /* passos do dia contra o sono da noite seguinte */
       var xs=[],ys=[];D.forEach(function(x){var am=por[NUCLEO.somaDiasISO(x.data,1)];if(am&&am.sono&&am.sono.total&&x.dados.passos){xs.push(x.dados.passos);ys.push(am.sono.total/3600)}});
       var rc=NUCLEO.correlacao(xs,ys);if(rc!=null&&Math.abs(rc)>=.25)out.push("Nos dias em que você anda mais, você "+(rc>0?"dorme mais":"dorme menos")+" na noite seguinte (correlação "+fmtN(Math.round(rc*100)/100)+").");
+      /* humor do diário contra sono, treino e estresse */
+      var hs=D.filter(function(x){return typeof x.dados.humor==="number"});
+      if(hs.length>=8){
+        var bom=[],ruim=[];hs.forEach(function(x){var s3=x.dados.sono&&x.dados.sono.total/3600;if(s3>=7)bom.push(x.dados.humor);else if(s3&&s3<6)ruim.push(x.dados.humor)});
+        if(bom.length>=3&&ruim.length>=3&&media(bom)-media(ruim)>=.4)out.push("Depois de noites com 7 h ou mais de sono, o seu humor fica em "+fmtN(Math.round(media(bom)*10)/10)+" de 5; com menos de 6 h, cai para "+fmtN(Math.round(media(ruim)*10)/10)+".");
+        var tr=[],des=[];hs.forEach(function(x){(carga[x.data]?tr:des).push(x.dados.humor)});
+        if(tr.length>=3&&des.length>=3&&Math.abs(media(tr)-media(des))>=.3)out.push("Nos dias com treino o seu humor médio é "+fmtN(Math.round(media(tr)*10)/10)+"; sem treino, "+fmtN(Math.round(media(des)*10)/10)+".");
+        var ex=[],ey=[];hs.forEach(function(x){if(typeof x.dados.estresse==="number"){ex.push(x.dados.estresse);ey.push(x.dados.humor)}});
+        var re=NUCLEO.correlacao(ex,ey);if(re!=null&&re<=-.3)out.push("Quanto mais estresse o relógio mede no dia, pior o humor que você anota (correlação "+fmtN(Math.round(re*100)/100)+").")}
+      else if(isOwner())out.push("Anote o humor por mais "+(8-hs.length)+(8-hs.length===1?" dia":" dias")+" para o site cruzar com o sono e o treino.");
       return out}
     function saudeHoje(dias){
       var d=dias[dias.length-1];if(!d)return null;var x=d.dados,ont=dias[dias.length-2];

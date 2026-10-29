@@ -3,14 +3,14 @@
    (sql.js no navegador) e estudo de caso anonimizado para o portfólio.
    Dados em PESSOAL.candidaturas, PESSOAL.perfilCarreira e PESSOAL.historias. Usa as funções do núcleo (js/app.js). */
   var CAR_COLS=[["salva","Salvas"],["candidatei","Candidatei"],["entrevista","Entrevista"],["resposta","Resposta"]];
-  var CAR_ABAS=[["funil","Funil"],["compat","Compatibilidade"],["star","Histórias STAR"],["sql","Praticar SQL"],["portfolio","Portfólio"]];
+  var CAR_ABAS=[["funil","Funil"],["cv","Meu currículo"],["compat","Compatibilidade"],["star","Histórias STAR"],["sql","Praticar SQL"],["portfolio","Portfólio"]];
   function carCands(){return PESSOAL.candidaturas||[]}
   function carSkillNome(k){return (NUCLEO.SKILLS.filter(function(s){return s[0]===k})[0]||[k,k])[1]}
   function carMeus(){return ((PESSOAL.perfilCarreira||{}).skills)||["sql","powerbi","excel","negocio","estat"]}
   function renderCarreira(sub,arg){
     var root=$("#carreira-view");root.innerHTML="";var aba=CAR_ABAS.some(function(a){return a[0]===sub})?sub:"funil";
     root.appendChild(h("div",{class:"seg famseg"},CAR_ABAS.map(function(a){return h("a",{href:"#carreira/"+a[0],"aria-pressed":String(a[0]===aba),text:a[1]})}).concat([h("a",{href:"#rede",text:"Rede (LinkedIn)"})])));
-    ({funil:carFunil,compat:carCompat,star:carStar,sql:carSql,portfolio:carPortfolio})[aba](root,arg)}
+    ({funil:carFunil,cv:carCv,compat:carCompat,star:carStar,sql:carSql,portfolio:carPortfolio})[aba](root,arg)}
 
   /* ---------- funil ---------- */
   function carSalvar(l){pessoalGravar("candidaturas",l)}
@@ -119,7 +119,67 @@
       var o=Object.assign({},x,{t:t.value.trim(),e:e.value.trim(),link:urlAbs(lk.value),coluna:col.value,resultado:res.value||null,desc:desc.value.trim(),notas:notas.value.trim(),followup:fu.checked?(x.followup||hojeISO()):null,datas:d});
       var l=carCands().filter(function(c){return c.id!==x.id});l.unshift(o);carSalvar(l);location.hash="#carreira/funil";renderCarreira("funil")};
     if(del){var arm=false;del.onclick=function(){if(!arm){arm=true;del.textContent="Toque de novo para apagar";return}carSalvar(carCands().filter(function(c){return c.id!==x.id}));renderCarreira("funil")}}
-    f.appendChild(h("div",{class:"vfil"},ok,volta,del));p.appendChild(f);root.appendChild(p)}
+    f.appendChild(h("div",{class:"vfil"},ok,volta,del));p.appendChild(f);root.appendChild(p);
+    if(!novo)root.appendChild(carVersoesPainel(x,function(){return {t:t.value.trim(),e:e.value.trim(),desc:desc.value.trim()}}))}
+
+  /* ===== Currículo base (uma vez) e versões sob medida por vaga ===== */
+  function carCv(root){
+    var cv=PESSOAL.curriculo||{},p=panel("Meu currículo (base)","Preencha uma vez. Para cada vaga, o site monta uma versão enxuta: o que a vaga pede vem primeiro, as suas histórias STAR viram resultados em destaque e sai uma carta de apresentação. Fica guardado na sua conta (não vai para o código público).");
+    var f=h("div",{class:"wform"}),C={};
+    function campo(k,rot,ph,linhas){var el=linhas?h("textarea",{rows:String(linhas),placeholder:ph}):h("input",{type:"text",placeholder:ph});el.value=cv[k]||"";C[k]=el;f.appendChild(h("label",null,rot,el))}
+    campo("nome","Nome","Rayner Carvalho");campo("titulo","Título","Ex.: Analista de Dados | SQL · Power BI · Python");campo("contato","Contato","Sorocaba/SP · e-mail · telefone · linkedin.com/in/…");
+    campo("resumo","Resumo","3 ou 4 linhas sobre você",4);
+    campo("experiencias","Experiências","Uma por bloco, separadas por uma linha em branco. Primeira linha: Cargo — Empresa (período). Depois, uma conquista por linha.",10);
+    campo("formacao","Formação","Ex.: MBA em Data Science e Analytics — USP/Esalq (2026–2027)",3);campo("cursos","Cursos e certificações","Um por linha",3);
+    campo("ferramentas","Ferramentas","Separadas por vírgula: SQL, Power BI, Excel, Python…");
+    var ok=h("button",{type:"button",text:"Salvar"}),st=h("span",{class:"sub",role:"status"});
+    ok.onclick=function(){var o={};Object.keys(C).forEach(function(k){o[k]=C[k].value.trim()});pessoalGravar("curriculo",o);st.textContent="✓ Salvo. Abra uma candidatura no funil e toque em Gerar versão."};
+    f.appendChild(h("div",{class:"vfil"},ok,st));p.appendChild(f);root.appendChild(p)}
+  /* monta a versão para a vaga: ferramentas pedidas primeiro, 2 histórias que mais combinam, resumo e carta */
+  function carGerar(cv,v){
+    var cp=NUCLEO.compatVaga([v.t,v.desc].join(" "),carMeus()),tem=cp.tem.map(carSkillNome),falta=cp.falta.map(carSkillNome);
+    var fer=String(cv.ferramentas||"").split(/\s*,\s*/).filter(Boolean);
+    function pedida(f){var n=NUCLEO.norm(f);return tem.some(function(s){var a=NUCLEO.norm(s);return a.indexOf(n)>=0||n.indexOf(a)>=0})}
+    fer=fer.filter(pedida).concat(fer.filter(function(f){return !pedida(f)}));
+    var hs=(PESSOAL.historias||[]).map(function(s){return [s,NUCLEO.compatVaga([s.titulo,s.s,s.t,s.a,s.r,s.tags].join(" "),cp.pede.length?cp.pede:carMeus()).tem.length]}).sort(function(a,b){return b[1]-a[1]}).slice(0,2).map(function(x){return x[0]});
+    var resumo=(cv.resumo||"")+(v.t?"\n\nObjetivo: "+v.t+(v.e?" na "+v.e:"")+(tem.length?", com experiência em "+tem.join(", ")+".":"."):"");
+    var h1=hs[0],nome=cv.nome||"";
+    var carta=["Olá"+(v.e?", equipe de recrutamento da "+v.e:"")+",","Tenho interesse na vaga de "+(v.t||"")+". "+(String(cv.resumo||"").match(/^[\s\S]*?[.!?](?=\s|$)/)||[cv.resumo||""])[0],
+      tem.length?"O que a vaga pede e eu já uso no dia a dia: "+tem.join(", ")+"."+(h1?" Um exemplo: "+h1.titulo+". "+(h1.a?h1.a.replace(/[.!]?\s*$/,". "):"")+(h1.r?"Resultado: "+h1.r.replace(/[.!]?\s*$/,"."):""):""):"",
+      falta.length?"Também estou aprofundando "+falta.join(", ")+" no MBA em Data Science e Analytics da USP/Esalq.":"",
+      "Fico à disposição para conversar e agradeço a atenção.",nome+(cv.contato?"\n"+cv.contato:"")].filter(Boolean).join("\n\n");
+    return {id:"v"+Date.now().toString(36),data:hojeISO(),nota:cp.nota,skills:tem,falta:falta,ferramentas:fer,historias:hs.map(function(s){return {titulo:s.titulo,r:s.r||""}}),resumo:resumo,carta:carta}}
+  /* página para imprimir ou salvar em PDF (no iPhone: Compartilhar → Imprimir → abrir em PDF) */
+  function carImprimir(cv,v,vaga){
+    var old=$("#impressao");if(old)old.remove();
+    var exps=String(cv.experiencias||"").split(/\n\s*\n/).map(function(b){var ls=b.split("\n").map(function(x){return x.trim()}).filter(Boolean);return ls.length?h("div",{class:"cvexp"},h("b",{text:ls[0]}),ls.length>1?h("ul",null,ls.slice(1).map(function(x){return h("li",{text:x.replace(/^[-•*]\s*/,"")})})):null):null}).filter(Boolean);
+    function sec(t,c){return c&&(!Array.isArray(c)||c.length)?h("section",null,h("h3",{text:t}),c):null}
+    var cvEl=h("article",{class:"cvdoc"},h("h1",{text:cv.nome||""}),h("p",{class:"cvtit",text:cv.titulo||""}),h("p",{class:"cvcont",text:cv.contato||""}),
+      sec("Resumo",h("p",{class:"cvp",text:v.resumo})),sec("Ferramentas",h("p",{text:v.ferramentas.join(" · ")})),
+      sec("Resultados em destaque",v.historias.length?h("ul",null,v.historias.map(function(s){return h("li",null,h("b",{text:s.titulo}),s.r?" — "+s.r:"")})):null),
+      sec("Experiência",exps),sec("Formação",h("p",{class:"cvp",text:cv.formacao||""})),cv.cursos?sec("Cursos e certificações",h("p",{class:"cvp",text:cv.cursos})):null);
+    var carta=h("article",{class:"cvdoc cvcarta"},h("p",{class:"cvp",text:v.carta}));
+    var fechar=h("button",{type:"button",class:"ghostbtn",text:"Fechar"}),imp=h("button",{type:"button",text:"Imprimir / salvar PDF"});
+    var w=h("div",{id:"impressao"},h("div",{class:"impbar"},h("span",{class:"sub",text:"Versão de "+dataBR(v.data)+" para "+(vaga.t||"")+(vaga.e?" · "+vaga.e:"")}),imp,fechar),cvEl,carta);
+    fechar.onclick=function(){w.remove();document.documentElement.classList.remove("imprimindo")};imp.onclick=function(){window.print()};
+    document.body.appendChild(w);document.documentElement.classList.add("imprimindo");window.scrollTo(0,0)}
+  function carVersoesPainel(x,atual){
+    var p=panel("Currículo e carta para esta vaga","Gera uma versão enxuta com o que a vaga pede primeiro. Cada versão fica guardada aqui: dá para saber o que foi para onde.");
+    var cv=PESSOAL.curriculo;
+    if(!cv||!cv.nome){p.appendChild(h("p",{class:"sub"},"Primeiro preencha o ",h("a",{href:"#carreira/cv",class:"link",text:"currículo base"}),"."));return p}
+    var gerar=h("button",{type:"button",class:"ghostbtn pri",text:"Gerar versão para esta vaga"}),cl=h("button",{type:"button",class:"ghostbtn",text:"Copiar pedido para o Claude"}),st=h("p",{class:"sub",role:"status"});
+    gerar.onclick=function(){var v=carGerar(cv,atual()),l=carCands().map(function(c){return c.id===x.id?Object.assign({},c,{versoes:[v].concat(c.versoes||[])}):c});
+      x.versoes=[v].concat(x.versoes||[]);carSalvar(l);desenha();carImprimir(cv,v,atual())};
+    cl.onclick=function(){var a=atual(),v=carGerar(cv,a);
+      var txt="Monte um currículo de 1 página e uma carta de apresentação curta, em português, para a vaga abaixo. Use só as informações do meu currículo e das minhas histórias; não invente experiência. Coloque primeiro o que a vaga pede.\n\nVAGA: "+a.t+(a.e?" — "+a.e:"")+"\n"+(a.desc||"(sem descrição)")+
+        "\n\nMEU CURRÍCULO:\n"+[cv.nome,cv.titulo,cv.resumo,"Experiências:\n"+cv.experiencias,"Formação: "+cv.formacao,"Cursos: "+(cv.cursos||""),"Ferramentas: "+cv.ferramentas].join("\n")+
+        "\n\nHISTÓRIAS (STAR):\n"+(PESSOAL.historias||[]).map(function(s){return "- "+s.titulo+": "+[s.s,s.t,s.a,s.r].filter(Boolean).join(" / ")}).join("\n")+"\n\nCompatibilidade calculada: "+(v.nota==null?"—":v.nota+"%")+"; tenho "+v.skills.join(", ")+"; falta "+(v.falta.join(", ")||"nada");
+      try{navigator.clipboard.writeText(txt).then(function(){st.textContent="✓ Pedido copiado. Cole numa conversa nova do Claude.";window.open("https://claude.ai/new","_blank","noopener")})}catch(e){prompt("Copie:",txt)}};
+    p.appendChild(h("div",{class:"vfil"},gerar,cl));p.appendChild(st);var ul=h("ul",{class:"wl"});p.appendChild(ul);
+    function desenha(){ul.innerHTML="";(x.versoes||[]).forEach(function(v){var ver=h("button",{type:"button",class:"ghostbtn",text:"Ver / imprimir"});ver.onclick=function(){carImprimir(cv,v,x)};
+      ul.appendChild(h("li",null,h("span",{class:"grow"},h("b",{text:"Versão de "+dataBR(v.data)+(v.nota!=null?" · "+v.nota+"% compatível":"")}),h("span",{class:"sub",text:"Destaque: "+(v.skills.join(", ")||"—")+(v.historias.length?" · histórias: "+v.historias.map(function(s){return s.titulo}).join("; "):"")})),ver))});
+      if(!(x.versoes||[]).length)ul.appendChild(h("li",null,h("span",{class:"sub",text:"Nenhuma versão ainda."})))}
+    desenha();return p}
 
   /* ---------- compatibilidade: perfil + ranking das vagas abertas ---------- */
   function carCompat(root){

@@ -108,7 +108,9 @@
     function mesDe(iso){var a=new Date(nasc+"T12:00:00"),b=new Date(iso.slice(0,10)+"T12:00:00"),m=(b.getFullYear()-a.getFullYear())*12+b.getMonth()-a.getMonth();if(b.getDate()<a.getDate())m--;return Math.max(0,m)}
     var cartas=regs.filter(function(r){return r.tipo==="carta"});
     var cp=panel("Cápsula do tempo","Cartas para a Olivia ler no futuro. Escreva em “+ Adicionar registro”, tipo “Carta para o futuro”, e diga em “Abrir em” quando ela pode ler.");
-    if(cartas.length)cp.appendChild(h("ul",{class:"wl"},cartas.map(function(c){var det=h("details",{class:"famvals"},h("summary",{text:"✉️ "+c.titulo+(c.valor?" · abrir em "+c.valor:"")+" · escrita em "+dataBR(c.data)}),h("p",{class:"famdet",text:c.detalhes||""}));return h("li",null,det)})));
+    if(cartas.length)cp.appendChild(h("ul",{class:"wl"},cartas.map(function(c){var det=h("details",{class:"famvals"},h("summary",{text:"✉️ "+c.titulo+(c.valor?" · abrir em "+c.valor:"")+" · escrita em "+dataBR(c.data)}),h("p",{class:"famdet",text:c.detalhes||""}));
+      var fs=((c.dados||{}).fotos||[]).map(function(pth){return urls[pth]}).filter(Boolean);if(fs.length)det.appendChild(h("div",{class:"famarq"},fs.map(function(u){return h("a",{href:u,target:"_blank",rel:"noopener"},h("img",{src:u,alt:"",loading:"lazy"}))})));
+      return h("li",null,det)})));
     else cp.appendChild(h("p",{class:"sub",text:"Nenhuma carta ainda."}));
     box.appendChild(cp);
     var G={};regs.forEach(function(r){if(r.tipo==="carta")return;var m=mesDe(r.data);(G[m]=G[m]||[]).push(r)});
@@ -123,4 +125,28 @@
       p.appendChild(h("ul",{class:"wl"},l.filter(function(r){return r.tipo!=="peso"&&r.tipo!=="diario"}).map(function(r){return h("li",null,h("span",{class:"grow"},h("b",{text:tipoInfo(r.tipo)[1]+": "+r.titulo}),h("span",{class:"sub",text:dataBR(r.data)})))})));
       var fotos=[];l.forEach(function(r){(r.arquivos||[]).forEach(function(a){if(/^image\//.test(a.tipo)&&urls[a.path])fotos.push(urls[a.path])})});
       if(fotos.length)p.appendChild(h("div",{class:"famarq"},fotos.slice(0,12).map(function(u){return h("a",{href:u,target:"_blank",rel:"noopener"},h("img",{src:u,alt:"",loading:"lazy"}))})));
+      /* carta do mês: quando o mês termina, um rascunho com os números e as fotos dele, para editar e guardar na cápsula */
+      if(mesDe(hojeISO())>m&&!cartas.some(function(c){return (c.dados||{}).mes===m}))p.appendChild(bebeCartaBtn(quem,nasc,m,l,dm,peso,urls));
       box.appendChild(p)})}
+  function bebeMesData(nasc,m){var d=new Date(nasc+"T12:00:00");d.setMonth(d.getMonth()+m);return d.toISOString().slice(0,10)}
+  function bebeCartaBtn(quem,nasc,m,l,dm,peso,urls){
+    var w=h("div",{class:"stack"}),b=h("button",{type:"button",class:"ghostbtn pri",text:"✉️ Escrever a carta do "+(m===0?"primeiro":(m+1)+"º")+" mês"});w.appendChild(b);
+    b.onclick=function(){b.remove();
+      var de=bebeMesData(nasc,m),ate=maisDias(bebeMesData(nasc,m+1),-1),pd=dadosDe(peso||{}),linhas=[];
+      if(peso)linhas.push("Você terminou o mês com "+fmtN(pesoNum(peso))+" kg"+(pd.altura?" e "+fmtN(pd.altura)+" cm":"")+".");
+      if(dm.length){var so=dm.reduce(function(s,d){return s+d.sonoMin},0)/dm.length/60,ma=dm.reduce(function(s,d){return s+d.peito+d.mamadeira},0)/dm.length;
+        linhas.push("Dormia umas "+fmtN(Math.round(so*10)/10)+" horas por dia e mamava umas "+Math.round(ma)+" vezes.")}
+      var mom=l.filter(function(r){return r.tipo==="momento"}).map(function(r){return r.titulo}),vac=l.filter(function(r){return r.tipo==="vacina"}).map(function(r){return r.titulo}),con=l.filter(function(r){return /consulta|exame/.test(r.tipo)}).map(function(r){return r.titulo});
+      if(mom.length)linhas.push("Foi o mês de: "+mom.join("; ")+".");if(vac.length)linhas.push("Tomou "+(vac.length===1?"a vacina ":"as vacinas ")+vac.join(", ")+" (e foi corajosa).");if(con.length)linhas.push("Teve "+con.join(", ")+".");
+      var txt="Querida Olivia,\n\nEste é o seu "+(m===0?"primeiro":(m+1)+"º")+" mês de vida, de "+dataBR(de)+" a "+dataBR(ate)+". "+linhas.join(" ")+"\n\n(Escreva aqui o que vocês viveram, o que ela aprontou, como vocês se sentiram.)\n\nCom amor,\n";
+      var ta=h("textarea",{rows:"9"});ta.value=txt;
+      var d18=new Date(nasc+"T12:00:00");d18.setFullYear(d18.getFullYear()+18);var ab=h("input",{type:"date",value:d18.toISOString().slice(0,10)});
+      var fotos=[];l.forEach(function(r){(r.arquivos||[]).forEach(function(a){if(/^image\//.test(a.tipo))fotos.push(a.path)})});
+      var sv=h("button",{type:"button",text:"Guardar na cápsula"}),st=h("p",{class:"sub",role:"status"});
+      w.appendChild(h("div",{class:"wform"},h("label",null,"Carta (é só um rascunho: edite à vontade)",ta),h("label",null,"Ela pode abrir em",ab),
+        fotos.length?h("p",{class:"sub",text:"As "+Math.min(fotos.length,12)+" fotos deste mês vão junto com a carta."}):null,h("div",{class:"vfil"},sv),st));
+      sv.onclick=function(){sv.disabled=true;st.textContent="Guardando…";
+        SB.from("registros").insert({quem:quem,tipo:"carta",data:hojeISO(),titulo:"Carta do "+(m===0?"primeiro":(m+1)+"º")+" mês",valor:ab.value?dataBR(ab.value):null,detalhes:ta.value.trim(),dados:{mes:m,fotos:fotos.slice(0,12),abrirEm:ab.value||undefined}})
+          .then(sbOk).then(function(){renderFamilia(quem)},function(e){sv.disabled=false;st.textContent="Não consegui guardar: "+e.message})};
+      ta.focus()};
+    return w}

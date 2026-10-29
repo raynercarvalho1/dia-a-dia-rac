@@ -24,7 +24,7 @@
     n.id="pico";$("#pico").replaceWith(n);
     $("#ptitle").textContent=hit?hit.querySelector(".t").textContent:"Dia a Dia RAC"}
   /* ===== Módulos: cada seção grande fica em js/<seção>.js e só carrega quando é aberta ===== */
-  var MOD_VERSAO="2026-10-29.7",MODULOS={},MOD_OK={};
+  var MOD_VERSAO="2026-10-29.8",MODULOS={},MOD_OK={};
   var MOD_DEPS={conexoes:["mba"],sistema:["familia","mba","saude"],carreira:["sistema"],bebe:["familia","oms"],resumo:["saude","mba","familia"]};
   var ROTA_MODS={esportes:["esportes"],eddie:["familia"],olivia:["familia"],veiculos:["familia"],mba:["mba"],saude:["saude"],
     conexoes:["conexoes"],agenda:["sistema"],busca:["sistema"],sistema:["sistema"],lista:["lista"],carreira:["carreira"],documentos:["familia"],resumo:["resumo"],rede:["rede"]};
@@ -451,6 +451,25 @@
     var novos=ant.filter(function(x){return !tem[bkey(x)]});
     if(novos.length)pessoalGravar("aniversarios",conta.concat(novos));
   }
+  /* "Esqueci a senha": o Supabase manda um link por e-mail; ele volta para o site com #...type=recovery e aí pedimos a senha nova */
+  var RECUPERAR=/type=recovery/.test(location.hash+location.search);
+  function novaSenha(){
+    document.documentElement.classList.remove("logado");$("#gate").hidden=false;$("#gate-form").hidden=true;
+    var p1=h("input",{type:"password",placeholder:"Senha nova (8 ou mais caracteres)",autocomplete:"new-password","aria-label":"Senha nova"}),p2=h("input",{type:"password",placeholder:"Repita a senha nova",autocomplete:"new-password","aria-label":"Repita a senha nova"});
+    var b=h("button",{type:"submit",text:"Salvar a senha nova"}),m=h("p",{class:"sub",role:"status"});
+    var f=h("form",{class:"panel lockbox"},h("h2",{text:"Criar uma senha nova"}),h("p",{class:"sub",text:"Você entrou pelo link do e-mail. Escolha a senha nova; depois é só usar ela para entrar."}),p1,p2,b,m);
+    f.onsubmit=function(e){e.preventDefault();
+      if(p1.value.length<8){m.textContent="Use pelo menos 8 caracteres.";return}if(p1.value!==p2.value){m.textContent="As duas senhas estão diferentes.";return}
+      b.disabled=true;m.textContent="Salvando…";
+      SB.auth.updateUser({password:p1.value}).then(function(r){if(r.error)throw r.error;m.textContent="✓ Senha nova salva. Entrando…";RECUPERAR=false;history.replaceState(null,"",location.pathname+"#inicio");
+        setTimeout(function(){f.remove();$("#gate-form").hidden=false;entrar()},900)}).catch(function(e){b.disabled=false;m.textContent="Não consegui salvar: "+(e.message||e)})};
+    $("#gate").appendChild(f);setTimeout(function(){p1.focus()},50)}
+  $("#gate-esqueci").addEventListener("click",function(){
+    var em=$("#gate-email").value.trim(),m=$("#gate-msg");if(!/.+@.+\..+/.test(em)){m.textContent="Digite o seu e-mail no campo acima e toque de novo em Esqueci a senha.";$("#gate-email").focus();return}
+    m.textContent="Enviando…";
+    window.RACmercado.client().then(function(sb){return sb.auth.resetPasswordForEmail(em,{redirectTo:location.origin+location.pathname})}).then(function(r){
+      if(r&&r.error)throw r.error;m.textContent="Se esse e-mail tiver conta, chega um link em instantes (olhe também o spam). Abra o link neste aparelho para criar a senha nova."})
+      .catch(function(e){m.textContent=/rate|seconds/i.test(e.message||"")?"Já enviei um link há pouco; espere um minuto e tente de novo.":"Não consegui enviar: "+(e.message||e)})});
   function mostrarGate(texto){
     document.documentElement.classList.remove("logado");
     $("#gate").hidden=false;$("#gate-msg").textContent=texto||"";
@@ -458,8 +477,9 @@
   function entrar(){
     window.RACmercado.client().then(function(sb){SB=sb;return sb.auth.getSession()}).then(function(r){
       var ses=r.data&&r.data.session;
-      if(!ses){mostrarGate();return}
+      if(!ses){mostrarGate(RECUPERAR?"O link expirou ou já foi usado. Peça outro em Esqueci a senha.":"");return}
       EU=ses.user;
+      if(RECUPERAR){novaSenha();return}
       return SB.from("membros").select("dono").eq("membro",EU.id).then(function(m){
         PAPEL=m.data&&m.data.length?"casa":"dono";
         DONO=PAPEL==="casa"?m.data[0].dono:EU.id;
@@ -760,6 +780,7 @@
 
   /* ===== Tela inicial: a visão do dia num lugar só ===== */
   var ICOS={
+    alvo:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg>',
     link:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>',
     mail:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 6.5l8.5 7 8.5-7"/></svg>',
     mba:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l9-4 9 4-9 4z"/><path d="M7 10.5V15c0 1.4 2.2 3 5 3s5-1.6 5-3v-4.5M21 8v6"/></svg>',
@@ -776,16 +797,48 @@
     return p}
   function quando(d){return new Date(d).toLocaleString("pt-BR",{weekday:"short",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}).replace(",","")}
   function saudacao(){var hr=new Date().getHours();return hr<5?"Boa noite":hr<12?"Bom dia":hr<18?"Boa tarde":"Boa noite"}
-  var relogio=null;
+  var relogio=null,TEMPO_HOJE=null;
+  /* ===== Briefing falado: o resumo do dia lido em voz alta (Web Speech API, funciona no iPhone depois de um toque) ===== */
+  function briefingBtn(){
+    if(!("speechSynthesis" in window))return null;
+    var b=h("button",{type:"button",class:"ghostbtn falar",text:"🔊 Ouvir o resumo do dia"});
+    b.onclick=function(){
+      if(speechSynthesis.speaking){speechSynthesis.cancel();b.textContent="🔊 Ouvir o resumo do dia";return}
+      b.textContent="Preparando…";
+      briefingTexto().then(function(t){
+        var u=new SpeechSynthesisUtterance(t),vs=speechSynthesis.getVoices().filter(function(v){return /^pt(-|_)BR/i.test(v.lang)});
+        u.lang="pt-BR";if(vs.length)u.voice=vs.filter(function(v){return /Luciana|Francisca|Google|Felipe/i.test(v.name)})[0]||vs[0];u.rate=1.02;
+        u.onend=u.onerror=function(){b.textContent="🔊 Ouvir o resumo do dia"};
+        speechSynthesis.cancel();speechSynthesis.speak(u);b.textContent="■ Parar"})
+        .catch(function(e){b.textContent="🔊 Ouvir o resumo do dia";logErro("briefing",e)})};
+    return b}
+  function briefingTexto(){
+    var agora=new Date(),hoje=hojeISO(),partes=[saudacao()+", Rayner. Hoje é "+agora.toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long"})+"."];
+    var pTempo=TEMPO_HOJE?Promise.resolve(TEMPO_HOJE):getJson("https://api.open-meteo.com/v1/forecast?latitude=-23.50&longitude=-47.46&current=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min&hourly=precipitation_probability,precipitation&timezone=America%2FSao_Paulo&forecast_days=2").catch(function(){return null});
+    var pAcoes=precisa(["sistema"]).then(function(){return proximasAcoes()}).catch(function(){return []});
+    var pJogo=getJson("https://statsapi.mlb.com/api/v1/schedule?sportId=1&teamId=119&date="+hoje+"&hydrate=team").catch(function(){return null});
+    return Promise.all([pTempo,pAcoes,pJogo]).then(function(r){
+      var d=r[0];if(d){partes.push("Em Sorocaba faz "+Math.round(d.current.temperature_2m)+" graus, "+WXTXT[wxKind(d.current.weather_code)]+", com máxima de "+Math.round(d.daily.temperature_2m_max[0])+" e mínima de "+Math.round(d.daily.temperature_2m_min[0])+".");
+        var c=NUCLEO.chuvaAviso(d.hourly,d.current.time);if(c)partes.push(c.texto.replace(/\(até (\d+)%.*\)/,"(chance de até $1 por cento)").replace(/~/g,""))}
+      var a=r[1].slice(0,4);if(a.length)partes.push("Para hoje: "+a.map(function(x){return x.t+(x.sub?", "+x.sub.split(" · ")[0]:"")}).join(". ")+".");
+      else partes.push("Nada vencendo na agenda.");
+      var niver=(typeof withDates==="function"&&isOwner()?withDates():[]).filter(function(x){return x.dias===0});if(niver.length)partes.push("Hoje é aniversário de "+niver.map(function(x){return x.nome}).join(", ")+".");
+      var novas=(VG.all||[]).filter(function(v){return v.d<=1}).length;if(novas)partes.push(novas+(novas===1?" vaga nova":" vagas novas")+" de dados apareceram desde ontem.");
+      var j=r[2]&&r[2].dates&&r[2].dates[0]&&r[2].dates[0].games[0];
+      if(j){var casa=j.teams.home.team.id===119,adv=(casa?j.teams.away:j.teams.home).team.teamName||(casa?j.teams.away:j.teams.home).team.name;
+        partes.push("Os Dodgers jogam hoje "+(casa?"em casa contra ":"fora contra ")+"os "+adv+", às "+new Date(j.gameDate).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"}).replace(":00","").replace(":"," e ")+" de Brasília.")}
+      partes.push(new Date().getHours()<12?"Tenha um ótimo dia!":"É isso por agora.");
+      return partes.join(" ")})}
   function renderInicio(){
     var root=$("#inicio-view");root.innerHTML="";
     var clock=h("div",{class:"clock"}),wx=h("p",{class:"sub",text:"Sorocaba"});
     function tick(){clock.textContent=new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}
     tick();clearInterval(relogio);relogio=setInterval(tick,15000);
     root.appendChild(h("div",{class:"home"},
-      h("div",{class:"hi"},h("div",null,h("h2",{text:saudacao()+", Rayner"}),h("p",{class:"sub",text:new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long",year:"numeric"})})),h("div",null,clock,wx)),
-      h("div",{class:"hgrid"},wEmail(),wLazy(["sistema"],"wAgenda"),wLazy(["conexoes"],"wConexoes"),wLazy(["esportes"],"wEsportes"),wNoticias(),wX(),wMercado(),wLazy(["mba"],"wMba"),wAniv(),wVagas(),wEstudos())));
+      h("div",{class:"hi"},h("div",null,h("h2",{text:saudacao()+", Rayner"}),briefingBtn(),h("p",{class:"sub",text:new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long",year:"numeric"})})),h("div",null,clock,wx)),
+      h("div",{class:"hgrid"},wLazy(["sistema"],"wProxima"),wEmail(),wLazy(["sistema"],"wAgenda"),wLazy(["conexoes"],"wConexoes"),wLazy(["esportes"],"wEsportes"),wNoticias(),wX(),wMercado(),wLazy(["mba"],"wMba"),wAniv(),wVagas(),wEstudos())));
     getJson("https://api.open-meteo.com/v1/forecast?latitude=-23.50&longitude=-47.46&current=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min&hourly=precipitation_probability,precipitation&timezone=America%2FSao_Paulo&forecast_days=2").then(function(d){
+      TEMPO_HOJE=d;
       wx.textContent=Math.round(d.current.temperature_2m)+"° agora em Sorocaba · "+WXTXT[wxKind(d.current.weather_code)]+" · máx. "+Math.round(d.daily.temperature_2m_max[0])+"°, mín. "+Math.round(d.daily.temperature_2m_min[0])+"°";
       /* aviso de chuva nas próximas 12 horas, em cima dos cartões */
       var c=NUCLEO.chuvaAviso(d.hourly,d.current.time);if(!c)return;

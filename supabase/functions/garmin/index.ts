@@ -6,7 +6,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 const BASE = "https://personal.connectapi.garmin.com";
 const CORS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-rac-atalho",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 /* chaves do próprio Supabase: o formato novo é um JSON por nome ({"default": "sb_..."}); o antigo, um texto só */
@@ -363,6 +363,108 @@ async function resumoSemana(adm: Sb, uid: string, hoje: string) {
   return l;
 }
 
+/* ---------- lista de compras: atalhos do iPhone (Siri e a nota compartilhada) e o que deve estar acabando ----------
+   Mesmas regras de nucleo.js (previsaoCompras, notaItens, dividirItens, chaveProduto), em TypeScript. */
+const semAcento = (t: string) => String(t ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+const chaveProduto = (t: string) => semAcento(t).replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
+const mediana = (l: number[]) => { const a = [...l].sort((x, y) => x - y), n = a.length; return n ? (n % 2 ? a[(n - 1) / 2] : (a[n / 2 - 1] + a[n / 2]) / 2) : 0; };
+const diasEntre = (a: string, b: string) => Math.round((Date.parse(b + "T12:00:00Z") - Date.parse(a + "T12:00:00Z")) / 864e5);
+type Linha = { data: string; produto: string; quantidade: number };
+function previsaoCompras(linhas: Linha[], hoje: string, adiados: Record<string, string>) {
+  const por: Record<string, { produto: string; dias: Record<string, number> }> = {}, out: { chave: string; produto: string; r: number; vezes: number; status: string }[] = [];
+  for (const x of linhas) { if (!x.produto || !x.data) continue; const k = chaveProduto(x.produto), p = (por[k] ??= { produto: x.produto, dias: {} }); p.dias[x.data] = (p.dias[x.data] ?? 0) + (Number(x.quantidade) || 1); }
+  for (const [k, p] of Object.entries(por)) {
+    const ds = Object.keys(p.dias).sort(); if (ds.length < 3) continue;
+    const iv = ds.slice(1).map((d, i) => diasEntre(ds[i], d));
+    const med = Math.max(3, mediana(iv)), qMed = mediana(ds.map((d) => p.dias[d])) || 1, ult = ds[ds.length - 1];
+    const esp = med * Math.max(0.5, Math.min(3, p.dias[ult] / qMed)), desde = diasEntre(ult, hoje), r = desde / esp;
+    if (desde > Math.max(21, esp * 2.5)) continue;
+    if (adiados[k] && adiados[k] > hoje) continue;
+    out.push({ chave: k, produto: p.produto, r, vezes: ds.length, status: r >= 0.9 ? "acabando" : r >= 0.7 ? "logo" : "ok" });
+  }
+  return out.sort((a, b) => Number(b.status === "acabando") - Number(a.status === "acabando") || b.vezes - a.vezes || b.r - a.r);
+}
+const itemBate = (item: string, produto: string) => {
+  const w = chaveProduto(item).split(" ").filter((x) => x.length >= 3 && !/^(de|da|do|das|dos|com|para)$/.test(x)), alvo = " " + chaveProduto(produto) + " ";
+  return !!w.length && w.every((x) => alvo.includes(" " + x));
+};
+function notaItens(texto: string) {
+  const out: string[] = []; let primeira = true;
+  for (const l of String(texto ?? "").replace(/\r/g, "").split("\n")) {
+    let t = l.replace(/\u00a0/g, " ").trim(); if (!t) continue;
+    const marcado = /^(?:- )?(?:☑|✅|✓|✔|\[[xX]\])/.test(t), marca = marcado || /^(?:- )?(?:[-*•·◦○◯⚪☐]|\[ ?\])/.test(t);
+    t = t.replace(/^(?:- )?(?:\[[ xX]?\]|[-*•·◦○◯⚪☐☑✅✓✔])\s*/, "").trim(); if (!t) continue;
+    const era1 = primeira; primeira = false;
+    if (era1 && !marca && /\b(lista|compras|mercado)\b/.test(semAcento(t))) continue;
+    if (!marca && (/:$/.test(t) || /^(demais itens|outros|outros itens|outras coisas)$/.test(semAcento(t)))) continue;
+    if (marcado) continue;
+    out.push(t.slice(0, 200));
+  }
+  return out;
+}
+const dividirItens = (texto: string) => String(texto ?? "").split(/\s*(?:\n|;|,|\s+e\s+(?=\S))\s*/i)
+  .map((x) => x.replace(/^(?:- )?(?:\[[ xX]?\]|[-*•·◦○◯⚪☐])\s*/, "").replace(/[.!]+$/, "").trim()).filter(Boolean)
+  .map((x) => x.charAt(0).toUpperCase() + x.slice(1));
+/* histórico do Mercado (último ano) direto das tabelas */
+async function historicoCompras(adm: Sb, uid: string, hoje: string) {
+  const ini = somaDias(hoje, -365);
+  const { data: notas } = await adm.from("notas").select("id,data").eq("user_id", uid).gte("data", ini);
+  const dataDe: Record<string, string> = {}; for (const n of notas ?? []) dataDe[(n as any).id] = (n as any).data;
+  const { data: prods } = await adm.from("produtos").select("id,nome").eq("user_id", uid);
+  const nomeDe: Record<string, string> = {}; for (const p of prods ?? []) nomeDe[(p as any).id] = (p as any).nome;
+  const linhas: Linha[] = [];
+  for (let de = 0; ; de += 1000) {
+    const { data, error } = await adm.from("itens").select("nota_id,produto_id,descricao,quantidade").eq("user_id", uid).range(de, de + 999);
+    if (error) throw error;
+    for (const x of (data ?? []) as any[]) if (dataDe[x.nota_id]) linhas.push({ data: dataDe[x.nota_id], produto: nomeDe[x.produto_id] ?? x.descricao, quantidade: Number(x.quantidade) || 1 });
+    if ((data ?? []).length < 1000) break;
+  }
+  return { linhas, notas: (notas ?? []) as { data: string }[] };
+}
+async function acabando(adm: Sb, uid: string, hoje: string) {
+  const [{ linhas }, { data: abertos }, { data: ad }] = await Promise.all([historicoCompras(adm, uid, hoje),
+    adm.from("lista").select("item").eq("user_id", uid).eq("tipo", "compra").eq("feito", false),
+    adm.from("pessoal").select("valor").eq("user_id", uid).eq("chave", "acabandoAdiado").maybeSingle()]);
+  const ab = (abertos ?? []).map((x: any) => x.item as string);
+  return previsaoCompras(linhas, hoje, ((ad as any)?.valor ?? {}) as Record<string, string>)
+    .filter((x) => x.status !== "ok" && !ab.some((i) => itemBate(i, x.produto) || chaveProduto(i) === x.chave)).map((x) => x.produto);
+}
+/* pedidos dos atalhos: cabeçalho x-rac-atalho com a chave criada no site (Lista → Siri e a nota do iPhone) */
+async function sha256hex(t: string) { return [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(t)))].map((x) => x.toString(16).padStart(2, "0")).join(""); }
+async function atalho(req: Request) {
+  const adm = admin(), corpo = await req.json().catch(() => ({})) as Record<string, unknown>;
+  const resp = (m: string, st = 200) => corpo.formato === "json" ? responder({ ok: st < 300, mensagem: m }, st)
+    : new Response(m, { status: st, headers: { ...CORS, "Content-Type": "text/plain; charset=utf-8" } });
+  const tok = (req.headers.get("x-rac-atalho") ?? "").trim(), hash = await sha256hex(tok);
+  const { data: ps } = await adm.from("pessoal").select("user_id,valor").eq("chave", "atalho");
+  const dono = tok.length >= 20 ? (ps ?? []).find((x: any) => x.valor?.hash === hash) as { user_id: string } | undefined : undefined;
+  if (!dono) return resp("Chave do atalho inválida. Crie outra no site: Lista → Siri e a nota do iPhone.", 401);
+  const uid = dono.user_id, hoje = iso(new Date(Date.now() - 3 * 3600e3));
+  const { data: abertos } = await adm.from("lista").select("item").eq("user_id", uid).eq("tipo", "compra").eq("feito", false);
+  const ja = new Set((abertos ?? []).map((x: any) => chaveProduto(x.item)));
+  const inserir = async (itens: string[]) => {
+    const novos: string[] = [];
+    for (const i of itens) { const k = chaveProduto(i); if (k && !ja.has(k)) { ja.add(k); novos.push(i.slice(0, 200)); } }
+    if (novos.length) { const { error } = await adm.from("lista").insert(novos.map((item) => ({ user_id: uid, criado_por: uid, tipo: "compra", item }))); if (error) throw error; }
+    return novos;
+  };
+  if (corpo.tipo === "lista_add") {
+    const n = await inserir(dividirItens(String(corpo.texto ?? "")));
+    return resp(n.length ? "Na lista: " + n.join(", ") + "." : "Já estava tudo na lista.");
+  }
+  if (corpo.tipo === "lista_notas") {
+    /* só o que apareceu na nota desde a última leitura: o que vocês já riscaram no site não volta */
+    const itens = notaItens(String(corpo.texto ?? ""));
+    const { data: pv } = await adm.from("pessoal").select("valor").eq("user_id", uid).eq("chave", "notaVista").maybeSingle();
+    const vistos = new Set<string>(((pv as any)?.valor?.linhas ?? []) as string[]);
+    const n = await inserir(itens.filter((i) => !vistos.has(chaveProduto(i))));
+    await adm.from("pessoal").upsert({ user_id: uid, chave: "notaVista", valor: { linhas: itens.map(chaveProduto), quando: new Date().toISOString() }, atualizado: new Date().toISOString() }, { onConflict: "user_id,chave" });
+    return resp(n.length ? `Novo na lista do site: ${n.join(", ")}.` : "Nada novo na nota.");
+  }
+  if (corpo.tipo === "acabando") return resp((await acabando(adm, uid, hoje)).join("\n"));
+  return resp("Pedido desconhecido.", 400);
+}
+
 /* ---------- rotina diária (chamada pelo agendamento do banco, sem ninguém com o site aberto) ---------- */
 const NOMES: Record<string, string> = { eddie: "Eddie", olivia: "Olivia", civic: "Civic", moto: "Moto", c3: "C3" };
 const dBR = (s: string) => s.slice(8, 10) + "/" + s.slice(5, 7);
@@ -450,15 +552,25 @@ async function rotina(req: Request) {
   let chuva: string | null = null, semana: string[] = [];
   await passo("chuva", async () => { chuva = await chuvaHoje(hoje); return chuva ?? "sem chuva"; });
   if (domingo) await passo("resumo_semana", async () => { semana = await resumoSemana(adm, uid, hoje); return semana.length; });
+  let faltando: string[] = [];
+  await passo("acabando", async () => {
+    const { notas } = await historicoCompras(adm, uid, hoje), sem = [0, 0, 0, 0, 0, 0, 0];
+    for (const n of notas) if (n.data >= somaDias(hoje, -120)) sem[new Date(n.data + "T12:00:00Z").getUTCDay()]++;
+    const dia = sem.indexOf(Math.max(...sem));
+    if (!Math.max(...sem) || new Date(hoje + "T12:00:00Z").getUTCDay() !== dia) return "não é dia de mercado";
+    faltando = (await acabando(adm, uid, hoje)).slice(0, 8);
+    return faltando.length;
+  });
   await passo("alertas", async () => {
     const ev = await agendaServidor(adm, uid, hoje);
     const linhas = ev.map((e) => (e.data < hoje ? "⚠ atrasado: " : e.data === hoje ? "• hoje: " : "• " + dBR(e.data) + ": ") + e.t);
-    const partes = [chuva, semana.length ? "Sua semana\n" + semana.join("\n") : null, linhas.length ? "Próximos dias\n" + linhas.join("\n") : null].filter(Boolean) as string[];
+    const compra = faltando.length ? "🛒 Dia de mercado. Deve estar acabando: " + faltando.join(", ") + "." : null;
+    const partes = [chuva, compra, semana.length ? "Sua semana\n" + semana.join("\n") : null, linhas.length ? "Próximos dias\n" + linhas.join("\n") : null].filter(Boolean) as string[];
     if (!partes.length) return { itens: 0 };
     /* push: o essencial em poucas linhas; ao tocar, abre a Agenda (ou o Resumo, no domingo) */
-    const corpoPush = [chuva, semana.length ? "Sua semana: " + semana.join(" · ") : null, linhas.length ? linhas.length + (linhas.length > 1 ? " itens" : " item") + " na agenda: " + ev[0].t : null].filter(Boolean).join("\n");
+    const corpoPush = [chuva, compra, semana.length ? "Sua semana: " + semana.join(" · ") : null, linhas.length ? linhas.length + (linhas.length > 1 ? " itens" : " item") + " na agenda: " + ev[0].t : null].filter(Boolean).join("\n");
     return { itens: ev.length, telegram: await telegram("Dia a Dia RAC\n\n" + partes.join("\n\n")),
-      push: await pushPara(adm, uid, { titulo: domingo ? "Dia a Dia RAC — resumo da semana" : "Dia a Dia RAC — hoje", corpo: corpoPush, url: domingo && semana.length ? "./#resumo" : "./#agenda", tag: "rotina" }) };
+      push: await pushPara(adm, uid, { titulo: domingo ? "Dia a Dia RAC — resumo da semana" : "Dia a Dia RAC — hoje", corpo: corpoPush, url: domingo && semana.length ? "./#resumo" : compra && !linhas.length ? "./#lista" : "./#agenda", tag: "rotina" }) };
   });
   if (domingo) await passo("backup", () => backupSemanal(adm, uid, hoje));
   await adm.from("rotina_log").insert({ user_id: uid, ok: tudoOk, resumo: res });
@@ -469,6 +581,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   try {
     if (req.headers.get("x-rac-rotina")) return await rotina(req);
+    if (req.headers.get("x-rac-atalho")) return await atalho(req);
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, chavePublica(), {
       global: { headers: { Authorization: req.headers.get("Authorization") ?? "" } },
     });

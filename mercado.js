@@ -1057,7 +1057,9 @@
           ratearDesconto(final);
           salvarB.disabled = true; st3.textContent = "Salvando…";
           var nomeMerc = selMerc.value === "novo" ? final.mercado : selMerc.options[selMerc.selectedIndex].text;
-          salvarNota(final, selMerc.value, prods).then(function () { return loadRows(true); }).then(function () {
+          var riscados = [];
+          salvarNota(final, selMerc.value, prods).then(function () { return riscarDaLista(final.itens).then(function (r) { riscados = r; }, function () { }); })
+            .then(function () { return loadRows(true); }).then(function () {
             /* troca o quadro inteiro por uma confirmação clara do que entrou */
             p.innerHTML = "";
             var outra = h("button", { type: "button", class: "ghostbtn", text: "Adicionar outra nota" });
@@ -1067,6 +1069,7 @@
               h("h2", { text: "Nota salva" }),
               h("p", { text: semCidade(nomeMerc) + " · " + dataBR(final.data) + " · " + final.itens.length + " itens · " + money(final.pago) }),
               h("p", { class: "sub", text: "Ela já aparece no painel como a última compra e entrou no histórico de preços." }),
+              riscados.length ? h("p", { class: "qrok", text: "✓ Riscado da lista de compras: " + riscados.join(", ") + "." }) : null,
               h("div", { class: "vfil" },
                 h("a", { class: "ghostbtn pri", href: "#mercado/painel", text: "Ver no painel" }),
                 h("a", { class: "ghostbtn", href: "#mercado/notas", text: "Ver notas" }), outra)));
@@ -1092,6 +1095,18 @@
       var ids = Object.keys(groupBy(l, function (x) { return x.nota_id; }));
       if (!ids.length) throw new Error("nota não encontrada");
       return sb.from("itens").delete().in("nota_id", ids).then(ok).then(function () { return sb.from("notas").delete().in("id", ids).then(ok); });
+    });
+  }
+
+  /* o que estava na lista de compras e apareceu nesta nota vai para "no carrinho" (marcado) */
+  function riscarDaLista(itens) {
+    var N = window.RACnucleo;
+    if (!N || !N.itemBate) return Promise.resolve([]);
+    return sb.from("lista").select("id,item").eq("tipo", "compra").eq("feito", false).then(ok).then(function (l) {
+      var bate = l.filter(function (x) { return itens.some(function (it) { return N.itemBate(x.item, (it.prodNome || "") + " " + (it.desc || "")); }); });
+      if (!bate.length) return [];
+      return sb.from("lista").update({ feito: true, feito_em: new Date().toISOString() }).in("id", bate.map(function (x) { return x.id; })).then(ok)
+        .then(function () { return bate.map(function (x) { return x.item; }); });
     });
   }
 
@@ -1241,7 +1256,7 @@
   /* O login do Mercado é o login do site todo: a página inteira usa este mesmo cliente */
   /* abre o histórico de preço de um produto (usado pelos Gastos da Olivia) */
   function verProduto(nome) { st.prod = nome; st.q = ""; st.voltar = false; st.voltarY = null; location.hash = "#mercado/precos"; }
-  window.RACmercado = { render: render, client: client, resumo: resumo, money: money, grafico: graficoLinha, verProduto: verProduto,
+  window.RACmercado = { url: SB_URL, chave: SB_KEY, render: render, client: client, resumo: resumo, money: money, grafico: graficoLinha, verProduto: verProduto,
     /* só para os testes automáticos (tests/): leitura da resposta da nota pela foto */
     _teste: { jsonTolerante: jsonTolerante, lerResposta: lerResposta, lerTextoLivre: lerTextoLivre } };
 })();

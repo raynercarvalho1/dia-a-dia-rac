@@ -137,3 +137,30 @@ test("chuva: acha a primeira hora com chuva provável e ignora garoa improvável
   assert.equal(N.chuvaAviso({ time, precipitation_probability: prob, precipitation: mm }, "2026-10-29T00:00", 9), null);
   assert.ok(N.chuvaAviso({ time, precipitation_probability: prob, precipitation: mm }, "2026-10-29T16:00").agora);
 });
+
+test("compras: prevê o que está acabando e respeita o 'ainda tem'", () => {
+  const l = [];
+  ["2026-08-01", "2026-08-08", "2026-08-15", "2026-08-22"].forEach((d) => l.push({ data: d, produto: "Leite Integral", quantidade: 6, valor: 30 }));
+  ["2026-07-01", "2026-08-01", "2026-09-01"].forEach((d) => l.push({ data: d, produto: "Papel Higiênico", quantidade: 1, valor: 25 }));
+  l.push({ data: "2026-08-10", produto: "Vinho", quantidade: 1, valor: 80 });
+  const p = N.previsaoCompras(l, "2026-08-29");
+  assert.equal(p[0].produto, "Leite Integral");
+  assert.equal(p[0].status, "acabando"); // a cada 7 dias, última há 7
+  assert.equal(p.find((x) => x.produto === "Papel Higiênico").status, "ok"); // a última compra (01/09) é depois desta data
+  assert.ok(!p.some((x) => x.produto === "Vinho")); // só uma compra
+  assert.equal(N.previsaoCompras(l, "2026-08-29", { "leite integral": "2026-09-02" }).some((x) => x.produto === "Leite Integral"), false);
+  assert.equal(N.previsaoCompras(l, "2026-12-30").some((x) => x.produto === "Leite Integral"), false); // parou de comprar
+  const pd = N.padraoCompras(l);
+  assert.equal(pd.mais[0].produto, "Leite Integral");
+  assert.equal(pd.menos[0].produto, "Vinho");
+  assert.ok(N.itemBate("pão de forma", "Pão de Forma Pullman 480g"));
+  assert.ok(!N.itemBate("filtro café", "Café Pilão 500g"));
+});
+test("nota do iPhone e o que é ditado viram itens da lista", () => {
+  const nota = "Lista de compras\nDiabo verde\nPão de forma\nFiltro café\n\nDemais itens\n\nFarmácia:\nAnti inflamatório: ibuprofeno ou naproxeno\n✓ Sabonete";
+  const it = N.notaItens(nota);
+  assert.deepEqual(it.map((x) => x.item), ["Diabo verde", "Pão de forma", "Filtro café", "Anti inflamatório: ibuprofeno ou naproxeno"]);
+  assert.equal(it[3].secao, "Farmácia");
+  assert.deepEqual(N.notaItens("◦ Leite\n☑ Ovos\n- [ ] Café").map((x) => x.item), ["Leite", "Café"]);
+  assert.deepEqual(N.dividirItens("leite, pão de forma e café."), ["Leite", "Pão de forma", "Café"]);
+});

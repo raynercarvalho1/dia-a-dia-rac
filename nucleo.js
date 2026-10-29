@@ -174,5 +174,49 @@
     var hora=function(k){return +t[k].slice(11,13)+"h"},agoraJa=ini===i0;
     return {agora:agoraJa,inicio:t[ini],fim:t[fim],prob:max,mm:Math.round(soma*10)/10,
       texto:(agoraJa?"Chuva em Sorocaba agora":"Chuva em Sorocaba a partir das "+hora(ini))+(fim>ini?", até umas "+(+t[fim].slice(11,13)+1)+"h":"")+" (até "+max+"%"+(soma>=1?", ~"+Math.round(soma)+" mm":"")+")."}}
-  raiz.RACnucleo={norm:norm,urlAbs:urlAbs,lerAbast:lerAbast,TEMAS:TEMAS,temasDe:temasDe,juntarDados:juntarDados,SKILLS:SKILLS,compatVaga:compatVaga,omsZ:omsZ,omsValor:omsValor,percentilDeZ:percentilDeZ,csvLinhas:csvLinhas,napperLer:napperLer,bebeDias:bebeDias,VACINAS_PNI:VACINAS_PNI,vacinasCalendario:vacinasCalendario,mediana:mediana,prontidao:prontidao,somaDiasISO:somaDiasISO,correlacao:correlacao,chuvaAviso:chuvaAviso};
+  /* ===== Compras: o que deve estar acabando, pelo intervalo entre as compras de cada produto =====
+     linhas = [{data, produto, quantidade, valor}] (notas do Mercado); adiados = {chave: "AAAA-MM-DD"} ("ainda tem" até essa data).
+     Precisa de 3 compras do produto; o intervalo é a mediana entre elas, esticado quando a última compra foi maior que o normal. */
+  function diasEntre(a,b){return Math.round((Date.parse(b+"T12:00:00Z")-Date.parse(a+"T12:00:00Z"))/864e5)}
+  function chaveProduto(t){return norm(t).replace(/[^a-z0-9 ]+/g," ").replace(/\s+/g," ").trim()}
+  function previsaoCompras(linhas,hoje,adiados){
+    adiados=adiados||{};var por={},out=[];
+    linhas.forEach(function(x){if(!x.produto||!x.data)return;var k=chaveProduto(x.produto),p=por[k]=por[k]||{produto:x.produto,dias:{}};p.dias[x.data]=(p.dias[x.data]||0)+(+x.quantidade||1)});
+    Object.keys(por).forEach(function(k){
+      var p=por[k],ds=Object.keys(p.dias).sort();if(ds.length<3)return;
+      var iv=[];for(var i=1;i<ds.length;i++)iv.push(diasEntre(ds[i-1],ds[i]));
+      var med=Math.max(3,mediana(iv)),qMed=mediana(ds.map(function(d){return p.dias[d]}))||1,ult=ds[ds.length-1];
+      var esp=med*Math.max(.5,Math.min(3,p.dias[ult]/qMed)),desde=diasEntre(ult,hoje),r=desde/esp;
+      if(desde>Math.max(21,esp*2.5))return; /* passou muito do normal: parou de comprar ou compra em outro lugar */
+      if(adiados[k]&&adiados[k]>hoje)return;
+      out.push({chave:k,produto:p.produto,ultima:ult,vezes:ds.length,intervalo:Math.round(esp),dias:desde,r:Math.round(r*100)/100,status:r>=.9?"acabando":r>=.7?"logo":"ok"})});
+    /* primeiro o que está acabando; dentro disso, o que você mais compra (o básico do dia a dia vem na frente) */
+    return out.sort(function(a,b){return (b.status==="acabando")-(a.status==="acabando")||b.vezes-a.vezes||b.r-a.r})}
+  /* mais comprados (em quantas compras o produto apareceu) e os que só apareceram uma vez */
+  function padraoCompras(linhas){
+    var por={};linhas.forEach(function(x){var k=chaveProduto(x.produto);if(!k)return;var p=por[k]=por[k]||{produto:x.produto,dias:{},gasto:0};p.dias[x.data]=1;p.gasto+=+x.valor||0});
+    var l=Object.keys(por).map(function(k){var p=por[k],ds=Object.keys(p.dias).sort();return {produto:p.produto,vezes:ds.length,gasto:Math.round(p.gasto*100)/100,ultima:ds[ds.length-1]}});
+    return {total:l.length,mais:l.slice().sort(function(a,b){return b.vezes-a.vezes||b.gasto-a.gasto}).slice(0,15),
+      menos:l.filter(function(x){return x.vezes===1}).sort(function(a,b){return b.ultima.localeCompare(a.ultima)}).slice(0,15)}}
+  /* item da lista já está numa nota? (todas as palavras do item aparecem no nome do produto ou na descrição do cupom) */
+  function itemBate(item,produto){var w=chaveProduto(item).split(" ").filter(function(x){return x.length>=3&&!/^(de|da|do|das|dos|com|para)$/.test(x)}),alvo=" "+chaveProduto(produto)+" ";
+    return !!w.length&&w.every(function(x){return alvo.indexOf(" "+x)>=0})}
+  /* texto de uma nota do iPhone: itens, sem o título, as seções ("Farmácia:", "Demais itens") e o que já foi marcado */
+  function notaItens(texto){
+    var out=[],secao="",primeira=true;
+    String(texto||"").replace(/\r/g,"").split("\n").forEach(function(l){
+      var t=l.replace(/\u00a0/g," ").trim();if(!t)return;
+      var marcado=/^(?:- )?(?:☑|✅|✓|✔|\[[xX]\])/.test(t),marca=marcado||/^(?:- )?(?:[-*•·◦○◯⚪☐]|\[ ?\])/.test(t);
+      t=t.replace(/^(?:- )?(?:\[[ xX]?\]|[-*•·◦○◯⚪☐☑✅✓✔])\s*/,"").trim();if(!t)return;
+      var era1=primeira;primeira=false;
+      if(era1&&!marca&&/\b(lista|compras|mercado)\b/.test(norm(t)))return;
+      if(!marca&&(/:$/.test(t)||/^(demais itens|outros|outros itens|outras coisas)$/.test(norm(t)))){secao=t.replace(/:$/,"");return}
+      if(marcado)return;
+      out.push({item:t.slice(0,200),secao:secao})});
+    return out}
+  /* o que foi ditado ou digitado de uma vez ("leite, pão de forma e café") vira um item por coisa */
+  function dividirItens(texto){
+    return String(texto||"").split(/\s*(?:\n|;|,|\s+e\s+(?=\S))\s*/i).map(function(x){return x.replace(/^(?:- )?(?:\[[ xX]?\]|[-*•·◦○◯⚪☐])\s*/,"").replace(/[.!]+$/,"").trim()}).filter(Boolean)
+      .map(function(x){return x.charAt(0).toUpperCase()+x.slice(1)})}
+  raiz.RACnucleo={norm:norm,urlAbs:urlAbs,lerAbast:lerAbast,TEMAS:TEMAS,temasDe:temasDe,juntarDados:juntarDados,SKILLS:SKILLS,compatVaga:compatVaga,omsZ:omsZ,omsValor:omsValor,percentilDeZ:percentilDeZ,csvLinhas:csvLinhas,napperLer:napperLer,bebeDias:bebeDias,VACINAS_PNI:VACINAS_PNI,vacinasCalendario:vacinasCalendario,mediana:mediana,prontidao:prontidao,somaDiasISO:somaDiasISO,correlacao:correlacao,chuvaAviso:chuvaAviso,diasEntre:diasEntre,chaveProduto:chaveProduto,previsaoCompras:previsaoCompras,padraoCompras:padraoCompras,itemBate:itemBate,notaItens:notaItens,dividirItens:dividirItens};
 })(typeof window!=="undefined"?window:globalThis);

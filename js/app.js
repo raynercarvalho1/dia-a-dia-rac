@@ -24,7 +24,7 @@
     n.id="pico";$("#pico").replaceWith(n);
     $("#ptitle").textContent=hit?hit.querySelector(".t").textContent:"Dia a Dia RAC"}
   /* ===== Módulos: cada seção grande fica em js/<seção>.js e só carrega quando é aberta ===== */
-  var MOD_VERSAO="2026-10-29.18",MODULOS={},MOD_OK={};
+  var MOD_VERSAO="2026-10-29.19",MODULOS={},MOD_OK={};
   var MOD_DEPS={conexoes:["mba"],sistema:["familia","mba","saude"],carreira:["sistema"],bebe:["familia","oms"],resumo:["saude","mba","familia"]};
   var ROTA_MODS={esportes:["esportes"],eddie:["familia"],olivia:["familia"],veiculos:["familia"],mba:["mba"],saude:["saude"],
     conexoes:["conexoes"],agenda:["sistema"],busca:["sistema"],sistema:["sistema"],lista:["lista"],carreira:["carreira"],documentos:["familia"],resumo:["resumo"],rede:["rede"]};
@@ -101,7 +101,7 @@
     if(top==="mercado"){sideMark("mercado","mercado");if(window.RACmercado)window.RACmercado.render(parts[1]||"");return}
     if(top==="inicio"){sideMark("inicio","inicio");renderInicio();return}
     if(top==="estudos"){sideMark("estudos","estudos");renderEstudos();return}
-    if(top==="mba"){sideMark("mba","mba");renderMba();return}
+    if(top==="mba"){sideMark("mba","mba");renderMba(parts[1]);return}
     if(top==="documentos"){sideMark("documentos","documentos");renderFamilia("docs");return}
     if(top==="vagas")vgAlertas();
     if(top==="rede"){sideMark("rede","rede");renderRede();return}

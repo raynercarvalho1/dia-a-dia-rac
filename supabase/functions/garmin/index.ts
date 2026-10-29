@@ -274,6 +274,7 @@ async function agendaServidor(adm: Sb, uid: string, hoje: string) {
   for (const q of P.mba?.financeiro?.parcelas ?? []) if (!feito["pg:" + q.k]) ev.push({ data: q.venc, t: `MBA: boleto ${q.n} (R$ ${Number(q.v).toFixed(2).replace(".", ",")})` });
   for (const a of P.mba?.aulas ?? []) ev.push({ data: a.data, t: `MBA: aula ${a.t} às ${a.hora}` });
   for (const l of P.lembretes ?? []) if (!l.feito) ev.push({ data: l.data, t: l.t });
+  for (const c of P.candidaturas ?? []) { const d = c.datas?.candidatei; if (c.coluna === "candidatei" && d && !c.followup) ev.push({ data: somaDias(d, 5), t: `Follow-up da candidatura: ${c.t}${c.e ? " (" + c.e + ")" : ""}` }); }
   const ano = +hoje.slice(0, 4);
   for (const b of P.aniversarios ?? []) {
     let d = `${ano}-${String(b.mes).padStart(2, "0")}-${String(b.dia).padStart(2, "0")}`; if (d < hoje) d = `${ano + 1}` + d.slice(4);

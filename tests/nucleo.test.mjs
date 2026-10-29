@@ -58,3 +58,11 @@ test("importação com juntar: completa sem duplicar e sem apagar", () => {
   assert.equal(r.clinica, "Vet A");
   assert.equal(N.juntarDados(velho, { custo: 1, meds: [{ nome: "Bravecto" }] }), null, "nada novo: devolve null");
 });
+
+test("compatibilidade da vaga: o que pede, o que tem e o que falta", () => {
+  const r = N.compatVaga("Analista de Dados Pleno — SQL avançado, Power BI (DAX), Python desejável, levantamento de requisitos com stakeholders", ["sql", "powerbi", "negocio"]);
+  assert.deepEqual(r.pede.sort(), ["negocio", "powerbi", "python", "sql"]);
+  assert.deepEqual(r.falta, ["python"]);
+  assert.equal(r.nota, 75);
+  assert.equal(N.compatVaga("Vaga de motorista", ["sql"]).nota, null, "sem competência de dados: sem nota");
+});

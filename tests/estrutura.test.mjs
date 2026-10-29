@@ -50,3 +50,10 @@ test("nenhum dado pessoal no código público", () => {
     for (const p of proibidos) assert.ok(!p.test(t), `${a} tem algo que parece dado pessoal (${p})`);
   }
 });
+
+test("nenhum caractere de controle escondido no código (ex.: \b virando backspace)", () => {
+  for (const a of ["index.html", "nucleo.js", "mercado.js", "sw.js", ...arquivos]) {
+    const t = fs.readFileSync(new URL(a, raiz), "utf8");
+    assert.ok(!/[\x00-\x08\x0B\x0C\x0E-\x1F]/.test(t), `${a} tem caractere de controle`);
+  }
+});

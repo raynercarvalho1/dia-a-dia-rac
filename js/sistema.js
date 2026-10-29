@@ -67,7 +67,7 @@
         return SB.storage.from("familia").upload(path,new Blob([a.dados]),{upsert:true})})},Promise.resolve()).then(function(){res.anexos=B.anexos.length;return res})})})}
 
   /* ---------- agenda única: tudo que tem data no site ---------- */
-  var AGENDA_TIPOS={familia:["🐾","Família"],veiculo:["🚗","Veículos"],mba:["🎓","MBA"],niver:["🎂","Aniversário"],lembrete:["📌","Lembrete"],sistema:["🛟","Sistema"]};
+  var AGENDA_TIPOS={familia:["🐾","Família"],veiculo:["🚗","Veículos"],mba:["🎓","MBA"],niver:["🎂","Aniversário"],lembrete:["📌","Lembrete"],sistema:["🛟","Sistema"],carreira:["💼","Carreira"]};
   function agendaColetar(){
     var hoje=hojeISO(),ev=[];
     function add(data,t,sub,tipo,href,extra){if(data)ev.push(Object.assign({data:String(data).slice(0,10),t:t,sub:sub||"",tipo:tipo,href:href||""},extra||{}))}
@@ -85,6 +85,8 @@
         var fin=mbaFin();if(fin)fin.ps.forEach(function(q){if(!q.paga)add(q.venc,"Boleto: "+q.n,BRL(q.v),"mba","#mba")});
         withDates().forEach(function(x){if(x.dias<=7||(x.fav&&x.dias<=30))add(maisDias(hoje,x.dias),"Aniversário de "+x.nome,x.fav?"marcado":"", "niver","#aniversarios")});
         (PESSOAL.lembretes||[]).forEach(function(l){if(!l.feito)add(l.data,l.t,"lembrete","lembrete","",{lembrete:l})});
+        /* carreira: 5 dias depois de se candidatar sem resposta, hora do follow-up */
+        (PESSOAL.candidaturas||[]).forEach(function(c){var d=(c.datas||{}).candidatei;if(c.coluna==="candidatei"&&d&&!c.followup)add(maisDias(d,5),"Follow-up: "+c.t+(c.e?" ("+c.e+")":""),"candidatura de "+dataBR(d),"carreira","#carreira/funil")});
         if(!PESSOAL.ultimoBackup||PESSOAL.ultimoBackup<maisDias(hoje,-30))add(hoje,"Baixar um backup do site",PESSOAL.ultimoBackup?"o último foi em "+dataBR(PESSOAL.ultimoBackup):"nunca foi feito","sistema","#sistema")}
       return ev.sort(function(a,b){return a.data.localeCompare(b.data)})})}
   function agendaLinha(e,redesenhar){

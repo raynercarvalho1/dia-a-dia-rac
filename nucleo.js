@@ -57,5 +57,27 @@
         novo[k].forEach(function(x){if(!tem[chave(x)]){l.push(x);mudou=true}});d[k]=l}
       else if(d[k]==null){d[k]=novo[k];mudou=true}});
     return mudou?d:null}
-  raiz.RACnucleo={norm:norm,urlAbs:urlAbs,lerAbast:lerAbast,TEMAS:TEMAS,temasDe:temasDe,juntarDados:juntarDados};
+  /* Carreira: competências que aparecem em vagas de dados, para comparar com o seu perfil */
+  var SKILLS=[
+    ["sql","SQL",/\bsql\b|consultas? em banco|postgres|mysql|sql server|oracle|bigquery|snowflake|redshift/i],
+    ["powerbi","Power BI",/power ?bi|\bdax\b|power query|\bpbi\b/i],
+    ["excel","Excel avançado",/excel|planilhas?|vba|tabelas? din[aâ]micas?|proc ?v/i],
+    ["python","Python",/\bpython\b|pandas|numpy|jupyter/i],
+    ["r","R",/\blinguagem r\b|\bem r\b|\br\/|rstudio|tidyverse/i],
+    ["estat","Estatística",/estat[ií]stic|teste[s]? de hip[oó]tese|regress[aã]o|infer[eê]ncia/i],
+    ["ml","Machine learning",/machine learning|aprendizado de m[aá]quina|modelos? preditivos?|scikit|xgboost/i],
+    ["viz","Visualização (Tableau, Looker…)",/tableau|looker|qlik|metabase|data ?viz|visualiza[cç][aã]o de dados|storytelling/i],
+    ["etl","ETL e engenharia de dados",/\betl\b|\belt\b|pipelines?|airflow|\bdbt\b|spark|databricks|data lake|lakehouse|integra[cç][aã]o de dados/i],
+    ["cloud","Nuvem (AWS, Azure, GCP)",/\baws\b|azure|google cloud|\bgcp\b|cloud/i],
+    ["negocio","Requisitos de negócio",/requisitos|regras? de neg[oó]cio|stakeholders?|levantamento|vis[aã]o de neg[oó]cio|kpis?|indicadores/i],
+    ["agil","Metodologias ágeis",/[aá]geis|\b[aá]gil\b|scrum|kanban|jira/i],
+    ["ingles","Inglês",/ingl[eê]s|english/i],
+    ["git","Git",/\bgit\b|github|gitlab/i],
+    ["ia","IA generativa",/ia generativa|\bllms?\b|genai|chatgpt|prompt/i],
+    ["sap","SAP / ERP",/\bsap\b|\berp\b|totvs|protheus/i]];
+  /* o que o texto da vaga pede, o que você tem e o que falta (nota de 0 a 100) */
+  function compatVaga(texto,meus){
+    var pede=SKILLS.filter(function(k){return k[2].test(String(texto||""))}).map(function(k){return k[0]}),tem=pede.filter(function(k){return (meus||[]).indexOf(k)>=0});
+    return {pede:pede,tem:tem,falta:pede.filter(function(k){return tem.indexOf(k)<0}),nota:pede.length?Math.round(tem.length/pede.length*100):null}}
+  raiz.RACnucleo={norm:norm,urlAbs:urlAbs,lerAbast:lerAbast,TEMAS:TEMAS,temasDe:temasDe,juntarDados:juntarDados,SKILLS:SKILLS,compatVaga:compatVaga};
 })(typeof window!=="undefined"?window:globalThis);

@@ -145,6 +145,14 @@ img.ico{background:#fff;object-fit:contain;padding:2px;box-shadow:0 0 0 1px var(
 .listat{font-size:calc(16px + var(--fz))}.listaq{margin-left:8px;color:var(--muted);font-size:calc(13px + var(--fz))}
 .listaul li.feito .listat{text-decoration:line-through;color:var(--muted)}
 .listarm{background:none;color:var(--muted);font-size:22px;padding:6px 10px}
+.kanban{display:grid;grid-template-columns:repeat(4,minmax(220px,1fr));gap:10px;overflow-x:auto;padding-bottom:6px}
+.kcol{background:var(--glass);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-radius:14px;padding:10px;display:grid;gap:8px;align-content:start}
+.kcard{background:var(--panel,var(--bg));border:1px solid var(--line);border-radius:12px;padding:10px;display:grid;gap:4px}
+.kcard.alerta{box-shadow:inset 3px 0 0 var(--bad,#c62828)}.kcompat,.vcompat{font:600 calc(12px + var(--fz)) var(--f-ui);color:var(--muted)}
+.vcompat.bom,.kcompat.bom{color:var(--good,#1a7f37)}.vcompat.ruim{color:var(--bad,#c62828)}
+.skillgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px}
+.star{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;margin:0}.star dt{font-weight:700;color:var(--accent)}.star dd{margin:0}
+.sqled{font:calc(13px + var(--fz))/1.45 ui-monospace,Consolas,monospace;width:100%}
 .syncst{display:block;font:600 calc(12px + var(--fz)) var(--f-ui);padding:6px 10px;border-radius:10px;text-decoration:none;color:var(--ink);background:var(--bg)}
 .syncst.bom{color:var(--good,#1a7f37)}.syncst.pend{color:var(--warn,#b45309)}.syncst.ruim{color:var(--bad,#c62828);background:color-mix(in srgb,#c62828 10%,var(--bg))}
 .buscares li{padding:6px 8px}.buscares li b{font-size:calc(13px + var(--fz))}
@@ -833,6 +841,7 @@ code.mbaf{font:calc(12px + var(--fz))/1.4 ui-monospace,Consolas,monospace;white-
       <a class="it" href="#x" data-k="x"><span class="ico" style="--ic:var(--c-x);color:var(--side)"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></span><span class="t">Perfis no X</span><span class="cnt" id="cnt-x"></span></a>
       <a class="it" href="#saude" data-k="saude"><span class="ico" style="--ic:var(--c-saude)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.8 5.6a5.2 5.2 0 0 0-7.4 0L12 7l-1.4-1.4a5.2 5.2 0 1 0-7.4 7.4L12 21.6l8.8-8.6a5.2 5.2 0 0 0 0-7.4z"/><path d="M3.5 12h4l2-3 3 6 2-3h6"/></svg></span><span class="t">Saúde e treinos</span></a>
       <a class="it" href="#mba" data-k="mba"><span class="ico" style="--ic:var(--c-inicio)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8l9-4 9 4-9 4z"/><path d="M7 10.5V15c0 1.4 2.2 3 5 3s5-1.6 5-3v-4.5M21 8v6"/></svg></span><span class="t">MBA</span><span class="cnt" id="cnt-mba"></span></a>
+      <a class="it" href="#carreira" data-k="carreira"><span class="ico" style="--ic:var(--c-vagas)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7.5" width="18" height="12" rx="2"/><path d="M9 7.5V5h6v2.5M3 13h18M11 13v2h2v-2"/></svg></span><span class="t">Carreira</span></a>
       <a class="it" href="#mercado" data-k="mercado"><span class="ico" style="--ic:var(--c-mercado)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L21 8H6"/><circle cx="10" cy="20" r="1.2" fill="currentColor"/><circle cx="17" cy="20" r="1.2" fill="currentColor"/></svg></span><span class="t">Mercado</span></a>
       <a class="it" href="#lista" data-k="lista"><span class="ico" style="--ic:var(--c-mercado)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/></svg></span><span class="t">Lista de compras</span></a>
       <a class="it" href="#olivia" data-k="olivia"><span class="ico" style="--ic:var(--c-olivia)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M9 10.5h.01M15 10.5h.01M9.5 15c1.4 1.2 3.6 1.2 5 0M12 3.5c-1 1.2-1 2.6 0 3.5"/></svg></span><span class="t">Olivia</span></a>
@@ -875,6 +884,7 @@ code.mbaf{font:calc(12px + var(--fz))/1.4 ui-monospace,Consolas,monospace;white-
   <section id="inicio" hidden><div id="inicio-view"></div></section>
   <section id="estudos" hidden><div id="estudos-view" class="stack"></div></section>
   <section id="mba" hidden><div id="mba-view" class="stack"></div></section>
+  <section id="carreira" hidden><div id="carreira-view" class="stack"></div></section>
   <section id="lista" hidden><div id="lista-view" class="stack"></div></section>
   <section id="agenda" hidden><div id="agenda-view" class="stack"></div></section>
   <section id="busca" hidden><div id="busca-view" class="stack"></div></section>

@@ -24,7 +24,7 @@
     n.id="pico";$("#pico").replaceWith(n);
     $("#ptitle").textContent=hit?hit.querySelector(".t").textContent:"Dia a Dia RAC"}
   /* ===== Módulos: cada seção grande fica em js/<seção>.js e só carrega quando é aberta ===== */
-  var MOD_VERSAO="2026-10-29.21",MODULOS={},MOD_OK={};
+  var MOD_VERSAO="2026-10-30.1",MODULOS={},MOD_OK={};
   var MOD_DEPS={conexoes:["mba"],sistema:["familia","mba","saude"],carreira:["sistema"],bebe:["familia","oms"],resumo:["saude","mba","familia"]};
   var ROTA_MODS={esportes:["esportes"],eddie:["familia"],olivia:["familia"],veiculos:["familia"],mba:["mba"],saude:["saude"],
     conexoes:["conexoes"],agenda:["sistema"],busca:["sistema"],sistema:["sistema"],lista:["lista"],carreira:["carreira"],documentos:["familia"],resumo:["resumo"],rede:["rede"]};
@@ -877,7 +877,7 @@
     return Promise.all([pTempo,pAcoes,pJogo]).then(function(r){
       var d=r[0];if(d){partes.push("Em Sorocaba faz "+Math.round(d.current.temperature_2m)+" graus, "+WXTXT[wxKind(d.current.weather_code)]+", com máxima de "+Math.round(d.daily.temperature_2m_max[0])+" e mínima de "+Math.round(d.daily.temperature_2m_min[0])+".");
         var c=NUCLEO.chuvaAviso(d.hourly,d.current.time);if(c)partes.push(c.texto.replace(/\(até (\d+)%.*\)/,"(chance de até $1 por cento)").replace(/~/g,""))}
-      var a=r[1].slice(0,4);if(a.length)partes.push("Para hoje: "+a.map(function(x){return x.t+(x.sub?", "+x.sub.split(" · ")[0]:"")}).join(". ")+".");
+      var a=r[1].slice(0,4);if(a.length)partes.push("Para hoje: "+a.map(function(x){return (x.pre?x.pre+": ":"")+x.t+(x.sub?", "+x.sub.split(" · ")[0]:"")}).join(". ")+".");
       else partes.push("Nada vencendo na agenda.");
       var niver=(typeof withDates==="function"&&isOwner()?withDates():[]).filter(function(x){return x.dias===0});if(niver.length)partes.push("Hoje é aniversário de "+niver.map(function(x){return x.nome}).join(", ")+".");
       var novas=(VG.all||[]).filter(function(v){return v.d<=1}).length;if(novas)partes.push(novas+(novas===1?" vaga nova":" vagas novas")+" de dados apareceram desde ontem.");

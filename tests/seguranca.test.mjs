@@ -39,3 +39,10 @@ test("rotina recusa senha errada", { skip: pular }, async () => {
   const j = await r.json().catch(() => ({}));
   assert.ok(!j.ok, "não executou");
 });
+
+test("a função só libera o navegador do próprio site (CORS)", { skip: pular }, async () => {
+  const origem = async (o) => (await fetch(`${URL_SB}/functions/v1/garmin`, { method: "OPTIONS", headers: { Origin: o, "Access-Control-Request-Method": "POST" } })).headers.get("access-control-allow-origin");
+  assert.notEqual(await origem("https://site-estranho.example"), "https://site-estranho.example", "outro site não pode chamar a função pelo navegador");
+  assert.notEqual(await origem("https://site-estranho.example"), "*", "sem liberar para qualquer site");
+  assert.equal(await origem("https://raynercarvalho.com.br"), "https://raynercarvalho.com.br", "o site continua podendo chamar");
+});

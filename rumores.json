@@ -1,8 +1,133 @@
 {
- "coletado": "2026-10-30T17:59:15.050304+00:00",
+ "coletado": "2026-10-30T22:15:54.783881+00:00",
  "fonte": "MLB Trade Rumors",
  "falhas": [],
  "liga": [
+  {
+   "t": "Guardians Select Milan Tolentino",
+   "link": "https://www.mlbtraderumors.com/2026/10/guardians-select-milan-tolentino.html",
+   "data": "2026-10-30T22:00:27+00:00",
+   "resumo": "The Guardians announced that they have selected the contract of infielder Milan Tolentino. They also declined a club option on right-hander Trevor Stephan as well as their end of a mutual option with righty Shawn Armstrong. Tolentino, 25 next month, was a fourth-round pick in…",
+   "tags": [
+    "Cleveland Guardians",
+    "Transactions",
+    "Milan Tolentino",
+    "Shawn Armstrong",
+    "Trevor Stephan"
+   ]
+  },
+  {
+   "t": "Giants Outright Andrew Knizner",
+   "link": "https://www.mlbtraderumors.com/2026/10/giants-outright-andrew-knizner.html",
+   "data": "2026-10-30T21:50:34+00:00",
+   "resumo": "The Giants announced that catcher Andrew Knizner has cleared waivers and been sent outright to Triple-A Sacramento. He has the right to elect free agency and will presumably do so. San Francisco entered the offseason needing to do a lot of roster maintenance. Eligible players…",
+   "tags": [
+    "San Francisco Giants",
+    "Transactions",
+    "Andrew Knizner"
+   ]
+  },
+  {
+   "t": "Angels Select Nicolò Pinazzi",
+   "link": "https://www.mlbtraderumors.com/2026/10/angels-select-nicolo-pinazzi.html",
+   "data": "2026-10-30T21:38:42+00:00",
+   "resumo": "The Angels announced that they have selected the contract of left-hander Nicolò Pinazzi. They also announced they have turned down a club option on righty Robert Stephenson, a move that was covered earlier today. More to come.",
+   "tags": [
+    "Los Angeles Angels",
+    "Transactions",
+    "Nicolo Pinazzi"
+   ]
+  },
+  {
+   "t": "Diamondbacks To Hire Ben Fritz As Pitching Coach",
+   "link": "https://www.mlbtraderumors.com/2026/10/diamondbacks-to-hire-ben-fritz-as-pitching-coach.html",
+   "data": "2026-10-30T21:10:32+00:00",
+   "resumo": "The Diamondbacks have a new pitching coach. Dennis Lin of The Athletic reports that Arizona has snaked Ben Fritz away from the Padres. He has been working as the bullpen coach in San Diego. The Snakes parted ways with pitching coach Brian Kaplan earlier this month. Fritz, 45,…",
+   "tags": [
+    "Arizona Diamondbacks",
+    "Colorado Rockies",
+    "San Diego Padres",
+    "Ben Fritz"
+   ]
+  },
+  {
+   "t": "Rays Decline Mutual Option On Cedric Mullins",
+   "link": "https://www.mlbtraderumors.com/2026/10/rays-decline-mutual-option-on-cedric-mullins.html",
+   "data": "2026-10-30T20:40:09+00:00",
+   "resumo": "The Rays announced that they have declined mutual options on right-hander Nick Martinez and outfielder Cedric Mullins. Both are now free agents. It was reported earlier that Martinez had turned down his end of his option. It has been over a decade since a mutual option was…",
+   "tags": [
+    "Tampa Bay Rays",
+    "Transactions",
+    "Cedric Mullins"
+   ]
+  },
+  {
+   "t": "Joc Pederson Declines Mutual Option With Rangers",
+   "link": "https://www.mlbtraderumors.com/2026/10/joc-pederson-declines-mutual-option-with-rangers.html",
+   "data": "2026-10-30T20:25:31+00:00",
+   "resumo": "Designated hitter Joc Pederson is back on the open market. Jesse Rogers of ESPN reports that Pederson has declined his end of an $18.5MM mutual option with the Rangers. He is now a free agent. As with all mutual option decisions, this is essentially a procedural move. It’s been…",
+   "tags": [
+    "Texas Rangers",
+    "Transactions",
+    "Joc Pederson"
+   ]
+  },
+  {
+   "t": "Athletics Decline Club Options On Jeffrey Springs, Jeff McNeil",
+   "link": "https://www.mlbtraderumors.com/2026/10/athletics-decline-club-options-on-jeffrey-springs-jeff-mcneil.html",
+   "data": "2026-10-30T19:20:08+00:00",
+   "resumo": "The Athletics announced that they have declined club options on left-hander Jeffrey Springs and infielder/outfielder Jeff McNeil. Both players are now free agents. Neither decision is too shocking. Both players are 34 years old and coming off disappointing seasons. The A’s…",
+   "tags": [
+    "Athletics",
+    "Transactions",
+    "Jeff McNeil",
+    "Jeffrey Springs"
+   ]
+  },
+  {
+   "t": "Mariners’ Michael Arroyo Undergoes Elbow Scope Procedure",
+   "link": "https://www.mlbtraderumors.com/2026/10/mariners-michael-arroyo-undergoes-elbow-scope-procedure.html",
+   "data": "2026-10-30T18:52:33+00:00",
+   "resumo": "The Mariners announced that Dr. Keith Meister performed an elbow scope on second baseman/left fielder Michael Arroyo two days ago. The procedure was meant “to clean up cartilage and brace a chronic injury to [Arroyo’s] UCL,” and the top prospect “is anticipated to be ready to…",
+   "tags": [
+    "Seattle Mariners",
+    "Michael Arroyo"
+   ]
+  },
+  {
+   "t": "Mariners To Hire CJ Gillman As Hitting Coach",
+   "link": "https://www.mlbtraderumors.com/2026/10/mariners-to-hire-cj-gillman-as-hitting-coach.html",
+   "data": "2026-10-30T18:39:39+00:00",
+   "resumo": "The Mariners are set to hire CJ Gillman as the new hitting coach, according to The Athletic’s Ken Rosenthal, Chandler Rome, and Spencer Nusbaum. Gillman formerly worked as Seattle’s minor league hitting coordinator from 2022-25, before spending last season as the Nationals’…",
+   "tags": [
+    "Seattle Mariners",
+    "Washington Nationals",
+    "CJ Gillman"
+   ]
+  },
+  {
+   "t": "Josh Bell’s Mutual Option Declined",
+   "link": "https://www.mlbtraderumors.com/2026/10/twins-josh-bell-decline-mutual-option.html",
+   "data": "2026-10-30T18:30:28+00:00",
+   "resumo": "Twins designated hitter Josh Bell is officially a free agent, the MLBPA announced today. His contract had a $10MM mutual option with a $1.25MM buyout. The team declined their end of the option, per Aaron Gleeman of AaronGleeman.com. Gleeman adds that the Twins declined their…",
+   "tags": [
+    "Minnesota Twins",
+    "Transactions",
+    "Joe Ryan",
+    "Josh Bell"
+   ]
+  },
+  {
+   "t": "Orioles Re-Sign Rece Hinds",
+   "link": "https://www.mlbtraderumors.com/2026/10/orioles-re-sign-rece-hinds.html",
+   "data": "2026-10-30T18:07:16+00:00",
+   "resumo": "The Orioles announced that outfielder Rece Hinds has been re-signed to a one-year Major League contract. The Baltimore Banner’s Andy Kostka reports that Hinds’ salary will be $4700 more than the next MLB minimum salary, which will be established when the next collective…",
+   "tags": [
+    "Baltimore Orioles",
+    "Transactions",
+    "Rece Hinds"
+   ]
+  },
   {
    "t": "Zach Eflin Becomes Free Agent",
    "link": "https://www.mlbtraderumors.com/2026/10/zach-eflin-becomes-free-agent.html",
@@ -15,31 +140,20 @@
    ]
   },
   {
-   "t": "Front Office Subscriber Chat With Anthony Franco: TODAY At 2:00pm Central",
+   "t": "Front Office Subscriber Chat Transcript",
    "link": "https://www.mlbtraderumors.com/2026/10/front-office-subscriber-chat-with-anthony-franco-today-at-200pm-central-89.html",
    "data": "2026-10-30T17:35:01+00:00",
-   "resumo": "MLBTR’s Anthony Franco will be holding a live chat today at 2:00 pm Central, exclusively for Trade Rumors Front Office subscribers! Unlock Subscriber-Exclusive Articles Like This One With a Trade Rumors Front Office Subscription BENEFITS Access weekly subscriber-only articles…",
+   "resumo": "Anthony Franco Good afternoon, hope all is well! Congratulations to Brewers fans on the well deserved championship! Busy time for us now obviously so I’m going to keep this one around an hour Let’s get rolling Joshua Take your shot…..what do you think will be the biggest trade…",
    "tags": [
     "Front Office Originals",
     "MLBTR Chats"
    ]
   },
   {
-   "t": "Josh Bell’s Mutual Option Declined",
-   "link": "https://www.mlbtraderumors.com/2026/10/twins-josh-bell-decline-mutual-option.html",
-   "data": "2026-10-30T17:31:28+00:00",
-   "resumo": "Twins designated hitter Josh Bell is officially a free agent, the MLBPA announced today. His contract had a $10MM mutual option with a $1.25MM buyout. It’s not immediately clear whether Bell or the team declined their end of the deal, but the result is the same. There was never…",
-   "tags": [
-    "Minnesota Twins",
-    "Transactions",
-    "Josh Bell"
-   ]
-  },
-  {
    "t": "Angels Decline Club Option On Robert Stephenson",
    "link": "https://www.mlbtraderumors.com/2026/10/angels-decline-club-option-on-robert-stephenson.html",
    "data": "2026-10-30T17:26:39+00:00",
-   "resumo": "The MLBPA announced that Robert Stephenson is now a free agent, indicating that the Angels declined their $2.5MM club option on his services for 2027. More to come…",
+   "resumo": "The MLBPA announced that Robert Stephenson is now a free agent, indicating that the Angels declined their $2.5MM club option on his services for 2027. Stephenson’s tenure in Los Angeles will now end with only 10 innings pitched over three seasons. A trade from the Pirates to…",
    "tags": [
     "Los Angeles Angels",
     "Transactions",
@@ -57,116 +171,6 @@
     "Transactions",
     "Carson Kelly",
     "Matthew Boyd"
-   ]
-  },
-  {
-   "t": "Sonny Gray Becomes Free Agent After Mutual Option Is Declined",
-   "link": "https://www.mlbtraderumors.com/2026/10/sonny-gray-becomes-free-agent-after-mutual-option-is-declined.html",
-   "data": "2026-10-30T17:23:43+00:00",
-   "resumo": "Sonny Gray is officially a free agent, as the MLBPA included the right-hander’s name on a list of players who have resolved their club or mutual options heading into the offseason. It isn’t specified if Gray or the Red Sox turned down their end of his $30MM mutual option for…",
-   "tags": [
-    "Boston Red Sox",
-    "Newsstand",
-    "Transactions",
-    "Sonny Gray"
-   ]
-  },
-  {
-   "t": "Blue Jays Outright Rudy Martin Jr.",
-   "link": "https://www.mlbtraderumors.com/2026/10/blue-jays-outright-rudy-martin-jr.html",
-   "data": "2026-10-30T16:30:07+00:00",
-   "resumo": "The Blue Jays announced that Rudy Martin Jr. has been outrighted to Triple-A Buffalo after clearing waivers. Since Martin has been outrighted in the past, he has the ability to reject the assignment and opt for free agency. It hadn’t been made public that Martin had been…",
-   "tags": [
-    "Toronto Blue Jays",
-    "Transactions",
-    "Rudy Martin Jr."
-   ]
-  },
-  {
-   "t": "Diamondbacks Seeking Controllable Starting Pitching",
-   "link": "https://www.mlbtraderumors.com/2026/10/diamondbacks-seeking-controllable-starting-pitching.html",
-   "data": "2026-10-30T15:20:18+00:00",
-   "resumo": "After deciding whether or not to trade Ketel Marte, a secondary item on the Diamondbacks’ to-do list will be adding to the rotation. General manager Mike Hazen tells Nick Piecoro of The Arizona Republic that he would like to acquire a controllable starter. That is more likely…",
-   "tags": [
-    "Arizona Diamondbacks"
-   ]
-  },
-  {
-   "t": "Marlins Exercise Club Option On Sandy Alcantara",
-   "link": "https://www.mlbtraderumors.com/2026/10/marlins-exercise-club-option-on-sandy-alcantara.html",
-   "data": "2026-10-30T14:28:09+00:00",
-   "resumo": "One of the most straightforward option decisions for any team this offseason is now official. The Marlins announced Friday that they’ve exercised their $21MM club option on right-hander Sandy Alcantara. It’s a net $19MM decision, as the Marlins would have owed Alcantara a $2MM…",
-   "tags": [
-    "Miami Marlins",
-    "Newsstand",
-    "Transactions",
-    "Sandy Alcantara"
-   ]
-  },
-  {
-   "t": "Marlins Outright Five Players",
-   "link": "https://www.mlbtraderumors.com/2026/10/marlins-outright-tyler-zuber-brian-navarreto.html",
-   "data": "2026-10-30T13:40:26+00:00",
-   "resumo": "The Marlins’ offseason housekeeping has begun. Miami has outrighted five players off the 40-man roster, according to the team’s transaction log at MLB.com. Catchers Logan Driscoll and Brian Navarreto and righties Tyler Zuber, Wikelman González and Zach Brzykcy have all cleared…",
-   "tags": [
-    "Miami Marlins",
-    "Transactions",
-    "Brian Navarreto",
-    "Logan Driscoll",
-    "Tyler Zuber",
-    "Wikelman Gonzalez"
-   ]
-  },
-  {
-   "t": "Nick Martinez Declines Mutual Option With Rays",
-   "link": "https://www.mlbtraderumors.com/2026/10/nick-martinez-declines-mutual-option-with-rays.html",
-   "data": "2026-10-30T13:17:03+00:00",
-   "resumo": "Nick Martinez declined his end of a $20MM mutual option with the Rays, reports Jon Heyman of The New York Post. Martinez will collect a $4MM buyout and return to free agency. The outcome was always certain. Mutual options are used as accounting measures and are almost never…",
-   "tags": [
-    "Tampa Bay Rays",
-    "Transactions",
-    "Nick Martinez"
-   ]
-  },
-  {
-   "t": "The Opener: Mariners’ Managerial Search, Astros’ GM Search, Trade Candidates",
-   "link": "https://www.mlbtraderumors.com/2026/10/the-opener-mariners-managerial-search-astros-gm-search-trade-candidates.html",
-   "data": "2026-10-30T12:54:43+00:00",
-   "resumo": "The offseason continues. Expect to see a host of option and 40-man roster decisions as teams try to duck under the limit before this coming Monday, November 2nd. At that point, all option decisions will need to be made, and all players on the 60-day injured list will need to be…",
-   "tags": [
-    "The Opener"
-   ]
-  },
-  {
-   "t": "Top 40 Trade Candidates Of The 2026-27 MLB Offseason",
-   "link": "https://www.mlbtraderumors.com/2026/10/top-trade-candidates-mlb-offseason-2026-27.html",
-   "data": "2026-10-30T04:59:59+00:00",
-   "resumo": "The celebration is on in Milwaukee and the offseason has arrived! Free agency won’t officially open for five days, as teams have until then to resolve any option decisions and have an exclusive negotiating window with their own free agents. There are no restrictions on the…",
-   "tags": [
-    "MLBTR Originals",
-    "Newsstand",
-    "Top Offseason Trade Candidates"
-   ]
-  },
-  {
-   "t": "NPB’s Seibu Lions To Post Kaima Taira",
-   "link": "https://www.mlbtraderumors.com/2026/10/npbs-seibu-lions-to-post-kaima-taira.html",
-   "data": "2026-10-30T04:58:22+00:00",
-   "resumo": "The Seibu Lions of Japan’s Nippon Professional Baseball confirmed they’ll make starter Kaima Taira available to MLB clubs via the posting system. The Lions’ general manager announced the news to Japanese media on Friday (Japanese-language link via Nikkan Sports). The posting…",
-   "tags": [
-    "Nippon Professional Baseball",
-    "Kaima Taira"
-   ]
-  },
-  {
-   "t": "Diamondbacks Expected To Field Interest On Ketel Marte",
-   "link": "https://www.mlbtraderumors.com/2026/10/diamondbacks-expected-to-field-interest-on-ketel-marte.html",
-   "data": "2026-10-30T04:32:23+00:00",
-   "resumo": "The Diamondbacks’ biggest offseason question is whether they’ll line up a Ketel Marte trade. Arizona fielded interest in the star second baseman early last offseason, though it seemed mostly a matter of due diligence as they explored ways to add controllable starting pitching.…",
-   "tags": [
-    "Arizona Diamondbacks",
-    "Newsstand",
-    "Ketel Marte"
    ]
   }
  ],

@@ -13,6 +13,8 @@ const raiz = fileURLToPath(new URL("../", import.meta.url));
 let pw = null;
 try { pw = await import("playwright"); } catch (_) { /* sem Playwright: pula */ }
 const pular = !pw ? "Playwright não instalado (roda no GitHub)" : false;
+/* no GitHub o Playwright tem que estar lá: se faltar, o teste falha em vez de ser pulado sem ninguém ver */
+test("no GitHub, o navegador do teste está instalado", { skip: !process.env.CI }, () => assert.ok(pw, "Playwright não foi instalado no testes.yml"));
 const TIPOS = { ".html": "text/html", ".js": "text/javascript", ".json": "application/json", ".css": "text/css", ".png": "image/png", ".webmanifest": "application/manifest+json" };
 
 test("o site abre no navegador, todos os módulos carregam e nada dá erro", { skip: pular, timeout: 90000 }, async () => {

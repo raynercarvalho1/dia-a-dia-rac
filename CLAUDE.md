@@ -18,6 +18,13 @@ Leia o README.md para a arquitetura. Estas são as regras de trabalho.
 - Edge Function: o dono republica a função antes do site ir ao ar.
 - Commits no `main` como `github-actions[bot]`; `git pull --rebase` antes do push (os robôs também publicam).
 
+## IA (RAC Intelligence, docs/rac-intelligence.md)
+- Toda IA passa pela função `rac-ia` e, no site, só por `racIA()`. Nenhum outro arquivo chama a Anthropic (há teste).
+- Ação nova = entrada em `acoes.ts` (modelo, papéis, limites, JSON obrigatório, validação) + demonstração em `demo.ts` + testes.
+- A IA nunca grava: o resultado vai para a conferência existente e só o clique em Salvar grava. Resposta DEMO nunca chega ao que salva.
+- Nada de repetição paga automática, de troca de modelo na recusa nem de liberar reserva incerta por prazo.
+- Preços só em `ia_precos` (com fonte e data), nunca no código.
+
 ## Segurança (o repositório é público)
 - Nunca escrever senhas, chaves secretas, tokens, CPF, documentos, endereço, telefone, placas, chassi, fotos ou exames no repositório.
 - A única chave no código é a pública (publishable) do Supabase; a segurança vem do RLS.

@@ -46,3 +46,18 @@ test("a função só libera o navegador do próprio site (CORS)", { skip: pular 
   assert.notEqual(await origem("https://site-estranho.example"), "*", "sem liberar para qualquer site");
   assert.equal(await origem("https://raynercarvalho.com.br"), "https://raynercarvalho.com.br", "o site continua podendo chamar");
 });
+
+// RAC Intelligence: a função rac-ia só existe depois da Fase C (publicação pela CLI). Até lá estes testes ficam como TODO;
+// na Fase C, trocar RAC_IA_PUBLICADA para true.
+const RAC_IA_PUBLICADA = false;
+const opIa = { skip: pular, todo: RAC_IA_PUBLICADA ? false : "publicar a função rac-ia (Fase C)" };
+test("rac-ia recusa quem não fez login, sem chamar a IA", opIa, async () => {
+  const r = await fetch(`${URL_SB}/functions/v1/rac-ia`, { method: "POST", headers: { ...H, "Content-Type": "application/json", Origin: "https://raynercarvalho.com.br" },
+    body: JSON.stringify({ versao: 1, modulo: "abastecimento", acao: "abastecimento.interpretar", idempotencia: "teste-sem-login-1", entrada: { texto: "6 litros" } }) });
+  assert.equal(r.status, 401);
+});
+test("rac-ia só libera o navegador do próprio site (CORS)", opIa, async () => {
+  const origem = async (o) => (await fetch(`${URL_SB}/functions/v1/rac-ia`, { method: "OPTIONS", headers: { Origin: o, "Access-Control-Request-Method": "POST" } })).headers.get("access-control-allow-origin");
+  assert.notEqual(await origem("https://site-estranho.example"), "https://site-estranho.example");
+  assert.equal(await origem("https://raynercarvalho.com.br"), "https://raynercarvalho.com.br");
+});

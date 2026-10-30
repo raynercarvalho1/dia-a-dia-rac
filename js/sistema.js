@@ -315,11 +315,61 @@
           var ids={},rep=0;l.forEach(function(x){var k=x.id!=null?x.id:x.chave||x.data;if(k!=null){if(ids[k])rep++;ids[k]=1}});if(rep)probs.push(t+": "+rep+" ids repetidos");
           det[t]=[l.length,agora[i]];if(agora[i]!=null&&l.length<agora[i]*0.8&&agora[i]-l.length>5)probs.push(t+": "+l.length+" no backup, "+agora[i]+" hoje")});
         var res={quando:new Date().toISOString(),arquivo:arq.name,ok:!probs.length,problemas:probs,tabelas:det};pessoalGravar("testeRestauracao",res);return res})})}
+  /* ===== RAC Intelligence: gasto do mês (reservado, estimado pelo RAC, cobrado), alertas, modo, chamadas incertas e preços.
+     Só o dono altera; a casa vê. A estimativa do RAC não é a fatura: a cobrança efetiva vem do Console da Anthropic. */
+  function sisIA(){
+    var p=panel("RAC Intelligence","A IA do RAC: o quanto já foi usado no mês e o que está configurado."),corpo=h("div",null,h("p",{class:"sub",text:"Carregando…"}));p.appendChild(corpo);
+    function usd(v){return "US$ "+(+v||0).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:4})}
+    function desenhar(){
+      Promise.all([SB.rpc("ia_totais_mes").then(sbOk),SB.from("ia_config").select("*").maybeSingle().then(sbOk),SB.from("ia_precos").select("*").then(sbOk),
+        isOwner()?SB.from("ia_uso").select("id,criado_em,modulo,acao,estado,reservado_usd,erro_codigo,enviado_em").in("estado",["incerto","enviando"]).order("criado_em",{ascending:false}).limit(20).then(sbOk):Promise.resolve([]),
+        isOwner()?SB.from("ia_cobranca").select("*").order("mes",{ascending:false}).limit(1).then(sbOk):Promise.resolve([])])
+      .then(function(r){
+        var t=r[0]||{},cfg=r[1]||{modo:"DEMO",limite_brl:50,cambio_brl_usd:6,margem_impostos:0.12,margem_seguranca:0.1},teto=+t.teto_usd||0,comp=+t.comprometido_usd||0,pct=teto?Math.round(comp/teto*100):0;
+        corpo.innerHTML="";
+        if(pct>=50)corpo.appendChild(h("p",{class:"qrwarn",text:pct>=100?"⚠ O limite do mês foi atingido: novas leituras com IA estão bloqueadas até o mês virar.":"⚠ A IA já usou "+pct+"% do limite do mês."}));
+        corpo.appendChild(h("div",{class:"kgasto"},
+          h("div",null,h("span",{class:"kl",text:"Modo"}),h("b",{class:"kv",text:cfg.modo==="REAL"?"REAL":"DEMO"})),
+          h("div",null,h("span",{class:"kl",text:"Comprometido no mês"}),h("b",{class:"kv",text:usd(comp)+" ("+pct+"%)"})),
+          h("div",null,h("span",{class:"kl",text:"Teto interno"}),h("b",{class:"kv",text:usd(teto)})),
+          h("div",null,h("span",{class:"kl",text:"Estimado pelo RAC"}),h("b",{class:"kv",text:usd(t.estimado_usd)})),
+          h("div",null,h("span",{class:"kl",text:"Reservado em aberto"}),h("b",{class:"kv",text:usd(t.reservado_aberto_usd)})),
+          h("div",null,h("span",{class:"kl",text:"Cobrança efetiva"}),h("b",{class:"kv",text:r[4][0]&&r[4][0].valor_usd!=null?usd(r[4][0].valor_usd)+" ("+String(r[4][0].mes).slice(0,7)+")":"não informada"}))));
+        var pm=t.por_modulo||{};if(Object.keys(pm).length)corpo.appendChild(h("p",{class:"sub",text:"Por módulo: "+Object.keys(pm).map(function(k){return k+" "+usd(pm[k])}).join(" · ")}));
+        corpo.appendChild(h("p",{class:"sub",text:"A estimativa do RAC (uso informado pela API × tabela de preços) não é a fatura. A cobrança efetiva está no Console da Anthropic, onde o limite é de US$ 7, sem recarga automática."}));
+        (r[2]||[]).forEach(function(x){var dias=Math.round((Date.now()-new Date(x.conferido_em+"T12:00:00"))/864e5);
+          corpo.appendChild(h("p",{class:dias>30?"qrwarn":"sub",text:x.modelo+": US$ "+x.entrada_usd_mtok+" / "+x.saida_usd_mtok+" por milhão de tokens (entrada / saída), conferido em "+dataBR(x.conferido_em)+(dias>30?". Confira o preço de novo na página oficial.":".")}))});
+        if(!isOwner())return;
+        /* chamadas incertas: só o dono decide, pelo id, depois de olhar o uso no Console */
+        if(r[3].length){corpo.appendChild(h("h3",{class:"dayh",text:"Chamadas incertas (a reserva continua contando)"}));
+          var ul=h("ul",{class:"wl"});r[3].forEach(function(u){
+            var sim=h("button",{type:"button",class:"ghostbtn",text:"Foi cobrada"}),nao=h("button",{type:"button",class:"ghostbtn",text:"Não foi cobrada"});
+            function rec(cobrado){var v=0;if(cobrado){v=parseFloat(String(window.prompt("Quanto foi cobrado por esta chamada, em US$? (veja no Console da Anthropic)",String(u.reservado_usd))||"").replace(",","."));if(!(v>=0))return}
+              SB.rpc("ia_reconciliar",{p_id:u.id,p_cobrado:cobrado,p_valor_usd:cobrado?v:0}).then(sbOk).then(function(okr){if(!okr)alert("Esta chamada não pode ser reconciliada agora.");desenhar()}).catch(function(e){alert("Não consegui: "+e.message)})}
+            sim.onclick=function(){rec(true)};nao.onclick=function(){rec(false)};
+            ul.appendChild(h("li",null,h("span",{class:"grow"},h("b",{text:u.acao+" · "+new Date(u.criado_em).toLocaleString("pt-BR")}),h("span",{class:"sub",text:"Id "+u.id+" · reservado "+usd(u.reservado_usd)+(u.erro_codigo?" · "+u.erro_codigo:"")})),h("span",{class:"end vfil"},sim,nao)))});
+          corpo.appendChild(ul)}
+        /* configuração: modo, limite e margens */
+        var modo=h("button",{type:"button",class:"ghostbtn"+(cfg.modo==="REAL"?"":" pri"),text:cfg.modo==="REAL"?"Voltar para DEMO":"Ligar o modo REAL"});
+        modo.onclick=function(){var novo=cfg.modo==="REAL"?"DEMO":"REAL";
+          if(novo==="REAL"&&!window.confirm("Ligar o modo REAL? Cada leitura com IA passa a ser paga (dentro do limite do mês)."))return;
+          gravar({modo:novo})};
+        function campo(rot,k,passo){var i=h("input",{type:"number",step:passo,value:String(cfg[k]),"aria-label":rot});i.dataset.k=k;return h("label",null,rot,i)}
+        var form=h("div",{class:"wform"},h("div",{class:"two"},campo("Limite mensal (R$)","limite_brl","1"),campo("Câmbio (R$ por US$)","cambio_brl_usd","0.01")),
+          h("div",{class:"two"},campo("Margem de impostos (0,12 = 12%)","margem_impostos","0.01"),campo("Margem de segurança (0,10 = 10%)","margem_seguranca","0.01")));
+        var salvar=h("button",{type:"button",text:"Salvar limites"});salvar.onclick=function(){var o={};form.querySelectorAll("input").forEach(function(i){o[i.dataset.k]=parseFloat(i.value)});gravar(o)};
+        var cob=h("input",{type:"number",step:"0.01",placeholder:"US$ cobrados no mês (Console)","aria-label":"Cobrança efetiva do mês em US$"}),cobB=h("button",{type:"button",class:"ghostbtn",text:"Registrar cobrança do mês"});
+        cobB.onclick=function(){var v=parseFloat(cob.value);if(!(v>=0))return;SB.from("ia_cobranca").upsert({dono:EU.id,mes:t.mes,valor_usd:v,informado_em:new Date().toISOString()}).then(sbOk).then(desenhar).catch(function(e){alert("Não consegui: "+e.message)})};
+        corpo.appendChild(h("div",{class:"vfil"},modo));corpo.appendChild(form);corpo.appendChild(h("div",{class:"vfil"},salvar));corpo.appendChild(h("div",{class:"vfil"},cob,cobB))})
+      .catch(function(e){corpo.innerHTML="";corpo.appendChild(h("p",{class:"empty",text:"O RAC Intelligence ainda não está disponível ("+e.message+")."}))})}
+    function gravar(mud){SB.from("ia_config").upsert(Object.assign({dono:EU.id,atualizado_em:new Date().toISOString()},mud)).then(sbOk).then(desenhar).catch(function(e){alert("Não consegui salvar: "+e.message)})}
+    desenhar();return p}
   function renderSistema(){
     var root=$("#sistema-view");root.innerHTML="";
     /* a versão que este aparelho está usando: se não for a mais nova, é só fechar e abrir o site de novo */
     root.appendChild(h("p",{class:"sub sisversao",text:"Versão do site neste aparelho: "+MOD_VERSAO}));
     try{root.appendChild(sisSaude())}catch(e){logErro("saúde do RAC",e)}
+    if(typeof iaLigada==="function"&&iaLigada())try{root.appendChild(sisIA())}catch(e){logErro("RAC Intelligence",e)}
     /* sincronização e conflitos */
     var ps=panel("Sincronização","Os dados pessoais ficam na sua conta e com uma cópia neste aparelho. Se o mesmo dado mudar em dois lugares, você escolhe qual vale.");
     var np=pendentes(),nc=Object.keys(SIS.conflitos);

@@ -24,7 +24,7 @@
     n.id="pico";$("#pico").replaceWith(n);
     $("#ptitle").textContent=hit?hit.querySelector(".t").textContent:"Dia a Dia RAC"}
   /* ===== Módulos: cada seção grande fica em js/<seção>.js e só carrega quando é aberta ===== */
-  var MOD_VERSAO="2026-10-30.8",MODULOS={},MOD_OK={};
+  var MOD_VERSAO="2026-10-30.9",MODULOS={},MOD_OK={};
   var MOD_DEPS={conexoes:["mba"],sistema:["familia","mba","saude"],carreira:["sistema"],bebe:["familia","oms"],resumo:["saude","mba","familia"]};
   var ROTA_MODS={esportes:["esportes"],eddie:["familia"],olivia:["familia"],veiculos:["familia"],mba:["mba"],saude:["saude"],
     conexoes:["conexoes"],agenda:["sistema"],busca:["sistema"],sistema:["sistema"],lista:["lista"],carreira:["carreira"],documentos:["familia"],resumo:["resumo"],rede:["rede"]};
@@ -868,6 +868,56 @@
   function quando(d){return new Date(d).toLocaleString("pt-BR",{weekday:"short",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}).replace(",","")}
   function saudacao(){var hr=new Date().getHours();return hr<5?"Boa noite":hr<12?"Bom dia":hr<18?"Boa tarde":"Boa noite"}
   var relogio=null,TEMPO_HOJE=null;
+  /* ===== RAC Intelligence: a única porta do site para a IA (função rac-ia; docs/rac-intelligence.md) =====
+     IA_LIGADA fica false até a função e as tabelas existirem (Fase C): desligada, nada aparece e nada muda no site.
+     O modo DEMO ou REAL é decidido só no servidor. Resposta DEMO aparece só numa prévia de leitura e nunca chega ao que salva. */
+  var IA_LIGADA=false;
+  function iaLigada(){return IA_LIGADA}
+  function iaNovaChave(){try{if(window.crypto&&crypto.randomUUID)return crypto.randomUUID()}catch(e){}return "k"+Date.now().toString(36)+Math.random().toString(36).slice(2,14)}
+  /* uma chamada = uma chave de idempotência nova; quem chama nunca repete sozinho */
+  function racIA(modulo,acao,entrada,contexto){
+    var corpo={versao:1,modulo:modulo,acao:acao,idempotencia:iaNovaChave(),entrada:entrada,contexto:contexto||{}};
+    return SB.functions.invoke("rac-ia",{body:corpo}).then(function(r){
+      if(!r.error)return r.data;
+      var c=r.error.context;
+      return (c&&c.json?c.json().catch(function(){return null}):Promise.resolve(null)).then(function(j){
+        if(j&&j.versao===1)return j;
+        return {ok:false,versao:1,modo:"DEMO",mensagem:"Não consegui falar com o RAC Intelligence.",avisos:[],erro:{codigo:"rede",mensagem:String(r.error.message||"")}}})})}
+  /* foto reduzida no aparelho (até 1568 px no lado maior, JPEG): menos tokens e menos dados */
+  function iaFoto(arq){return new Promise(function(ok,nao){
+    var url=URL.createObjectURL(arq),im=new Image();
+    im.onload=function(){var e=Math.min(1,1568/Math.max(im.naturalWidth,im.naturalHeight)),w=Math.max(1,Math.round(im.naturalWidth*e)),a=Math.max(1,Math.round(im.naturalHeight*e));
+      var cv=document.createElement("canvas");cv.width=w;cv.height=a;cv.getContext("2d").drawImage(im,0,0,w,a);URL.revokeObjectURL(url);
+      var d=cv.toDataURL("image/jpeg",0.85);ok({tipo:"image/jpeg",base64:d.slice(d.indexOf(",")+1)})};
+    im.onerror=function(){URL.revokeObjectURL(url);nao(new Error("não consegui abrir a foto "+arq.name))};im.src=url})}
+  /* prévia só de leitura de uma resposta DEMO: sem botão de salvar e sem passar por nenhuma tela que salva */
+  function iaPrevia(r){
+    var res=r.resultado||{},ul=h("ul",{class:"wl"});
+    function val(v){if(v==null)return "—";if(Array.isArray(v))return v.map(function(x){return x&&typeof x==="object"?Object.keys(x).map(function(k){return x[k]==null?"—":x[k]}).join(" · "):String(x)}).join(" | ")||"—";return String(v)}
+    Object.keys(res).filter(function(k){return k!=="_demo"}).forEach(function(k){ul.appendChild(h("li",null,h("span",{class:"grow"},h("b",{text:k}),h("span",{class:"sub",text:val(res[k])}))))});
+    return h("div",{class:"iaprevia",role:"note"},h("p",{class:"iademo",text:"DEMONSTRAÇÃO · resposta simulada, não veio do Claude e não pode ser salva."}),ul,
+      (r.avisos||[]).length?h("p",{class:"sub",text:r.avisos.join(" ")}):null)}
+  /* botão "Ler com IA" de um módulo: fotos e texto opcionais; real(resultado) só recebe resposta REAL sem _demo */
+  function iaBotao(o){
+    var fotos=h("input",{type:"file",accept:"image/*",multiple:"","aria-label":"Fotos para a IA ler"}),texto=o.texto?h("input",{type:"text",placeholder:o.texto,"aria-label":"Texto para a IA ler"}):null;
+    var b=h("button",{type:"button",class:"ghostbtn pri",text:"✨ Ler com IA"}),st=h("p",{class:"sub",role:"status"}),previa=h("div");
+    b.onclick=function(){
+      if(b.disabled)return;
+      var arqs=[].slice.call(fotos.files||[]).slice(0,4),t=texto?texto.value.trim():"";
+      if(!arqs.length&&!t){st.textContent="Escolha uma foto"+(texto?" ou escreva o texto":"")+".";return}
+      b.disabled=true;st.textContent="Lendo com a IA…";previa.innerHTML="";
+      Promise.all(arqs.map(iaFoto)).then(function(imgs){return racIA(o.modulo,o.acao,{texto:t,imagens:imgs},o.contexto?o.contexto():{})}).then(function(r){
+        b.disabled=false;
+        if(r&&r.ok&&r.modo==="DEMO"){st.textContent="";previa.appendChild(iaPrevia(r));return}
+        if(r&&r.ok&&r.modo==="REAL"&&r.resultado&&!r.resultado._demo){
+          var c=r.consumo&&r.consumo.mes;
+          st.textContent="✓ Lido. Confira abaixo antes de salvar."+((r.avisos||[]).length?" "+r.avisos.join(" "):"")+(c&&c.alerta?" ⚠ A IA já usou "+c.percentual+"% do limite do mês.":"");
+          o.real(r.resultado,r);return}
+        st.textContent=(r&&r.mensagem||"A IA não respondeu.")+(r&&r.estado==="incerto"&&r.id?" Id da chamada: "+r.id+".":"")+" O jeito manual continua aqui embaixo.";
+      }).catch(function(e){b.disabled=false;st.textContent="Não consegui ler: "+e.message;logErro("rac-ia",e)})};
+    return h("div",{class:"iabox"},h("p",{class:"sub",text:"Ler com IA: tire ou escolha as fotos"+(texto?" (ou escreva)":"")+" e toque no botão. Você confere tudo antes de salvar; cada leitura usa o orçamento de IA da casa."}),
+      h("div",{class:"vfil"},fotos,texto,b),st,previa)}
+
   /* ===== Briefing falado: o resumo do dia lido em voz alta (Web Speech API, funciona no iPhone depois de um toque) ===== */
   function briefingBtn(){
     if(!("speechSynthesis" in window))return null;

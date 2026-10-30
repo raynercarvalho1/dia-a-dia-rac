@@ -198,3 +198,13 @@ test("lerAbast: só o painel (sem bomba) e as luzes de aviso acesas", () => {
   assert.deepEqual(r.alertas, ["injeção eletrônica (motor)"]);
   assert.deepEqual(N.lerAbast('{"km":1}').alertas, []);
 });
+
+test("RAC Intelligence: o resultado REAL do abastecimento vira o mesmo texto do fluxo manual; o DEMO não vira nada", () => {
+  const r = { veiculo: "moto", data: null, km: 18240, litros: 6.1, preco_litro: 6.29, total: 38.37, combustivel: "gasolina", posto: "", alertas: ["injeção eletrônica (motor)"] };
+  const a = N.lerAbast(N.iaAbastTexto(r));
+  assert.equal(a.veiculo, "moto"); assert.equal(a.km, 18240); assert.equal(a.litros, 6.1); assert.equal(a.total, 38.37); assert.deepEqual(a.alertas, ["injeção eletrônica (motor)"]);
+  assert.equal(N.iaAbastTexto({ ...r, _demo: true }), "", "resposta de demonstração nunca chega ao fluxo que salva");
+  assert.equal(N.iaAbastTexto(null), "");
+  assert.equal(N.iaNotaTexto({ itens: [{ descricao: "x" }], _demo: true }), "");
+  assert.equal(N.iaNotaTexto({ itens: [] }), "");
+});

@@ -35,3 +35,13 @@ test("resposta cortada no meio: salva os itens inteiros e avisa", () => {
 test("texto que não é nota não vira nota", () => {
   assert.equal(T.lerResposta("Não consegui ler a foto, pode mandar outra?"), null);
 });
+
+test("RAC Intelligence: a nota lida pela IA passa pela mesma leitura da resposta colada", () => {
+  createRequire(import.meta.url)("../nucleo.js");
+  const N = globalThis.window.RACnucleo;
+  const r = { mercado: "Confiança", cnpj: "12345678000190", data: "2026-10-20", numero: "1", serie: "1", chave: null, pagamento: "Crédito", total_pago: 31.5, desconto_nota: 0,
+    itens: [{ descricao: "ARROZ 5KG", qtd: 1, un: "un", unitario: 20.5, total: 20.5, desconto: 0 }, { descricao: "LEITE 1L", qtd: 2, un: "un", unitario: 5.5, total: 11, desconto: 0 }] };
+  const n = T.lerResposta(N.iaNotaTexto(r));
+  assert.equal(n.mercado, "Confiança"); assert.equal(n.itens.length, 2); assert.equal(n.itens[1].qtd, 2); assert.equal(n.pago, 31.5); assert.equal(n.cortado, false);
+  assert.equal(N.iaNotaTexto({ ...r, _demo: true }), "", "demonstração nunca vira nota");
+});

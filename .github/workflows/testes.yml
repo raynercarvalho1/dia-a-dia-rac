@@ -12,11 +12,16 @@ on:
 jobs:
   testes:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
+      # navegador de verdade para tests/navegador.test.mjs (o site em si não tem dependências; isto é só do teste)
+      - name: Instalar o Playwright e o Chromium
+        run: |
+          npm install --no-save --no-package-lock playwright@1.48.2
+          npx playwright install --with-deps chromium
       - name: Rodar os testes
         run: node --test tests/*.test.mjs

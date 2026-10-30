@@ -4,8 +4,13 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const BASE = "https://personal.connectapi.garmin.com";
+/* CORS: só o site (e o teste local) podem chamar pelo navegador. Atalhos do iPhone e a rotina do banco não são navegador
+   e não mandam Origin, então não são afetados. A origem certa é posta em cada resposta no Deno.serve, lá embaixo. */
+const ORIGENS = ["https://raynercarvalho.com.br", "https://www.raynercarvalho.com.br", "https://raynercarvalho1.github.io"];
+const origemPermitida = (o: string | null) =>
+  o && (ORIGENS.includes(o) || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(o)) ? o : ORIGENS[0];
 const CORS = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": ORIGENS[0],
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-rac-atalho",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
@@ -590,6 +595,13 @@ async function rotina(req: Request) {
 }
 
 Deno.serve(async (req) => {
+  const r = await atender(req);
+  r.headers.set("Access-Control-Allow-Origin", origemPermitida(req.headers.get("Origin")));
+  r.headers.append("Vary", "Origin");
+  return r;
+});
+
+async function atender(req: Request): Promise<Response> {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   try {
     if (req.headers.get("x-rac-rotina")) return await rotina(req);
@@ -629,4 +641,4 @@ Deno.serve(async (req) => {
   } catch (e) {
     return responder({ erro: (e as Error).message ?? String(e) }, 500);
   }
-});
+}

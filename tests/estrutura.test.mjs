@@ -44,7 +44,9 @@ test("o service worker guarda todos os arquivos do site para uso sem internet", 
 
 test("nenhum dado pessoal no código público", () => {
   const proibidos = [/@gmail\.com/i, /@icloud\.com/i, /\b\d{3}\.\d{3}\.\d{3}-\d{2}\b/, /class\.mbx\.academy\/\?t=/, /AIza[\w-]{30,}/];
-  const todos = ["index.html", "nucleo.js", "mercado.js", "sw.js", ...arquivos, ...fs.readdirSync(new URL("supabase/", raiz)).filter((f) => f.endsWith(".sql")).map((f) => "supabase/" + f)];
+  const todos = ["index.html", "nucleo.js", "mercado.js", "sw.js", ...arquivos, ...fs.readdirSync(new URL("supabase/", raiz)).filter((f) => f.endsWith(".sql")).map((f) => "supabase/" + f),
+    "README.md", "CLAUDE.md", "supabase/functions/garmin/index.ts",
+    ...fs.readdirSync(new URL("scripts/", raiz)).map((f) => "scripts/" + f), ...fs.readdirSync(new URL(".github/workflows/", raiz)).map((f) => ".github/workflows/" + f)];
   for (const a of todos) {
     const t = fs.readFileSync(new URL(a, raiz), "utf8");
     for (const p of proibidos) assert.ok(!p.test(t), `${a} tem algo que parece dado pessoal (${p})`);
@@ -67,4 +69,19 @@ test("todo gráfico usa a dica padrão (racDica): clicável, com o valor em dest
   }
   const app = fs.readFileSync(new URL("js/app.js", raiz), "utf8");
   assert.ok(/var racDica=/.test(app) && /\.racdica\{/.test(fs.readFileSync(new URL("index.html", raiz), "utf8")), "o componente racDica e o seu visual existem");
+});
+
+// Um erro de sintaxe num módulo só aparece quando a seção abre; aqui todos são lidos de uma vez (sem executar nada).
+test("todo arquivo de código do site e a Edge Function têm sintaxe válida", async () => {
+  const vm = await import("node:vm");
+  for (const a of ["nucleo.js", "mercado.js", "sw.js", ...arquivos]) {
+    const t = fs.readFileSync(new URL(a, raiz), "utf8");
+    assert.doesNotThrow(() => new vm.Script(t, { filename: a }), `${a} tem erro de sintaxe`);
+  }
+  const mod = await import("node:module");
+  if (typeof mod.stripTypeScriptTypes === "function") {
+    const ts = fs.readFileSync(new URL("supabase/functions/garmin/index.ts", raiz), "utf8");
+    const js = mod.stripTypeScriptTypes(ts).replace(/^import .*$/gm, "");
+    assert.doesNotThrow(() => new vm.Script("(async()=>{" + js + "\n})", { filename: "garmin/index.ts" }), "a Edge Function tem erro de sintaxe");
+  }
 });

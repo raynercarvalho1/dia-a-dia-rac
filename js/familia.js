@@ -428,7 +428,7 @@
       if(topoH===quem||(ehVeic(quem)&&topoH==="veiculos"))fundoPagina(fotoBg?urls[fotoBg.path]:null,F.n,ehVeic(quem));
       var nasc=regs.filter(function(r){return r.tipo==="nascimento"})[0],ultPeso=regs.filter(function(r){return r.tipo==="peso"&&r.valor})[0];
       var foto=regs.filter(function(r){return dadosDe(r).perfil&&(r.arquivos||[]).some(function(a){return urls[a.path]&&/^image\//.test(a.tipo)})})[0];
-      var add=h("button",{type:"button",class:"mkadd",text:"+ Adicionar registro"}),imp=h("button",{type:"button",class:"ghostbtn",text:"Importar histórico"}),abf=ehVeic(quem)?h("button",{type:"button",class:"ghostbtn",text:"⛽ Abastecimento pela foto"}):null,akm=ehVeic(quem)?h("button",{type:"button",class:"ghostbtn",text:"Atualizar km"}):null;
+      var add=h("button",{type:"button",class:"mkadd",text:"+ Adicionar registro"}),imp=h("button",{type:"button",class:"ghostbtn",text:"Importar histórico"}),abf=ehVeic(quem)?h("button",{type:"button",class:"ghostbtn",text:"📷 Painel ou abastecimento pela foto"}):null,akm=ehVeic(quem)?h("button",{type:"button",class:"ghostbtn",text:"Atualizar km"}):null;
       var topo=h("div",{class:"panel famhead"},foto?h("img",{class:"famav",src:urls[foto.arquivos.filter(function(a){return /^image\//.test(a.tipo)})[0].path],alt:F.n}):null,
         h("div",{class:"grow"},h("h2",{text:F.n}),
         h("p",{class:"sub",text:F.docs?"Documentos, garantias, notas fiscais e contratos da casa. O que tem validade entra na Agenda.":ehVeic(quem)?[(regs.filter(function(r){return dadosDe(r).ficha})[0]||{dados:{ficha:F.desc}}).dados.ficha,(function(){var k=veicKm(regs);return k?fmtKm(k.km)+" em "+dataBR(k.data):""})()].filter(Boolean).join(" · "):[nasc?idadeTxt(nasc.data)+" (nasceu em "+dataBR(nasc.data)+")":"Adicione um registro “Nascimento” para mostrar a idade",ultPeso?"último peso "+ultPeso.valor+" kg em "+dataBR(ultPeso.data):""].filter(Boolean).join(" · ")})),
@@ -505,18 +505,21 @@
       cards(regs.filter(function(r){return !famFiltro[quem]||r.tipo===famFiltro[quem]}),box);irAoAlvo()}
   }
 
-  /* Abastecimento pela foto: o Claude lê a foto do painel (km) e a da bomba (litros, R$/litro e total)
-     e devolve um JSON; aqui a pessoa cola, confere e salva no veículo certo ("carro" ou "moto" na mensagem) */
-  var PEDIDO_ABAST="Leia as fotos deste abastecimento: uma do painel (quilometragem) e uma da bomba (litros, preço por litro e total). Responda só com este JSON, sem texto antes ou depois:\n"+
-    '{"veiculo":"carro ou moto","data":"AAAA-MM-DD","km":0,"litros":0,"preco_litro":0,"total":0,"combustivel":"gasolina, etanol ou diesel","posto":""}\n'+
-    "Regras: veiculo é o que eu escrever na mensagem (carro ou moto). km é o hodômetro total do painel, não o parcial (trip). Use ponto como separador decimal e não use separador de milhar. "+
-    "Se a data não aparecer nas fotos, use null. Se não conseguir ler um número, use null.";
+  /* Abastecimento (ou só a km) pela foto: o Claude lê a foto do painel (km, luzes acesas e qual veículo é) e, se houver, a da bomba
+     (litros, R$/litro e total) e devolve um JSON; aqui a pessoa cola, confere e salva no veículo certo */
+  var PEDIDO_ABAST="Leia as fotos: a do painel (quilometragem) e, se vier, a da bomba (litros, preço por litro e total). Pode vir só a foto do painel, quando é só para anotar a quilometragem. Responda só com este JSON, sem texto antes ou depois:\n"+
+    '{"veiculo":"carro ou moto","data":"AAAA-MM-DD","km":0,"litros":null,"preco_litro":null,"total":null,"combustivel":"gasolina, etanol ou diesel","posto":"","alertas":[]}\n'+
+    "Regras: reconheça o veículo pelo painel. moto = Yamaha NMAX: painel digital de LCD com a marca YAMAHA embaixo, ODO e F/ECO na parte de baixo e a velocidade em números grandes no meio. "+
+    "carro = Honda Civic: painel de carro, com conta-giros e a marca Honda. Se eu escrever carro ou moto na mensagem, vale o que eu escrevi. "+
+    "km é o hodômetro total do painel (ODO), não o parcial (Trip). Sem foto da bomba, litros, preco_litro, total e combustivel ficam null. "+
+    "alertas é a lista das luzes de aviso acesas no painel, em português (ex.: \"injeção eletrônica (motor)\", \"óleo\", \"bateria\", \"temperatura\", \"freio\"); lista vazia se nenhuma estiver acesa. "+
+    "Use ponto como separador decimal e não use separador de milhar. Se a data não aparecer nas fotos, use null. Se não conseguir ler um número, use null.";
   function veicFoto(quem,regs,pronto,fechar){
-    var p=panel("Abastecimento pela foto","O Claude lê as duas fotos; você cola a resposta aqui, confere e salva."),f=h("div",{class:"wform"});
+    var p=panel("Painel ou abastecimento pela foto","O Claude lê as fotos e reconhece o carro ou a moto pelo painel; você cola a resposta aqui, confere e salva."),f=h("div",{class:"wform"});
     var CH_LINK="rac-claude-abast";function link(){try{return localStorage.getItem(CH_LINK)||""}catch(e){return ""}}
     var cmsg=h("p",{class:"sub",role:"status"}),pedTxt=h("textarea",{class:"qrpaste",rows:"4",readonly:"",hidden:"","aria-label":"Pedido para copiar"});pedTxt.value=PEDIDO_ABAST;
     var abrir=h("a",{class:"filebtn",target:"_blank",rel:"noopener"});
-    abrir.onclick=function(){try{navigator.clipboard.writeText(PEDIDO_ABAST).then(function(){cmsg.textContent=link()?"✓ Pedido copiado (só precisa colar se o projeto ainda não tiver as instruções).":"✓ Pedido copiado. No Claude: anexe as 2 fotos, escreva carro ou moto, cole o pedido e envie."},function(){pedTxt.hidden=false})}catch(e){pedTxt.hidden=false}};
+    abrir.onclick=function(){try{navigator.clipboard.writeText(PEDIDO_ABAST).then(function(){cmsg.textContent=link()?"✓ Pedido copiado (só precisa colar se o projeto ainda não tiver as instruções novas).":"✓ Pedido copiado. No Claude: anexe as fotos, cole o pedido e envie."},function(){pedTxt.hidden=false})}catch(e){pedTxt.hidden=false}};
     var trocar=h("button",{type:"button",class:"ghostbtn"}),lform=h("div",{class:"vfil",hidden:""}),lin=h("input",{type:"url",placeholder:"https://claude.ai/project/…","aria-label":"Link do projeto do Claude",autocomplete:"off"}),lok=h("button",{type:"button",text:"Salvar"}),lmsg=h("p",{class:"sub",role:"status"});
     function mostrar(){var l=link();abrir.href=l||"https://claude.ai/new";abrir.textContent=l?"Abrir o Claude (projeto Abastecimento)":"Abrir o Claude";trocar.textContent=l?"Trocar o projeto":"Usar o meu projeto de abastecimento"}
     trocar.onclick=function(){lform.hidden=!lform.hidden;lin.value=link();lmsg.textContent="";if(!lform.hidden)lin.focus()};
@@ -524,8 +527,8 @@
       if(v&&!/^https:\/\/claude\.ai\/(chat|project)\/[\w-]+/.test(v)){lmsg.textContent="O link precisa começar com https://claude.ai/project/ (ou /chat/). Copie o endereço da barra do navegador com o projeto aberto.";return}
       try{if(v)localStorage.setItem(CH_LINK,v);else localStorage.removeItem(CH_LINK)}catch(e){}lform.hidden=true;lmsg.textContent=v?"✓ Pronto: o botão agora abre o seu projeto.":"Voltou a abrir uma conversa nova.";mostrar()};
     lform.appendChild(lin);lform.appendChild(lok);mostrar();
-    f.appendChild(h("ol",{class:"how"},h("li",null,"Tire as duas fotos: o painel com a quilometragem e a bomba com o total abastecido."),
-      h("li",null,"Toque em Abrir o Claude, anexe as fotos, escreva ",h("b",{text:"carro"})," ou ",h("b",{text:"moto"})," e envie."),
+    f.appendChild(h("ol",{class:"how"},h("li",null,"Tire a foto do painel com a quilometragem e, se abasteceu, a da bomba com o total. Só o painel já serve para anotar a km."),
+      h("li",null,"Toque em Abrir o Claude, anexe as fotos e envie. Ele reconhece pelo painel se é o carro ou a moto."),
       h("li",null,"Copie a resposta inteira, volte aqui e toque em ",h("b",{text:"Colar a resposta"}),".")));
     f.appendChild(h("div",{class:"vfil"},abrir,trocar));f.appendChild(lform);f.appendChild(lmsg);f.appendChild(cmsg);f.appendChild(pedTxt);
     var resp=h("textarea",{class:"qrpaste",rows:"3",placeholder:"…ou cole aqui a resposta","aria-label":"Resposta do Claude"}),colar=h("button",{type:"button",text:"Colar a resposta"}),fch=h("button",{type:"button",class:"ghostbtn",text:"Fechar"}),rmsg=h("p",{class:"sub",role:"status"});
@@ -542,18 +545,22 @@
     conf.appendChild(h("div",{class:"two"},h("label",null,"Quilometragem do painel",km),h("label",null,"Litros",lit)));
     conf.appendChild(h("div",{class:"two"},h("label",null,"Preço por litro (R$)",pre),h("label",null,"Total pago (R$)",tot)));
     conf.appendChild(h("div",{class:"two"},h("label",null,"Combustível",comb),h("label",null,"Posto (opcional)",posto)));
-    conf.appendChild(h("label",null,"As duas fotos (para guardar junto)",arq));conf.appendChild(aviso);
+    conf.appendChild(h("label",null,"As fotos (para guardar junto)",arq));conf.appendChild(aviso);
     function br(v,c){return v==null?"":v.toLocaleString("pt-BR",{minimumFractionDigits:c,maximumFractionDigits:c})}
     function num(s){s=String(s||"").replace(/[R$\s]/g,"");if(!s)return null;if(/,/.test(s))s=s.replace(/\./g,"").replace(",",".");var x=parseFloat(s);return isFinite(x)?x:null}
     function ler(){
       if(!resp.value.trim()){rmsg.textContent="";return}
-      var r=lerAbast(resp.value);
+      var r=lerAbast(resp.value);alertas=r.alertas||[];
       if(r.km==null&&r.litros==null&&r.total==null){rmsg.textContent="Não achei km, litros nem total nessa resposta. Copie a resposta inteira do Claude.";conf.hidden=true;return}
       if(r.veiculo)veic.value=r.veiculo;if(r.data)data.value=r.data;km.value=r.km!=null?String(r.km):"";lit.value=br(r.litros,2);pre.value=br(r.preco,3);tot.value=br(r.total,2);
       var cb=/gasolina|etanol|diesel/.exec(r.combustivel);if(cb)comb.value=cb[0];if(r.posto)posto.value=r.posto;
-      rmsg.textContent="✓ Li a resposta. Confira os valores abaixo e salve."+(r.veiculo?"":" Escolha o veículo (a resposta não disse se é carro ou moto).");conf.hidden=false;conferir()}
+      var soKm=r.km!=null&&r.litros==null&&r.total==null;
+      rmsg.textContent="✓ Li a resposta"+(soKm?": só a quilometragem, sem abastecimento":"")+". Confira os valores abaixo e salve."+(r.veiculo?"":" Escolha o veículo (a resposta não disse se é carro ou moto).");conf.hidden=false;conferir()}
     /* avisa o que parece errado: conta que não fecha ou km menor que o último anotado */
+    var alertas=[];
     function conferir(){var L=num(lit.value),P=num(pre.value),T=num(tot.value),K=parseInt(km.value.replace(/\D/g,""),10),avs=[];
+      salvar.textContent=!(T>0)&&!(L>0)?"Salvar quilometragem":"Salvar abastecimento";
+      if(alertas.length)avs.push("Luz acesa no painel: "+alertas.join(", ")+". Se continuar acesa com o motor ligado, vale levar para avaliar.");
       if(L&&P&&T&&Math.abs(L*P-T)>Math.max(1,T*0.02))avs.push("Litros × preço dá "+brl(Math.round(L*P*100)/100)+", diferente do total. Confira na foto da bomba.");
       if(K&&veic.value===quem){var ult=veicKm(regs);if(ult&&K<ult.km)avs.push("A quilometragem é menor que a última anotada ("+fmtKm(ult.km)+" em "+dataBR(ult.data)+"). Confira se não leu o parcial (trip).")}
       aviso.textContent=avs.map(function(a){return "⚠ "+a}).join(" ");aviso.hidden=!avs.length}
@@ -563,16 +570,22 @@
     salvar.onclick=function(){
       var K=parseInt(km.value.replace(/\D/g,""),10),L=num(lit.value),P=num(pre.value),T=num(tot.value);
       if(!data.value){st.textContent="Escolha a data.";return}
-      if(!(T>0)&&!(L>0)){st.textContent="Preencha pelo menos os litros ou o total.";return}
+      var q=veic.value,alt=alertas.length?"Luz acesa no painel: "+alertas.join(", "):null;
+      if(!(T>0)&&!(L>0)){
+        /* sem bomba: só a quilometragem, igual ao "Atualizar km" */
+        if(!(K>0)){st.textContent="Preencha a quilometragem, ou os litros e o total.";return}
+        var rk={quem:q,tipo:"outro",data:data.value,titulo:"Quilometragem",valor:null,detalhes:alt,dados:alertas.length?{km:K,alertas:alertas}:{km:K}};
+        salvar.disabled=true;st.textContent="Salvando…";return guardar(rk)}
       if(T==null&&L&&P)T=Math.round(L*P*100)/100;
-      var c=comb.value,tit=c.charAt(0).toUpperCase()+c.slice(1)+(posto.value.trim()?" ("+posto.value.trim()+")":""),q=veic.value;
-      var dd={combustivel:c};if(K>0)dd.km=K;if(L>0)dd.litros=L;if(P>0)dd.precoLitro=P;if(T>0){dd.custo=Math.round(T*100)/100;dd.itensCusto=[[L?fmtN(L)+" l de "+c:c,dd.custo]]}
-      var reg={quem:q,tipo:"abastecimento",data:data.value,titulo:tit,valor:posto.value.trim()||null,detalhes:[L?fmtN(L)+" litros":"",P?"a "+brl(P)+"/l":"",T?"total "+brl(T):""].filter(Boolean).join(" ")||null,dados:dd};
-      salvar.disabled=true;st.textContent="Salvando…";
+      var c=comb.value,tit=c.charAt(0).toUpperCase()+c.slice(1)+(posto.value.trim()?" ("+posto.value.trim()+")":"");
+      var dd={combustivel:c};if(alertas.length)dd.alertas=alertas;if(K>0)dd.km=K;if(L>0)dd.litros=L;if(P>0)dd.precoLitro=P;if(T>0){dd.custo=Math.round(T*100)/100;dd.itensCusto=[[L?fmtN(L)+" l de "+c:c,dd.custo]]}
+      var reg={quem:q,tipo:"abastecimento",data:data.value,titulo:tit,valor:posto.value.trim()||null,detalhes:[L?fmtN(L)+" litros":"",P?"a "+brl(P)+"/l":"",T?"total "+brl(T):"",alt?"· "+alt:""].filter(Boolean).join(" ")||null,dados:dd};
+      salvar.disabled=true;st.textContent="Salvando…";guardar(reg)};
+    function guardar(reg){var q=reg.quem;
       SB.from("registros").insert(reg).select("id,arquivos").single().then(sbOk).then(function(row){
         if(!arq.files.length)return;
         return enviarArquivos(q,row.id,arq.files,function(t){st.textContent=t}).then(function(novos){return SB.from("registros").update({arquivos:(row.arquivos||[]).concat(novos)}).eq("id",row.id).then(sbOk)})
-      }).then(function(){pronto(q)}).catch(function(e){salvar.disabled=false;st.textContent="Não consegui salvar: "+e.message})};
+      }).then(function(){pronto(q)}).catch(function(e){salvar.disabled=false;st.textContent="Não consegui salvar: "+e.message})}
     conf.appendChild(h("div",{class:"vfil"},salvar,canc));conf.appendChild(st);
     f.appendChild(conf);p.appendChild(f);return p}
 

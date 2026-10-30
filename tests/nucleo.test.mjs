@@ -190,3 +190,11 @@ test("e-mails de vagas: confirmação, etapa, entrevista, retorno, cancelada e a
   assert.ok(N.vagaParecida({ vaga: "ANALISTA DE DADOS (INOVAÇÃO E MELHORIA)", empresa: "Tauste Supermercados" }, { t: "Analista de Dados - Inovação e Melhoria", e: "Tauste" }));
   assert.ok(!N.vagaParecida({ vaga: "Analista de Suporte de TI", empresa: "" }, { t: "Analista de Dados", e: "Tauste" }));
 });
+
+test("lerAbast: só o painel (sem bomba) e as luzes de aviso acesas", () => {
+  const r = N.lerAbast('{"veiculo":"moto","data":null,"km":18172,"litros":null,"preco_litro":null,"total":null,"combustivel":null,"posto":"","alertas":["injeção eletrônica (motor)",""]}');
+  assert.equal(r.veiculo, "moto"); assert.equal(r.km, 18172);
+  assert.equal(r.litros, null); assert.equal(r.total, null);
+  assert.deepEqual(r.alertas, ["injeção eletrônica (motor)"]);
+  assert.deepEqual(N.lerAbast('{"km":1}').alertas, []);
+});

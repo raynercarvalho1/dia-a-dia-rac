@@ -505,6 +505,20 @@
       cards(regs.filter(function(r){return !famFiltro[quem]||r.tipo===famFiltro[quem]}),box);irAoAlvo()}
   }
 
+  /* só a quilometragem do painel, sem abastecimento: vira um registro "Quilometragem" com a data */
+  function veicKmForm(quem,regs,pronto,fechar){
+    var p=panel("Atualizar a quilometragem","Olhe o total do painel (não o Trip)."),ult=veicKm(regs);
+    var km=h("input",{type:"text",inputmode:"numeric",placeholder:ult?"Última: "+fmtKm(ult.km):"Ex.: 104308"}),data=h("input",{type:"date",value:hojeISO()});
+    var st=h("p",{class:"sub",role:"status"}),ok=h("button",{type:"button",text:"Salvar"}),canc=h("button",{type:"button",class:"ghostbtn",text:"Cancelar"});
+    canc.onclick=fechar;
+    ok.onclick=function(){var K=parseInt(km.value.replace(/\D/g,""),10);
+      if(!(K>0)){st.textContent="Escreva a quilometragem, como 104308.";km.focus();return}
+      if(ult&&K<ult.km&&!ok.dataset.conf){ok.dataset.conf="1";st.textContent="⚠ É menor que a última anotada ("+fmtKm(ult.km)+"). Toque em Salvar de novo se estiver certo.";return}
+      ok.disabled=true;st.textContent="Salvando…";
+      SB.from("registros").insert({quem:quem,tipo:"outro",data:data.value||hojeISO(),titulo:"Quilometragem",valor:null,detalhes:null,dados:{km:K}}).then(sbOk).then(pronto)
+        .catch(function(e){ok.disabled=false;st.textContent="Não consegui salvar: "+e.message})};
+    p.appendChild(h("div",{class:"wform"},h("div",{class:"two"},h("label",null,"Quilometragem total",km),h("label",null,"Data",data)),h("div",{class:"vfil"},ok,canc),st));
+    setTimeout(function(){km.focus()},50);return p}
   /* Abastecimento (ou só a km) pela foto: o Claude lê a foto do painel (km, luzes acesas e qual veículo é) e, se houver, a da bomba
      (litros, R$/litro e total) e devolve um JSON; aqui a pessoa cola, confere e salva no veículo certo */
   var PEDIDO_ABAST="Leia as fotos: a do painel (quilometragem) e, se vier, a da bomba (litros, preço por litro e total). Pode vir só a foto do painel, quando é só para anotar a quilometragem. Responda só com este JSON, sem texto antes ou depois:\n"+

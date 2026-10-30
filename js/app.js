@@ -24,7 +24,7 @@
     n.id="pico";$("#pico").replaceWith(n);
     $("#ptitle").textContent=hit?hit.querySelector(".t").textContent:"Dia a Dia RAC"}
   /* ===== Módulos: cada seção grande fica em js/<seção>.js e só carrega quando é aberta ===== */
-  var MOD_VERSAO="2026-10-30.2",MODULOS={},MOD_OK={};
+  var MOD_VERSAO="2026-10-30.4",MODULOS={},MOD_OK={};
   var MOD_DEPS={conexoes:["mba"],sistema:["familia","mba","saude"],carreira:["sistema"],bebe:["familia","oms"],resumo:["saude","mba","familia"]};
   var ROTA_MODS={esportes:["esportes"],eddie:["familia"],olivia:["familia"],veiculos:["familia"],mba:["mba"],saude:["saude"],
     conexoes:["conexoes"],agenda:["sistema"],busca:["sistema"],sistema:["sistema"],lista:["lista"],carreira:["carreira"],documentos:["familia"],resumo:["resumo"],rede:["rede"]};
@@ -548,6 +548,10 @@
     html.classList.add("logado");html.classList.toggle("casa",PAPEL==="casa");
     $("#gate").hidden=true;$("#quem").textContent=EU.email;syncSelo();
     if(!$(".capbtn")){var cb=h("button",{type:"button",class:"capbtn","aria-label":"Anotar rápido",title:"Anotar rápido (lista, tarefa, lembrete, ideia, link, peso, gasto, km)",text:"+"});cb.onclick=function(){abrirCaptura()};document.body.appendChild(cb)}
+    /* voltar ao topo: aparece em cima do "+" depois de rolar um pouco a página */
+    if(!$(".topobtn")){var tb=h("button",{type:"button",class:"topobtn","aria-label":"Voltar ao topo da página",title:"Voltar ao topo",hidden:""},"↑");
+      tb.onclick=function(){scrollTo({top:0,behavior:"smooth"})};document.body.appendChild(tb);
+      var olhar=function(){tb.hidden=(window.scrollY||document.documentElement.scrollTop)<500};addEventListener("scroll",olhar,{passive:true});addEventListener("hashchange",function(){setTimeout(olhar,50)})}
     processarFila();setTimeout(capturaCompartilhada,400);
     if(isOwner()){items=SEM_TABELA?lsRead():(PESSOAL.aniversarios||[]);render();montarSideX()}
     else $("#bdalert").hidden=true;
@@ -848,9 +852,18 @@
     mala:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V4.5h6V7M3 13h18"/></svg>',
     livro:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M8 7h7M8 11h5"/></svg>',
     x:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>'};
+  /* cartões do Início: cada um tem o botão de recolher, e quem está recolhido fica guardado neste aparelho (rac-recolhidos) */
+  var RECOLHIDOS="rac-recolhidos";
+  function recolhidos(){try{return JSON.parse(localStorage.getItem(RECOLHIDOS)||"{}")||{}}catch(e){return {}}}
   function wCard(title,ico,cor,more,cls){
     var ic=h("span",{class:"ico",style:"--ic:"+cor});ic.innerHTML=ICOS[ico];
-    var p=h("div",{class:"panel "+(cls||"")},h("div",{class:"wh"},ic,h("h2",{text:title}),more?h("a",{class:"more",href:more[0],text:more[1]}):null));
+    var wh=h("div",{class:"wh"},ic,h("h2",{text:title}),more?h("a",{class:"more",href:more[0],text:more[1]}):null);
+    var p=h("div",{class:"panel "+(cls||"")},wh);
+    if(/^#?(inicio)?$/.test(location.hash.split("/")[0])){
+      var b=h("button",{type:"button",class:"recolher"});
+      function marcar(r){p.classList.toggle("recolhido",r);b.setAttribute("aria-expanded",String(!r));b.setAttribute("aria-label",(r?"Mostrar ":"Recolher ")+title);b.title=r?"Mostrar":"Recolher";b.textContent=r?"▸":"▾"}
+      b.onclick=function(){var m=recolhidos(),r=!p.classList.contains("recolhido");if(r)m[title]=1;else delete m[title];try{localStorage.setItem(RECOLHIDOS,JSON.stringify(m))}catch(e){}marcar(r)};
+      wh.appendChild(b);marcar(!!recolhidos()[title])}
     return p}
   function quando(d){return new Date(d).toLocaleString("pt-BR",{weekday:"short",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}).replace(",","")}
   function saudacao(){var hr=new Date().getHours();return hr<5?"Boa noite":hr<12?"Bom dia":hr<18?"Boa tarde":"Boa noite"}
@@ -995,39 +1008,57 @@
     if(tk)carregar(tk);else cabecalho(c.e?c.e+" · toque para ver os e-mails":"ainda não conectado",botao(c.e?"Atualizar":"Conectar"));
     return box}
 
-  /* Esportes: último resultado e próximo jogo de cada time */
+  /* Esportes: os times em temporada primeiro (último resultado, campanha e próximo jogo); a MLB mostra jogos só quando há jogo
+     nos próximos 10 dias, e fora disso o mercado de inverno dos Dodgers; no fim, as últimas notícias de Lakers e Packers */
   function wEsportes(){
     var p=wCard("Esportes","bola","#005A9C",["#esportes","ver tudo"]);
-    /* MLB primeiro: os jogos mais recentes da liga (e o que está rolando ou vem a seguir) */
-    var mlb=h("ul",{class:"wl"},h("li",null,h("span",{class:"sub",text:"Carregando a MLB…"})));
-    p.appendChild(h("div",{class:"cat",text:"MLB"}));p.appendChild(mlb);
-    var ul=h("ul",{class:"wl"});
+    var ul=h("ul",{class:"wl wtimes"},h("li",null,h("span",{class:"sub",text:"Carregando os jogos…"})));
     p.appendChild(h("div",{class:"cat",text:"Meus times"}));p.appendChild(ul);
-    var hoje=Date.now(),ini=new Date(hoje-21*864e5).toISOString().slice(0,10),fim=new Date(hoje+45*864e5).toISOString().slice(0,10);
+    var mlbCat=h("div",{class:"cat",text:"MLB",hidden:""}),mlb=h("ul",{class:"wl rumores",hidden:""});p.appendChild(mlbCat);p.appendChild(mlb);
+    var notCat=h("div",{class:"cat",text:"Últimas notícias",hidden:""}),nots=h("ul",{class:"wl rumores",hidden:""});p.appendChild(notCat);p.appendChild(nots);
+    var hoje=Date.now(),dia=function(n){return new Date(hoje+n*864e5).toISOString().slice(0,10)},ini=dia(-21),fim=dia(45);
     function curto(n){var w=n.split(" ");return /^(Sox|Jays)$/.test(w[w.length-1])?w.slice(-2).join(" "):w[w.length-1]}
     function placar(g){
       var a=g.away,b=g.home,fim=g.state==="post";
       function lado(t){return h("span",{class:"tn"+(fim&&t.winner?" win":"")},logoImg(t.id,"sm"),curto(t.name)+(g.state!=="pre"?" "+t.score:""))}
       return h("li",null,h("span",{class:"grow"},h("a",{href:g.detail},lado(a)," × ",lado(b)),
         h("span",{class:"sub",text:[g.label,g.state==="live"?"ao vivo":g.state==="pre"?quando(g.date):new Date(g.date).toLocaleDateString("pt-BR",{weekday:"short",day:"2-digit",month:"2-digit"})].filter(Boolean).join(" · ")})))}
-    mlbSched("startDate="+new Date(hoje-4*864e5).toISOString().slice(0,10)+"&endDate="+new Date(hoje+2*864e5).toISOString().slice(0,10)).then(function(gs){
-      var fin=gs.filter(function(g){return g.state==="post"}).reverse().slice(0,3),agora=gs.filter(function(g){return g.state!=="post"}).slice(0,2);
-      mlb.innerHTML="";fin.concat(agora.slice(0,1)).forEach(function(g){mlb.appendChild(placar(g))});
-      if(!mlb.children.length)mlb.appendChild(h("li",null,h("span",{class:"sub",text:"Nenhum jogo da MLB nos últimos dias."})))
-    }).catch(function(){mlb.innerHTML="";mlb.appendChild(h("li",null,h("span",{class:"sub",text:"Não consegui carregar a MLB agora."})))});
-    function linha(nome,logo,href,gs,meu,soComJogo){
+    function dm(d){return new Date(d).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"})}
+    function noticia(t,link,data,quem){return h("li",null,h("span",{class:"grow"},h("a",{class:"link",href:link,target:"_blank",rel:"noopener",text:t}),h("span",{class:"sub",text:quem+" · "+dm(data)})))}
+    function mostrar(cat,l){cat.hidden=false;l.hidden=false}
+    /* MLB: com jogo nos próximos 10 dias, os placares dos últimos 2 dias e o próximo; sem jogo, a temporada acabou e entra o mercado */
+    mlbSched("startDate="+dia(-2)+"&endDate="+dia(10)).then(function(gs){
+      var prox=gs.filter(function(g){return g.state!=="post"});
+      if(prox.length){var fin=gs.filter(function(g){return g.state==="post"}).reverse().slice(0,2);fin.concat(prox.slice(0,1)).forEach(function(g){mlb.appendChild(placar(g))});mostrar(mlbCat,mlb);return}
+      mlbCat.textContent="Dodgers no mercado de inverno";
+      return getJson("rumores.json?v="+Math.floor(hoje/36e5)).then(function(d){
+        /* primeiro as manchetes que são dos Dodgers mesmo (o feed do time traz também matérias de outros times que citam os Dodgers) */
+        var l=(d.dodgers&&d.dodgers.length?d.dodgers:d.liga||[]).map(function(r,i){return [r,(/Dodgers/.test(r.t)&&!/Podcast/i.test(r.t)?0:(r.tags||[]).length<=4?1:2)*1e3+i]});
+        l.sort(function(a,b){return a[1]-b[1]}).slice(0,3).map(function(x){return x[0]}).forEach(function(r){mlb.appendChild(noticia(r.t,r.link,r.data,"MLB Trade Rumors"))})},function(){})
+        .then(function(){mlb.appendChild(h("li",null,h("a",{class:"link",href:"#esportes/beisebol",text:"Mercado da liga, prêmios e datas da próxima temporada ›"})));mostrar(mlbCat,mlb)})
+    }).catch(function(){});
+    function linha(nome,logo,href,gs,meu,soComJogo,t){
       var fin=gs.filter(function(g){return g.state==="post"}),nx=gs.filter(function(g){return g.state!=="post"})[0],u=fin[fin.length-1];
       if(soComJogo&&!nx)return null;
       var txt="Sem jogos recentes";
       if(u){var eu=meu(u.away)?u.away:u.home,ele=eu===u.away?u.home:u.away;
         txt=(eu.winner?"V ":"D ")+eu.score+"–"+ele.score+(eu===u.away?" em ":" vs ")+(ele.abbr||ele.name)}
-      return h("li",null,img(logo,"lg"),h("span",{class:"grow"},h("a",{href:href,text:nome}),h("span",{class:"sub",text:txt})),
-        h("span",{class:"end"},nx?h("a",{href:nx.detail,text:nx.state==="live"?"Ao vivo":quando(nx.date)}):h("span",{class:"sub",text:"sem próximo jogo"})))}
+      var camp=t?[t.recordSummary?t.recordSummary.replace("-","–"):"",standingPt(t.standingSummary)].filter(Boolean).join(", "):"";
+      var li=h("li",null,img(logo,"lg"),h("span",{class:"grow"},h("a",{href:href,text:nome}),h("span",{class:"sub",text:txt+(camp?" · "+camp:"")})),
+        h("span",{class:"end"},nx?h("a",{href:nx.detail,text:nx.state==="live"?"Ao vivo":quando(nx.date)}):h("span",{class:"sub",text:"sem próximo jogo"})));
+      li.prox=nx?(nx.state==="live"?"0":nx.date):"9";return li}
+    var times=[];
     Promise.all([
       mlbSched("teamId=119&startDate="+ini+"&endDate="+fim).then(function(gs){return linha("Dodgers",logoUrl(119),"#esportes/beisebol/dodgers",gs,function(t){return t.id===119},true)}).catch(function(){return null}),
-      espnSchedule("nba").then(function(d){return linha("Lakers",espnLogo("nba",d.team),"#esportes/basquete",d.games,function(t){return t.abbr===d.team.abbreviation})}).catch(function(){return null}),
-      espnSchedule("nfl").then(function(d){return linha("Packers",espnLogo("nfl",d.team),"#esportes/futebol-americano",d.games,function(t){return t.abbr===d.team.abbreviation})}).catch(function(){return null})
-    ]).then(function(r){ul.innerHTML="";r.filter(Boolean).forEach(function(li){ul.appendChild(li)});if(!ul.children.length)ul.appendChild(h("li",null,h("span",{class:"sub",text:"Não consegui carregar os jogos agora."})))});
+      espnSchedule("nba").then(function(d){times.push(["nba","Lakers",d.team]);return linha("Lakers",espnLogo("nba",d.team),"#esportes/basquete",d.games,function(t){return t.abbr===d.team.abbreviation},false,d.team)}).catch(function(){return null}),
+      espnSchedule("nfl").then(function(d){times.push(["nfl","Packers",d.team]);return linha("Packers",espnLogo("nfl",d.team),"#esportes/futebol-americano",d.games,function(t){return t.abbr===d.team.abbreviation},false,d.team)}).catch(function(){return null})
+    ]).then(function(r){ul.innerHTML="";
+      /* quem joga antes aparece primeiro */
+      r.filter(Boolean).sort(function(a,b){return a.prox.localeCompare(b.prox)}).forEach(function(li){ul.appendChild(li)});
+      if(!ul.children.length)ul.appendChild(h("li",null,h("span",{class:"sub",text:"Não consegui carregar os jogos agora."})));
+      return Promise.all(times.map(function(x){return espn(x[0],"/news?team="+x[2].id+"&limit=3").then(function(d){return (d.articles||[]).map(function(a){return {t:a.headline,link:a.links&&a.links.web&&a.links.web.href,data:a.published,quem:x[1]}})},function(){return []})}))
+    }).then(function(ls){var l=[].concat.apply([],ls||[]).filter(function(a){return a.link&&a.data}).sort(function(a,b){return b.data.localeCompare(a.data)}).slice(0,4);
+      if(!l.length)return;l.forEach(function(a){nots.appendChild(noticia(a.t,a.link,a.data,a.quem+" · ESPN"))});mostrar(notCat,nots)}).catch(function(){});
     return p}
 
   /* Mercado do mês */

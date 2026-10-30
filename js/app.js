@@ -24,7 +24,7 @@
     n.id="pico";$("#pico").replaceWith(n);
     $("#ptitle").textContent=hit?hit.querySelector(".t").textContent:"Dia a Dia RAC"}
   /* ===== Módulos: cada seção grande fica em js/<seção>.js e só carrega quando é aberta ===== */
-  var MOD_VERSAO="2026-10-30.7",MODULOS={},MOD_OK={};
+  var MOD_VERSAO="2026-10-30.8",MODULOS={},MOD_OK={};
   var MOD_DEPS={conexoes:["mba"],sistema:["familia","mba","saude"],carreira:["sistema"],bebe:["familia","oms"],resumo:["saude","mba","familia"]};
   var ROTA_MODS={esportes:["esportes"],eddie:["familia"],olivia:["familia"],veiculos:["familia"],mba:["mba"],saude:["saude"],
     conexoes:["conexoes"],agenda:["sistema"],busca:["sistema"],sistema:["sistema"],lista:["lista"],carreira:["carreira"],documentos:["familia"],resumo:["resumo"],rede:["rede"]};
@@ -907,6 +907,10 @@
     root.appendChild(h("div",{class:"home"},
       h("div",{class:"hi"},h("div",null,h("h2",{text:saudacao()+", Rayner"}),briefingBtn(),h("p",{class:"sub",text:new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long",year:"numeric"})})),h("div",null,clock,wx)),
       h("div",{class:"hgrid"},wLazy(["sistema"],"wProxima"),wEmail(),wLazy(["sistema"],"wAgenda"),wLazy(["conexoes"],"wConexoes"),wLazy(["esportes"],"wEsportes"),wNoticias(),wX(),wMercado(),wLazy(["mba"],"wMba"),wAniv(),wVagas(),wEstudos())));
+    /* dia de aula do MBA: aviso no topo, que vira "ao vivo agora" 15 minutos antes (confere a cada minuto enquanto o Início está aberto) */
+    if(isOwner())precisa(["mba"]).then(function(){var g=root.querySelector(".hgrid"),atual=null;
+      function olhar(){if(!g.isConnected){clearInterval(t);return}var n=mbaAvisoAula();if(atual)atual.remove();atual=n;if(n)g.parentNode.insertBefore(n,g)}
+      var t=setInterval(olhar,60e3);olhar()}).catch(function(){});
     getJson("https://api.open-meteo.com/v1/forecast?latitude=-23.50&longitude=-47.46&current=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min&hourly=precipitation_probability,precipitation&timezone=America%2FSao_Paulo&forecast_days=2").then(function(d){
       TEMPO_HOJE=d;
       wx.textContent=Math.round(d.current.temperature_2m)+"° agora em Sorocaba · "+WXTXT[wxKind(d.current.weather_code)]+" · máx. "+Math.round(d.daily.temperature_2m_max[0])+"°, mín. "+Math.round(d.daily.temperature_2m_min[0])+"°";

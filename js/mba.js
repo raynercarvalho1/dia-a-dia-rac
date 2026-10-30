@@ -67,6 +67,31 @@
     var abertas=ps.filter(function(p){return !p.paga});
     return {F:F,ps:ps,pagas:ps.length-abertas.length,prox:abertas[0]||null,atrasadas:abertas.filter(function(p){return p.atrasada}),
       pago:ps.filter(function(p){return p.paga}).reduce(function(s,p){return s+p.v},0),falta:abertas.reduce(function(s,p){return s+p.v},0)}}
+  /* aula ao vivo: no portal, quem não dá o play durante a transmissão só assiste 48 horas depois.
+     No dia da aula o Início mostra o aviso; 15 minutos antes vira "ao vivo agora" com o botão para entrar */
+  var MBA_PORTAL="https://newdashboard.mbx.academy/classes";
+  function mbaLinkAula(a){return a.link||mbaLinkAulas(PESSOAL.mba)||MBA_PORTAL}
+  function mbaAvisoAula(){
+    var agora=Date.now(),hoje=hojeISO(),a=mbaAulas().filter(function(x){return x.data===hoje&&mbaQuando(x).getTime()+3*3600e3>agora})[0];if(!a)return null;
+    var ini=mbaQuando(a).getTime(),vivo=agora>=ini-15*60e3,b=ext(mbaLinkAula(a),vivo?"▶ Entrar na aula":"Abrir a aula","ghostbtn pri");b.target="mbx-aula";
+    return h("div",{class:"chuva mbavivo"+(vivo?" on":""),role:"status"},h("b",{text:(vivo?"🔴 Aula ao vivo agora: ":"🎓 Hoje às "+a.hora+": ")+a.t}),
+      h("span",{class:"sub",text:vivo?"Dê o play agora: se perder a transmissão, a gravação só libera 48 horas depois.":"Às "+a.hora+" o botão vira “Entrar na aula”. Dê o play ao vivo para não esperar 48 horas pela gravação."+(a.link?"":" O link de hoje ainda não está no site: o botão abre as aulas no portal.")}),
+      h("div",{class:"vfil"},b))}
+  /* calendário do celular: um .ics com as próximas aulas, alarme 10 minutos antes e na hora, e o link para entrar */
+  function mbaIcs(){
+    function z(d){return d.toISOString().replace(/[-:]/g,"").replace(/\.\d+/,"")}
+    function esc(t){return String(t||"").replace(/\\/g,"\\\\").replace(/[,;]/g,"\\$&").replace(/\n/g,"\\n")}
+    var ag=Date.now()-3*3600e3,L=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Dia a Dia RAC//MBA//PT","CALSCALE:GREGORIAN","X-WR-CALNAME:MBA"];
+    mbaAulas().filter(function(a){return mbaQuando(a).getTime()>ag}).forEach(function(a){var i=mbaQuando(a),u=mbaLinkAula(a);
+      L.push("BEGIN:VEVENT","UID:mba-"+a.id+"@raynercarvalho.com.br","DTSTAMP:"+z(new Date()),"DTSTART:"+z(i),"DTEND:"+z(new Date(i.getTime()+3*3600e3)),
+        "SUMMARY:"+esc("MBA: "+a.t),"URL:"+u,"DESCRIPTION:"+esc("Dê o play ao vivo: se perder a transmissão, a gravação só libera 48 horas depois.\nEntrar: "+u+(a.prof?"\nProfessor: "+a.prof:"")),
+        "BEGIN:VALARM","ACTION:DISPLAY","DESCRIPTION:"+esc("Aula do MBA em 10 minutos"),"TRIGGER:-PT10M","END:VALARM",
+        "BEGIN:VALARM","ACTION:DISPLAY","DESCRIPTION:"+esc("Aula do MBA começando: dê o play"),"TRIGGER:PT0M","END:VALARM","END:VEVENT")});
+    L.push("END:VCALENDAR");return L.join("\r\n")}
+  function mbaIcsBaixar(){var u=URL.createObjectURL(new Blob([mbaIcs()],{type:"text/calendar"}));
+    /* no iPhone, abrir o arquivo mostra direto a tela "Adicionar todos" do Calendário */
+    if(/iPhone|iPad|iPod/.test(navigator.userAgent)){location.href=u;return}
+    var a=h("a",{href:u,download:"aulas-mba.ics"});document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},2000)}
   function diasAte(iso){return Math.round((new Date(iso+"T12:00:00")-new Date(hojeISO()+"T12:00:00"))/864e5)}
   function mbaPainelAulas(){
     var aulas=mbaAulas();if(!aulas.length)return null;
@@ -85,7 +110,9 @@
       ul.appendChild(h("li",{class:(passou?"mbapassou":"")+(prox&&a.id===prox.id?" mbaprox":"")||null},
         h("span",{class:"grow"},h("b",{text:a.t}),h("span",{class:"sub",text:new Date(a.data+"T12:00:00").toLocaleDateString("pt-BR",{weekday:"short",day:"2-digit",month:"2-digit"})+" · "+a.hora+(a.prof?" · "+a.prof:"")+(ehHoje?" · hoje":"")})),acts))});
     p.appendChild(h("details",{class:"famvals",open:""},h("summary",{text:aulas.length+" aulas no semestre"}),ul));
-    if((PESSOAL.mba||{}).aulasLink)p.appendChild(h("div",{class:"vfil"},ext(PESSOAL.mba.aulasLink,"Aulas no portal","ghostbtn")));
+    var cal=h("button",{type:"button",class:"ghostbtn",text:"📅 Pôr as aulas no calendário do celular"});cal.onclick=mbaIcsBaixar;
+    p.appendChild(h("div",{class:"vfil"},cal,mbaLinkAulas(PESSOAL.mba)?ext(mbaLinkAulas(PESSOAL.mba),"Aulas no portal","ghostbtn"):null));
+    p.appendChild(h("p",{class:"sub",text:"O calendário avisa 10 minutos antes e na hora de cada aula, com o link para entrar. Quando sair aula nova, baixe de novo: as que já estão lá são atualizadas, sem repetir."}));
     return p}
   function mbaPainelFin(){
     var x=mbaFin();if(!x)return null;

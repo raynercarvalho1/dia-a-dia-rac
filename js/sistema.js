@@ -317,6 +317,8 @@
         var res={quando:new Date().toISOString(),arquivo:arq.name,ok:!probs.length,problemas:probs,tabelas:det};pessoalGravar("testeRestauracao",res);return res})})}
   function renderSistema(){
     var root=$("#sistema-view");root.innerHTML="";
+    /* a versão que este aparelho está usando: se não for a mais nova, é só fechar e abrir o site de novo */
+    root.appendChild(h("p",{class:"sub sisversao",text:"Versão do site neste aparelho: "+MOD_VERSAO}));
     try{root.appendChild(sisSaude())}catch(e){logErro("saúde do RAC",e)}
     /* sincronização e conflitos */
     var ps=panel("Sincronização","Os dados pessoais ficam na sua conta e com uma cópia neste aparelho. Se o mesmo dado mudar em dois lugares, você escolhe qual vale.");

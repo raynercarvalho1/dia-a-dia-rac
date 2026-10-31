@@ -319,29 +319,34 @@
      Só o dono altera; a casa vê. A estimativa do RAC não é a fatura: a cobrança efetiva vem do Console da Anthropic. */
   function sisIA(){
     var p=panel("RAC Intelligence","A IA do RAC: o quanto já foi usado no mês e o que está configurado."),corpo=h("div",null,h("p",{class:"sub",text:"Carregando…"}));p.appendChild(corpo);
-    function usd(v){return "US$ "+(+v||0).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:4})}
+    var usd=NUCLEO.iaUsd;
+    /* um indicador: rótulo, valor e, se houver, uma linha menor embaixo (ex.: o valor em reais) */
+    function kpi(rot,val,sub){return h("div",null,h("span",{class:"kl",text:rot}),h("b",{class:"kv",text:val}),sub?h("span",{class:"ksub",text:sub}):null)}
     function desenhar(){
       Promise.all([SB.rpc("ia_totais_mes").then(sbOk),SB.from("ia_config").select("*").maybeSingle().then(sbOk),SB.from("ia_precos").select("*").then(sbOk),
         isOwner()?SB.from("ia_uso").select("id,criado_em,modulo,acao,estado,reservado_usd,erro_codigo,enviado_em").in("estado",["incerto","enviando"]).order("criado_em",{ascending:false}).limit(20).then(sbOk):Promise.resolve([]),
         isOwner()?SB.from("ia_cobranca").select("*").order("mes",{ascending:false}).limit(1).then(sbOk):Promise.resolve([])])
       .then(function(r){
-        var t=r[0]||{},semConfig=!r[1],cfg=r[1]||{modo:"DEMO",limite_brl:50,cambio_brl_usd:6,margem_impostos:0.12,margem_seguranca:0.1},teto=+t.teto_usd||0,comp=+t.comprometido_usd||0,pct=teto?Math.round(comp/teto*100):0;
+        var t=r[0]||{},semConfig=!r[1],cfg=r[1]||{modo:"DEMO",limite_brl:50,cambio_brl_usd:6,margem_impostos:0.12,margem_seguranca:0.1},s=NUCLEO.iaResumo(t,cfg),al=NUCLEO.iaAlerta(s);
+        function brl(v){return "≈ "+NUCLEO.iaBrl(v,cfg)}
         corpo.innerHTML="";
-        if(pct>=50)corpo.appendChild(h("p",{class:"qrwarn",text:pct>=100?"⚠ O limite do mês foi atingido: novas leituras com IA estão bloqueadas até o mês virar.":"⚠ A IA já usou "+pct+"% do limite do mês."}));
+        if(al)corpo.appendChild(h("p",{class:al.forte?"qrwarn":"sub",text:al.texto}));
         corpo.appendChild(h("div",{class:"kgasto"},
-          h("div",null,h("span",{class:"kl",text:"Modo"}),h("b",{class:"kv",text:cfg.modo==="REAL"?"REAL":"DEMO"})),
-          h("div",null,h("span",{class:"kl",text:"Comprometido no mês"}),h("b",{class:"kv",text:usd(comp)+" ("+pct+"%)"})),
-          h("div",null,h("span",{class:"kl",text:"Teto interno"}),h("b",{class:"kv",text:usd(teto)})),
-          h("div",null,h("span",{class:"kl",text:"Estimado pelo RAC"}),h("b",{class:"kv",text:usd(t.estimado_usd)})),
-          h("div",null,h("span",{class:"kl",text:"Reservado em aberto"}),h("b",{class:"kv",text:usd(t.reservado_aberto_usd)})),
-          h("div",null,h("span",{class:"kl",text:"Cobrança efetiva"}),h("b",{class:"kv",text:r[4][0]&&r[4][0].valor_usd!=null?usd(r[4][0].valor_usd)+" ("+String(r[4][0].mes).slice(0,7)+")":"não informada"}))));
+          kpi("Modo",cfg.modo==="REAL"?"REAL":"DEMO"),
+          kpi("Disponível no mês",usd(s.disponivel),brl(s.disponivel)),
+          kpi("Comprometido no mês",usd(s.comprometido)+" ("+s.pct+"%)",brl(s.comprometido)),
+          kpi("Teto interno",usd(s.teto),brl(s.teto)+" de "+NUCLEO.iaReais(cfg.limite_brl)),
+          kpi("Estimado pelo RAC",usd(s.estimado)),
+          kpi("Reservado em aberto",usd(s.aberto)),
+          kpi("Cobrança efetiva",r[4][0]&&r[4][0].valor_usd!=null?usd(r[4][0].valor_usd)+" ("+String(r[4][0].mes).slice(0,7)+")":"não informada")));
+        corpo.appendChild(h("p",{class:"sub",text:NUCLEO.iaEstados(t.por_estado)}));
         /* modo por leitura, como o servidor decide: casa em REAL + leitura liberada (acoes_reais, 016) + papel; o Mercado fica sempre em DEMO nesta fase */
         var reais=cfg.modo==="REAL"&&Array.isArray(cfg.acoes_reais)?cfg.acoes_reais:[],reaisCasa=Array.isArray(cfg.acoes_reais_casa)?cfg.acoes_reais_casa:[];
         corpo.appendChild(h("p",{class:"sub",text:"Por leitura: Abastecimento "+(reais.indexOf("abastecimento.interpretar")>=0?"REAL ("+(reaisCasa.indexOf("abastecimento.interpretar")>=0?"dono e casa":"só o dono; a casa em DEMO")+")":"DEMO")+" · Nota do mercado DEMO (fixo nesta fase)."}));
         var pm=t.por_modulo||{};if(Object.keys(pm).length)corpo.appendChild(h("p",{class:"sub",text:"Por módulo: "+Object.keys(pm).map(function(k){return k+" "+usd(pm[k])}).join(" · ")}));
         corpo.appendChild(h("p",{class:"sub",text:"A estimativa do RAC (uso informado pela API × tabela de preços) não é a fatura. A cobrança efetiva está no Console da Anthropic. O teto interno acima é do RAC: quando acaba, o RAC não faz novas leituras REAL. O limite de gasto da conta na Anthropic é outro e é configurado no Console."}));
         (r[2]||[]).forEach(function(x){var dias=Math.round((Date.now()-new Date(x.conferido_em+"T12:00:00"))/864e5);
-          corpo.appendChild(h("p",{class:dias>30?"qrwarn":"sub",text:x.modelo+": US$ "+x.entrada_usd_mtok+" / "+x.saida_usd_mtok+" por milhão de tokens (entrada / saída), conferido em "+dataBR(x.conferido_em)+(dias>30?". Confira o preço de novo na página oficial.":".")}))});
+          corpo.appendChild(h("p",{class:dias>30?"qrwarn":"sub",text:x.modelo+": "+usd(x.entrada_usd_mtok)+" / "+usd(x.saida_usd_mtok)+" por milhão de tokens (entrada / saída), conferido em "+dataBR(x.conferido_em)+(dias>30?". Confira o preço de novo na página oficial.":".")}))});
         if(!isOwner())return;
         /* chamadas incertas: só o dono decide, pelo id, depois de olhar o uso no Console */
         if(r[3].length){corpo.appendChild(h("h3",{class:"dayh",text:"Chamadas incertas (a reserva continua contando)"}));

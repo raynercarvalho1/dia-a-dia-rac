@@ -249,5 +249,33 @@
     return JSON.stringify({mercado:r.mercado||"",cnpj:r.cnpj||"",data:r.data||"",numero:r.numero||"",serie:r.serie||"",chave:r.chave||"",pagamento:r.pagamento||"",
       total_pago:r.total_pago==null?null:r.total_pago,desconto_nota:r.desconto_nota||0,
       itens:r.itens.map(function(x){return [x.descricao,x.qtd==null?null:x.qtd,x.un||"un",x.unitario==null?null:x.unitario,x.total==null?null:x.total,x.desconto||0]})})}
-  raiz.RACnucleo={norm:norm,urlAbs:urlAbs,lerAbast:lerAbast,TEMAS:TEMAS,temasDe:temasDe,juntarDados:juntarDados,SKILLS:SKILLS,compatVaga:compatVaga,omsZ:omsZ,omsValor:omsValor,percentilDeZ:percentilDeZ,csvLinhas:csvLinhas,napperLer:napperLer,bebeDias:bebeDias,VACINAS_PNI:VACINAS_PNI,vacinasCalendario:vacinasCalendario,mediana:mediana,prontidao:prontidao,somaDiasISO:somaDiasISO,correlacao:correlacao,chuvaAviso:chuvaAviso,diasEntre:diasEntre,chaveProduto:chaveProduto,previsaoCompras:previsaoCompras,padraoCompras:padraoCompras,itemBate:itemBate,notaItens:notaItens,dividirItens:dividirItens,lerEmailVaga:lerEmailVaga,vagaParecida:vagaParecida,iaAbastTexto:iaAbastTexto,iaNotaTexto:iaNotaTexto};
+  /* ===== RAC Intelligence: contas e textos do painel do Sistema (sem tela nem banco; seguem as regras do banco, 015) ===== */
+  /* número no formato brasileiro (1.234,56) */
+  function iaNum(v,casas){var n=+v;if(!isFinite(n))n=0;var s=Math.abs(n).toFixed(casas).split("."),i=s[0].replace(/\B(?=(\d{3})+(?!\d))/g,".");
+    return (n<0&&+s.join(".")!==0?"-":"")+i+(s[1]?","+s[1]:"")}
+  /* dólar: 2 casas; abaixo de 1 centavo, até 4 (uma leitura custa frações de centavo) */
+  function iaUsd(v){var n=+v||0,a=Math.abs(n);if(a>0&&a<0.00005)return "menos de US$ 0,0001";
+    return "US$ "+(a>0&&a<0.01?iaNum(n,4).replace(/0{1,2}$/,""):iaNum(n,2))}
+  function iaReais(v){var n=+v||0;return n>0&&n<0.005?"menos de R$ 0,01":"R$ "+iaNum(n,2)}
+  /* quanto um valor em dólar custa em reais, com o câmbio e os impostos da configuração (como emReais no servidor) */
+  function iaBrl(usd,cfg){cfg=cfg||{};var c=+cfg.cambio_brl_usd>0?+cfg.cambio_brl_usd:6,i=+cfg.margem_impostos>=0?+cfg.margem_impostos:0.12;return iaReais((+usd||0)*c*(1+i))}
+  /* o mês da tela, a partir dos totais do banco (ia_totais_mes): disponível, percentual e nível de alerta.
+     O bloqueio acontece quando a PRÓXIMA reserva não cabe, então o aviso forte começa antes dos 100% */
+  function iaResumo(t,cfg){t=t||{};var teto=+t.teto_usd||0,comp=+t.comprometido_usd||0,pct=teto>0?comp/teto*100:100;
+    return {teto:teto,comprometido:comp,disponivel:Math.max(0,Math.round((teto-comp)*1e6)/1e6),pct:Math.round(pct),
+      nivel:pct>=100?100:pct>=95?95:pct>=80?80:pct>=50?50:0,estimado:+t.estimado_usd||0,aberto:+t.reservado_aberto_usd||0,mes:t.mes||""}}
+  function iaAlerta(s){if(!s||!s.nivel)return null;
+    if(s.nivel>=100)return {forte:true,texto:"⚠ O limite do mês acabou: novas leituras com IA ficam bloqueadas até o mês virar. O jeito manual continua."};
+    if(s.nivel>=95)return {forte:true,texto:"⚠ Quase no limite: a IA já usou "+s.pct+"% do mês e novas leituras podem ser recusadas."};
+    if(s.nivel>=80)return {forte:true,texto:"⚠ A IA já usou "+s.pct+"% do limite do mês."};
+    return {forte:false,texto:"A IA já usou "+s.pct+"% do limite do mês."}}
+  /* quantas chamadas pagas o mês teve, por estado (por_estado de ia_totais_mes) */
+  var IA_ESTADOS=[["concluido","leitura concluída","leituras concluídas"],["incerto","incerta","incertas"],["enviando","em andamento","em andamento"],
+    ["reservado","reservada","reservadas"],["reconciliado","conferida","conferidas"],["falhou_sem_envio","falhou antes do envio","falharam antes do envio"]];
+  function iaEstados(pe){pe=pe||{};var l=IA_ESTADOS.filter(function(e){return +pe[e[0]]>0}).map(function(e){var n=+pe[e[0]];return n+" "+(n===1?e[1]:e[2])});
+    return l.length?l.join(" · "):"Nenhuma leitura paga neste mês."}
+  var IA_MESES=["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
+  /* "2026-10-01" → "outubro de 2026" */
+  function iaNomeMes(iso){var m=/^(\d{4})-(\d{2})/.exec(String(iso||""));return m?IA_MESES[+m[2]-1]+" de "+m[1]:""}
+  raiz.RACnucleo={norm:norm,urlAbs:urlAbs,lerAbast:lerAbast,TEMAS:TEMAS,temasDe:temasDe,juntarDados:juntarDados,SKILLS:SKILLS,compatVaga:compatVaga,omsZ:omsZ,omsValor:omsValor,percentilDeZ:percentilDeZ,csvLinhas:csvLinhas,napperLer:napperLer,bebeDias:bebeDias,VACINAS_PNI:VACINAS_PNI,vacinasCalendario:vacinasCalendario,mediana:mediana,prontidao:prontidao,somaDiasISO:somaDiasISO,correlacao:correlacao,chuvaAviso:chuvaAviso,diasEntre:diasEntre,chaveProduto:chaveProduto,previsaoCompras:previsaoCompras,padraoCompras:padraoCompras,itemBate:itemBate,notaItens:notaItens,dividirItens:dividirItens,lerEmailVaga:lerEmailVaga,vagaParecida:vagaParecida,iaAbastTexto:iaAbastTexto,iaNotaTexto:iaNotaTexto,iaNum:iaNum,iaUsd:iaUsd,iaReais:iaReais,iaBrl:iaBrl,iaResumo:iaResumo,iaAlerta:iaAlerta,iaEstados:iaEstados,iaNomeMes:iaNomeMes};
 })(typeof window!=="undefined"?window:globalThis);

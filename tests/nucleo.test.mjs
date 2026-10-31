@@ -208,3 +208,47 @@ test("RAC Intelligence: o resultado REAL do abastecimento vira o mesmo texto do 
   assert.equal(N.iaNotaTexto({ itens: [{ descricao: "x" }], _demo: true }), "");
   assert.equal(N.iaNotaTexto({ itens: [] }), "");
 });
+
+/* ---------- RAC Intelligence: painel do Sistema ---------- */
+test("IA: dinheiro no formato brasileiro; frações de centavo com até 4 casas", () => {
+  assert.equal(N.iaUsd(6.696429), "US$ 6,70");
+  assert.equal(N.iaUsd(1234.5), "US$ 1.234,50");
+  assert.equal(N.iaUsd(0), "US$ 0,00");
+  assert.equal(N.iaUsd(null), "US$ 0,00");
+  assert.equal(N.iaUsd(0.002578), "US$ 0,0026");
+  assert.equal(N.iaUsd(0.003), "US$ 0,003");
+  assert.equal(N.iaUsd(0.01), "US$ 0,01");
+  assert.equal(N.iaUsd(0.00001), "menos de US$ 0,0001", "valor minúsculo não vira zero");
+  assert.equal(N.iaUsd(0.1), "US$ 0,10", "preço por milhão no formato brasileiro (não 0.1)");
+  assert.equal(N.iaReais(45), "R$ 45,00");
+  assert.equal(N.iaReais(0.001), "menos de R$ 0,01");
+  assert.equal(N.iaNum(-0.001, 2), "0,00", "sem -0,00");
+});
+
+test("IA: reais com o câmbio e os impostos da configuração (como o servidor)", () => {
+  assert.equal(N.iaBrl(6.696429, { cambio_brl_usd: 6, margem_impostos: 0.12 }), "R$ 45,00");
+  assert.equal(N.iaBrl(1, { cambio_brl_usd: 5, margem_impostos: 0 }), "R$ 5,00");
+  assert.equal(N.iaBrl(1, {}), "R$ 6,72", "sem configuração: câmbio 6 e 12% de impostos");
+});
+
+test("IA: disponível, percentual e alertas em níveis (o bloqueio pode vir antes dos 100%)", () => {
+  const s = N.iaResumo({ teto_usd: 6.696429, comprometido_usd: 3.5, estimado_usd: 3.1, reservado_aberto_usd: 0.0026, mes: "2026-10-01" }, {});
+  assert.deepEqual([s.disponivel, s.pct, s.nivel, s.estimado, s.aberto], [3.196429, 52, 50, 3.1, 0.0026]);
+  assert.equal(N.iaAlerta(s).forte, false, "a partir de 50%: aviso discreto");
+  assert.equal(N.iaAlerta(N.iaResumo({ teto_usd: 10, comprometido_usd: 8 })).forte, true);
+  assert.match(N.iaAlerta(N.iaResumo({ teto_usd: 10, comprometido_usd: 9.6 })).texto, /podem ser recusadas/);
+  assert.match(N.iaAlerta(N.iaResumo({ teto_usd: 10, comprometido_usd: 10 })).texto, /acabou/);
+  assert.equal(N.iaResumo({ teto_usd: 10, comprometido_usd: 12 }).disponivel, 0, "disponível nunca fica negativo");
+  assert.equal(N.iaResumo({ teto_usd: 0, comprometido_usd: 0 }).nivel, 100, "teto zero: tudo bloqueado");
+  assert.equal(N.iaAlerta(N.iaResumo({ teto_usd: 10, comprometido_usd: 1 })), null, "abaixo de 50%: sem aviso");
+  assert.equal(N.iaAlerta(null), null);
+});
+
+test("IA: contagem por estado e nome do mês", () => {
+  assert.equal(N.iaEstados({ concluido: 12, incerto: 1 }), "12 leituras concluídas · 1 incerta");
+  assert.equal(N.iaEstados({ concluido: 1, reconciliado: 2, falhou_sem_envio: 1 }), "1 leitura concluída · 2 conferidas · 1 falhou antes do envio");
+  assert.equal(N.iaEstados({}), "Nenhuma leitura paga neste mês.");
+  assert.equal(N.iaEstados(null), "Nenhuma leitura paga neste mês.");
+  assert.equal(N.iaNomeMes("2026-10-01"), "outubro de 2026");
+  assert.equal(N.iaNomeMes("lixo"), "");
+});

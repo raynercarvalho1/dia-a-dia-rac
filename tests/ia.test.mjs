@@ -894,6 +894,9 @@ test("site: o painel do Sistema não oferece ligar o modo REAL e nunca envia o m
   /* as informações continuam: modo, orçamento, teto, estimativa, reservado, cobrança, modelos */
   for (const rot of ["\"Modo\"", "Comprometido no mês", "Teto interno", "Estimado pelo RAC", "Reservado em aberto", "Cobrança efetiva", "por milhão de tokens"])
     assert.ok(painel.includes(rot), "o painel perdeu " + rot);
+  /* dinheiro e contas pelas funções puras do núcleo (formato brasileiro, reais, níveis de alerta) */
+  for (const f of ["NUCLEO.iaUsd", "NUCLEO.iaResumo(", "NUCLEO.iaAlerta(", "NUCLEO.iaBrl(", "NUCLEO.iaEstados(", "\"Disponível no mês\""]) assert.ok(painel.includes(f), "o painel não usa " + f);
+  assert.ok(!/toLocaleString\("pt-BR",\{minimumFractionDigits:2,maximumFractionDigits:4\}\)/.test(painel), "sem a formatação antiga");
 });
 
 test("site: o pedido à IA não leva o modo nem quem é: o servidor decide", () => {

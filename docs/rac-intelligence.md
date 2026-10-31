@@ -12,9 +12,10 @@ o modo da casa nunca esteve em REAL, e em DEMO a função responde antes de qual
 |---|---|---|
 | SQL `015_ia.sql` | Aplicado (Fase B) | Dono, no SQL Editor; testes de banco |
 | SQL `016_ia_acoes.sql` | **Aplicado e conferido**: modo DEMO mantido, `acoes_reais` e `acoes_reais_casa` vazias, UPDATE do site só nos 5 campos de limite, `mercado.nota` recusado pela constraint `ia_config_acoes_reais_permitidas` (erro 23514) | Dono, no SQL Editor |
+| SQL `017_ia_por_modulo.sql` | **Aplicado e conferido**: só `ia_totais_mes` recriada (corpo em produção igual ao do arquivo); "Por módulo" com a regra de `ia_comprometido_usd`; modo, listas, trava do Mercado, permissões, políticas e as outras funções iguais a antes | Claude, pela CLI (`db query --linked`), com autorização do dono |
 | Edge Function `rac-ia` | **Versão 3** publicada pela CLI (`--use-api --no-verify-jwt`); código publicado idêntico ao do commit `a131025` | Claude: download da versão publicada e comparação arquivo por arquivo; testes sem login |
 | Edge Function `garmin` | Não alterada (versão 9) | Claude: lista de funções |
-| Site | Publicado na versão **`2026-10-31.2`** | Claude: arquivos publicados iguais ao commit `a131025` |
+| Site | Publicado na versão **`2026-10-31.3`** (painel em seis etapas) | Claude: arquivos publicados iguais ao commit `00cf518` |
 | Teste DEMO no iPhone | **Concluído** em Abastecimento e Mercado | Dono |
 | Anthropic | Workspace **`RAC`**; chave **`rac-ia`** nesse workspace, **sem expiração**; **US$ 10 em créditos pré-pagos comprados**; **recarga automática desligada** | Dono, no Console |
 | Secret `ANTHROPIC_API_KEY` | Cadastrado no Supabase (o valor nunca foi lido nem impresso) | Dono; Claude conferiu só o nome |

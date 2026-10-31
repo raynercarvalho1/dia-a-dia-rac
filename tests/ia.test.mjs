@@ -896,8 +896,8 @@ const espacos = (t) => t.replace(/\s+/g, " ").trim();
 function casePorModulo(t) { const m = /'por_modulo'[\s\S]*?(sum\(case u\.estado[\s\S]*?end\))/.exec(semComent(t)); return m ? m[1] : ""; }
 function caseComprometido(t) { const m = /function public\.ia_comprometido_usd[\s\S]*?(sum\(case u\.estado[\s\S]*?end\))/.exec(semComent(t)); return m ? m[1] : ""; }
 
-test("SQL 017: pendente, numa transação, só recria ia_totais_mes (nenhuma tabela, política ou dado)", () => {
-  assert.match(sql17, /^-- status: pendente/);
+test("SQL 017: já aplicado (sem a marca de pendente), numa transação, só recria ia_totais_mes (nenhuma tabela, política ou dado)", () => {
+  assert.ok(!/^-- status: pendente/.test(sql17), "o 017 foi aplicado e conferido no banco em 31/10/2026");
   const s = semComent(sql17);
   assert.match(s, /^\s*begin;/m); assert.match(s, /commit;\s*$/); assert.ok(!/^(rollback|savepoint)/im.test(s));
   assert.deepEqual([...s.matchAll(/create or replace function public\.(\w+)/g)].map((m) => m[1]), ["ia_totais_mes"]);

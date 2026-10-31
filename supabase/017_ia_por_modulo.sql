@@ -1,4 +1,3 @@
--- status: pendente
 -- RAC Intelligence: o "Por módulo" do painel com as mesmas regras do "Comprometido no mês" (docs/rac-intelligence.md).
 -- Rode este arquivo inteiro no SQL Editor depois do 015 e do 016; pode rodar de novo sem estragar nada.
 --

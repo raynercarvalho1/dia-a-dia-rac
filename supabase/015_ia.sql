@@ -158,12 +158,15 @@ create or replace function public.ia_mes_atual() returns date
   select date_trunc('month', pg_catalog.now() at time zone 'America/Sao_Paulo')::date
 $$;
 
--- reserva: trava por casa, confere repetição, limites de uso e orçamento, e só então grava "reservado"
+-- reserva: trava por casa, exige a configuração da casa em modo REAL, confere repetição, limites de uso e orçamento,
+-- e só então grava "reservado". Segunda camada: a função rac-ia já não reserva sem configuração REAL, mas o banco
+-- também recusa, para que os valores padrão de ia_teto_usd nunca sirvam de autorização.
 create or replace function public.ia_reservar(p_dono uuid, p_user uuid, p_idempotencia text, p_modulo text, p_acao text,
                                               p_modelo text, p_reservado_usd numeric, p_tokens_contados integer, p_contagem_oficial boolean)
   returns jsonb language plpgsql security definer set search_path = '' as $$
 declare
   v_mes date := public.ia_mes_atual();
+  v_modo text;
   v_ex public.ia_uso%rowtype;
   v_teto numeric;
   v_comp numeric;
@@ -173,6 +176,15 @@ begin
     return jsonb_build_object('ok', false, 'codigo', 'entrada_invalida');
   end if;
   perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('rac-ia:' || p_dono::text, 0));
+
+  /* sem linha em ia_config: nada de reserva; com linha em DEMO (ou qualquer valor que não seja REAL): também não */
+  select c.modo into v_modo from public.ia_config c where c.dono = p_dono;
+  if not found then
+    return jsonb_build_object('ok', false, 'codigo', 'configuracao_ausente');
+  end if;
+  if v_modo is distinct from 'REAL' then
+    return jsonb_build_object('ok', false, 'codigo', 'modo_demo');
+  end if;
 
   select * into v_ex from public.ia_uso where user_id = p_user and idempotencia = p_idempotencia;
   if found then

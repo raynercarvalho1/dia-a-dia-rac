@@ -121,6 +121,15 @@ reservado ──► enviando ──► concluido            (resposta da API: su
 - **Quem pode usar a IA:** só a casa que tem linha em `ia_config`, e essa linha só nasce pelo SQL Editor (Fase B).
   Uma conta nova (sem ser membro de uma casa, o RAC a trata como dona de uma casa vazia) não tem linha, não consegue
   criar uma e recebe só DEMO: não reserva orçamento nem chama a Anthropic. Há testes para isso.
+- **Duas camadas para o modo REAL:**
+  1. **Função rac-ia:** sem linha em `ia_config`, ou com ela fora do modo REAL, responde DEMO antes de buscar preço,
+     contar tokens, reservar ou chamar a Anthropic.
+  2. **Banco:** `ia_reservar` também exige, logo depois da trava e antes da idempotência, dos limites, do teto e da
+     gravação, que exista a linha da casa em `ia_config` com `modo = 'REAL'`. Sem linha devolve `configuracao_ausente`;
+     com outro modo, `modo_demo`; nos dois casos não grava nada. Assim os valores padrão de `ia_teto_usd` (R$ 50 quando
+     falta a linha) nunca servem de autorização, e um dono que volta para DEMO bloqueia na hora até a chamada que a
+     função já tinha começado.
+  Os testes conferem a estrutura de `ia_reservar` (as verificações, a ordem e o caminho REAL) e falham com a versão antiga.
 - A migração roda inteira dentro de `begin … commit` (se algo falhar, nada fica pela metade) e não mexe em tabelas,
   funções ou políticas existentes: só cria e altera objetos `ia_*` (a leitura de `membros` pelo servidor já vem do 014).
 - `ia_uso` não guarda conteúdo (texto, foto, resposta): só números, códigos, módulo, ação, modelo e horários.
@@ -150,6 +159,18 @@ reservado ──► enviando ──► concluido            (resposta da API: su
 4. Crie a configuração, que começa em DEMO, com R$ 50, câmbio 6,00, 12% de impostos e 10% de margem:
    `insert into public.ia_config (dono) values ('UUID-DO-DONO') on conflict (dono) do nothing;`
 5. Confira: `select dono, modo, limite_brl from public.ia_config;` (uma linha, modo DEMO).
+6. Confira a segunda camada no próprio banco (dentro de uma transação desfeita no fim; não grava nada):
+
+   ```sql
+   begin;
+   -- uma casa sem configuração: esperado {"ok": false, "codigo": "configuracao_ausente"}
+   select public.ia_reservar(gen_random_uuid(), gen_random_uuid(), 'teste-camada-1', 'abastecimento',
+     'abastecimento.interpretar', 'claude-haiku-5-5', 0.01, 100, true);
+   -- a casa do dono, ainda em DEMO: esperado {"ok": false, "codigo": "modo_demo"}
+   select public.ia_reservar('UUID-DO-DONO', 'UUID-DO-DONO', 'teste-camada-2', 'abastecimento',
+     'abastecimento.interpretar', 'claude-haiku-5-5', 0.01, 100, true);
+   rollback;
+   ```
 
 O UUID e o e-mail ficam só no SQL Editor: não entram no repositório nem no site. Quem é da casa usa a mesma configuração
 (o papel casa vem da tabela `membros`), limitado às ações de `acoes_casa`.

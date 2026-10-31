@@ -17,6 +17,9 @@ export const ERROS: Record<string, { status: number; mensagem: string }> = {
   limite_de_uso: { status: 429, mensagem: "Muitos pedidos seguidos. Espere um pouco e tente de novo." },
   orcamento_esgotado: { status: 402, mensagem: "O limite mensal da IA foi atingido. Use o jeito manual até o mês virar." },
   configuracao: { status: 503, mensagem: "A IA ainda não está configurada no servidor (preços ou tabelas)." },
+  /* recusas do próprio banco (ia_reservar), a segunda camada: a casa sem configuração ou fora do modo REAL */
+  configuracao_ausente: { status: 503, mensagem: "A configuração da IA desta casa não existe. Nada foi reservado nem cobrado." },
+  modo_demo: { status: 409, mensagem: "O modo REAL está desligado para esta casa. Nada foi reservado nem cobrado." },
   tempo_esgotado: { status: 504, mensagem: "A IA não respondeu a tempo. A chamada ficou marcada como incerta e não será repetida sozinha." },
   provedor_indisponivel: { status: 502, mensagem: "O serviço de IA está fora do ar. Tente mais tarde ou use o jeito manual." },
   provedor_ocupado: { status: 503, mensagem: "O serviço de IA está ocupado agora. Tente de novo em alguns minutos." },

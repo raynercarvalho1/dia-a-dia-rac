@@ -205,10 +205,14 @@ function bancoFalso(opcoes = {}) {
     async papelEDono(user) { log.push("papel"); return user === "fernanda" ? { papel: "casa", dono: "rayner" } : { papel: "dono", dono: user }; },
     async config() { log.push("config"); if (opcoes.semTabela) throw new Error("42P01"); return cfg; },
     async preco(m) { log.push("preco"); return m === "claude-haiku-5-5" ? PRECO_HAIKU : PRECO_SONNET; },
-    /* imita ia_reservar: trava por casa, idempotência, limites e orçamento */
+    /* imita ia_reservar: trava por casa, configuração REAL (a do banco na hora da reserva, que pode ter mudado
+       depois da leitura da função: opcoes.cfgNaReserva), idempotência, limites e orçamento */
     reservar(a) {
       const r = trava.then(async () => {
         log.push("reservar");
+        const naReserva = opcoes.cfgNaReserva === undefined ? cfg : opcoes.cfgNaReserva;
+        if (!naReserva) return { ok: false, codigo: "configuracao_ausente" };
+        if (naReserva.modo !== "REAL") return { ok: false, codigo: "modo_demo" };
         const ex = linhas.find((l) => l.user === a.user && l.idem === a.idempotencia);
         if (ex) return { ok: false, id: ex.id, codigo: ["reservado", "enviando"].includes(ex.estado) ? "em_andamento" : "repetida" };
         if (linhas.filter((l) => l.user === a.user && ["reservado", "enviando"].includes(l.estado)).length >= 2) return { ok: false, codigo: "limite_de_uso" };
@@ -453,4 +457,81 @@ test("site: o Sistema altera a configuração com UPDATE na linha do dono, nunca
   const t = fs.readFileSync(new URL("js/sistema.js", raiz), "utf8");
   assert.ok(!/from\("ia_config"\)\.(upsert|insert)/.test(t), "o site não pode criar a configuração");
   assert.match(t, /from\("ia_config"\)\.update\([^]*?\.eq\("dono",EU\.id\)/);
+});
+
+/* ---------- segunda camada no banco: ia_reservar exige configuração em modo REAL ----------
+   Sem Postgres nos testes, a função SQL é conferida pela estrutura: as verificações existem, vêm logo depois da trava
+   e ANTES da idempotência, dos limites, do teto e da gravação; e o caminho REAL continua com tudo o que já existia.
+   A mesma conferência roda contra versões quebradas (a antiga, sem as verificações) e precisa apontar o problema. */
+function corpoReservar(texto) {
+  const m = /create or replace function public\.ia_reservar\([\s\S]*?\nend \$\$;/.exec(texto);
+  return m ? m[0].replace(/\/\*[\s\S]*?\*\//g, "").replace(/--.*$/gm, "") : "";
+}
+function problemasReservar(texto) {
+  const c = corpoReservar(texto), p = [];
+  if (!c) return ["ia_reservar não encontrada"];
+  const pos = (re) => { const m = re.exec(c); return m ? m.index : -1; };
+  const trava = pos(/pg_advisory_xact_lock\(/);
+  const leitura = pos(/select\s+(?:\w+\.)?modo\s+into\s+v_modo\s+from\s+public\.ia_config\s+\w+\s+where\s+\w+\.dono\s*=\s*p_dono\s*;/i);
+  const ausente = pos(/if\s+not\s+found\s+then\s+return\s+jsonb_build_object\('ok',\s*false,\s*'codigo',\s*'configuracao_ausente'\)/i);
+  const demo = pos(/if\s+v_modo\s+(?:is\s+distinct\s+from|<>)\s+'REAL'\s+then\s+return\s+jsonb_build_object\('ok',\s*false,\s*'codigo',\s*'modo_demo'\)/i);
+  const idem = pos(/idempotencia\s*=\s*p_idempotencia/), limites = pos(/'limite_de_uso'/), teto = pos(/public\.ia_teto_usd\(/);
+  const orc = pos(/'orcamento_esgotado'/), grava = pos(/insert\s+into\s+public\.ia_uso/i), okReal = pos(/'ok',\s*true/);
+  if (leitura < 0) p.push("não lê a configuração da casa (ia_config de p_dono)");
+  if (ausente < 0) p.push("não recusa sem configuração (configuracao_ausente)");
+  if (demo < 0) p.push("não recusa fora do modo REAL (modo_demo)");
+  if (trava < 0) p.push("perdeu a trava de concorrência");
+  if (idem < 0 || limites < 0 || orc < 0 || grava < 0 || okReal < 0) p.push("perdeu idempotência, limites, orçamento ou gravação");
+  if (leitura >= 0 && ausente >= 0 && demo >= 0) {
+    if (!(trava < leitura && leitura < ausente && ausente < demo)) p.push("ordem: trava → leitura → configuracao_ausente → modo_demo");
+    for (const [nome, i] of [["idempotência", idem], ["limites", limites], ["teto", teto], ["orçamento", orc], ["gravação", grava]])
+      if (i >= 0 && i < demo) p.push(nome + " acontece antes de exigir o modo REAL");
+    /* nada entre as verificações e o caminho atual que devolva ok sem passar por elas */
+    if (okReal >= 0 && okReal < demo) p.push("devolve ok antes de exigir o modo REAL");
+    if (!(idem < limites && limites < teto && teto < orc && orc < grava && grava < okReal)) p.push("o caminho REAL mudou de ordem (idempotência → limites → teto → orçamento → gravação)");
+  }
+  return p;
+}
+
+test("banco: ia_reservar recusa sem configuração, recusa em DEMO e só no REAL segue para as regras atuais", () => {
+  assert.deepEqual(problemasReservar(sql), []);
+  const c = corpoReservar(sql);
+  /* o teto padrão (coalesce 50) não autoriza: a leitura da configuração vem antes de qualquer ia_teto_usd */
+  assert.ok(c.indexOf("public.ia_config") < c.indexOf("public.ia_teto_usd("));
+  /* as recusas novas não gravam nada: são return antes do único insert */
+  assert.equal((c.match(/insert\s+into\s+public\.ia_uso/gi) || []).length, 1);
+});
+
+test("banco: a conferência pega a implementação antiga (sem as verificações) e versões quebradas", () => {
+  const s = sql.replace(/\r\n/g, "\n"); /* no Windows o git pode trocar as quebras de linha para CRLF */
+  const semGuarda = s.replace(/\n  \/\* sem linha em ia_config[\s\S]*?return jsonb_build_object\('ok', false, 'codigo', 'modo_demo'\);\n  end if;\n/, "\n");
+  assert.notEqual(semGuarda, s, "a remoção do bloco precisa ter acontecido");
+  const p = problemasReservar(semGuarda);
+  assert.ok(p.some((x) => /configuracao_ausente/.test(x)) && p.some((x) => /modo_demo/.test(x)), JSON.stringify(p));
+  /* só o modo DEMO recusado (um modo desconhecido passaria): não serve */
+  const soDemo = s.replace("if v_modo is distinct from 'REAL' then", "if v_modo = 'DEMO' then");
+  assert.notEqual(soDemo, s);
+  assert.ok(problemasReservar(soDemo).some((x) => /modo_demo/.test(x)));
+  /* verificações depois do teto: não serve */
+  const bloco = /\n  \/\* sem linha em ia_config[\s\S]*?'modo_demo'\);\n  end if;\n/.exec(s)[0];
+  const tarde = s.replace(bloco, "\n").replace("  v_teto := public.ia_teto_usd(p_dono);", bloco + "  v_teto := public.ia_teto_usd(p_dono);");
+  assert.notEqual(tarde, s);
+  assert.ok(problemasReservar(tarde).some((x) => /antes de exigir o modo REAL/.test(x)), JSON.stringify(problemasReservar(tarde)));
+  /* sem a trava: não serve */
+  assert.ok(problemasReservar(s.replace("pg_catalog.pg_advisory_xact_lock(", "pg_catalog.pg_sleep_x(")).some((x) => /trava/.test(x)));
+});
+
+test("duas camadas: se o banco estiver sem configuração ou em DEMO na hora da reserva, nada é chamado nem gravado", async () => {
+  /* a função leu REAL, mas na hora da reserva o dono já tinha voltado para DEMO (ou apagado a configuração) */
+  for (const [naReserva, codigo, status] of [[{ modo: "DEMO" }, "modo_demo", 409], [null, "configuracao_ausente", 503]]) {
+    const b = bancoFalso({ cfg: { modo: "REAL" }, cfgNaReserva: naReserva }), pv = provedorFalso(okAbast);
+    const r = await atenderPedido("rayner", pedido(), { banco: b, provedor: pv });
+    assert.equal(r.status, status); assert.equal(r.corpo.erro.codigo, codigo); assert.equal(r.corpo.ok, false);
+    assert.equal(pv.chamadas, 0, "sem chamada à Anthropic"); assert.equal(b.linhas.length, 0, "sem reserva gravada");
+    assert.ok(!b.log.includes("envio"));
+  }
+  /* com o banco em REAL, segue normalmente */
+  const b = bancoFalso({ cfg: { modo: "REAL" } }), pv = provedorFalso(okAbast);
+  assert.equal((await atenderPedido("rayner", pedido(), { banco: b, provedor: pv })).corpo.ok, true);
+  assert.equal(pv.chamadas, 1);
 });

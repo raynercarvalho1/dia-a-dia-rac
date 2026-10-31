@@ -45,7 +45,8 @@ test("o service worker guarda todos os arquivos do site para uso sem internet", 
 test("nenhum dado pessoal no código público", () => {
   const proibidos = [/@gmail\.com/i, /@icloud\.com/i, /\b\d{3}\.\d{3}\.\d{3}-\d{2}\b/, /class\.mbx\.academy\/\?t=/, /AIza[\w-]{30,}/];
   const todos = ["index.html", "nucleo.js", "mercado.js", "sw.js", ...arquivos, ...fs.readdirSync(new URL("supabase/", raiz)).filter((f) => f.endsWith(".sql")).map((f) => "supabase/" + f),
-    "README.md", "CLAUDE.md", "supabase/functions/garmin/index.ts",
+    "README.md", "CLAUDE.md", "supabase/functions/garmin/index.ts", "docs/rac-intelligence.md",
+    ...fs.readdirSync(new URL("supabase/functions/rac-ia/", raiz)).map((f) => "supabase/functions/rac-ia/" + f),
     ...fs.readdirSync(new URL("scripts/", raiz)).map((f) => "scripts/" + f), ...fs.readdirSync(new URL(".github/workflows/", raiz)).map((f) => ".github/workflows/" + f)];
   for (const a of todos) {
     const t = fs.readFileSync(new URL(a, raiz), "utf8");
@@ -80,8 +81,11 @@ test("todo arquivo de código do site e a Edge Function têm sintaxe válida", a
   }
   const mod = await import("node:module");
   if (typeof mod.stripTypeScriptTypes === "function") {
-    const ts = fs.readFileSync(new URL("supabase/functions/garmin/index.ts", raiz), "utf8");
-    const js = mod.stripTypeScriptTypes(ts).replace(/^import .*$/gm, "");
-    assert.doesNotThrow(() => new vm.Script("(async()=>{" + js + "\n})", { filename: "garmin/index.ts" }), "a Edge Function tem erro de sintaxe");
+    const funcoes = ["supabase/functions/garmin/index.ts", ...fs.readdirSync(new URL("supabase/functions/rac-ia/", raiz)).map((f) => "supabase/functions/rac-ia/" + f)];
+    for (const f of funcoes) {
+      const ts = fs.readFileSync(new URL(f, raiz), "utf8");
+      const js = mod.stripTypeScriptTypes(ts).replace(/^import\b[\s\S]*?from\s*["'][^"']+["'];?/gm, "").replace(/^export /gm, "");
+      assert.doesNotThrow(() => new vm.Script("(async()=>{" + js + "\n})", { filename: f }), f + " tem erro de sintaxe");
+    }
   }
 });

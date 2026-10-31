@@ -541,6 +541,10 @@
       if(v&&!/^https:\/\/claude\.ai\/(chat|project)\/[\w-]+/.test(v)){lmsg.textContent="O link precisa começar com https://claude.ai/project/ (ou /chat/). Copie o endereço da barra do navegador com o projeto aberto.";return}
       try{if(v)localStorage.setItem(CH_LINK,v);else localStorage.removeItem(CH_LINK)}catch(e){}lform.hidden=true;lmsg.textContent=v?"✓ Pronto: o botão agora abre o seu projeto.":"Voltou a abrir uma conversa nova.";mostrar()};
     lform.appendChild(lin);lform.appendChild(lok);mostrar();
+    /* RAC Intelligence (só aparece quando estiver ligada): o resultado REAL vira o mesmo texto do fluxo manual e cai na conferência */
+    if(typeof iaLigada==="function"&&iaLigada())f.appendChild(iaBotao({modulo:"abastecimento",acao:"abastecimento.interpretar",texto:"ou escreva: 6,1 litros a 6,29, 18.240 km",
+      contexto:function(){var k=veicKm(regs),c={veiculo_sugerido:quem==="moto"?"moto":"carro"};if(k)c.ultima_km=k.km;return c},
+      real:function(r){var t=NUCLEO.iaAbastTexto(r);if(!t)return;resp.value=t;ler();conf.scrollIntoView({behavior:"smooth",block:"start"})}}));
     f.appendChild(h("ol",{class:"how"},h("li",null,"Tire a foto do painel com a quilometragem e, se abasteceu, a da bomba com o total. Só o painel já serve para anotar a km."),
       h("li",null,"Toque em Abrir o Claude, anexe as fotos e envie. Ele reconhece pelo painel se é o carro ou a moto."),
       h("li",null,"Copie a resposta inteira, volte aqui e toque em ",h("b",{text:"Colar a resposta"}),".")));

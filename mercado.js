@@ -897,6 +897,10 @@
       navigator.clipboard.readText().then(function (t) { resp.value = t; tentarResp(); }, function () { rmsg.textContent = "Toque no quadro abaixo e cole."; resp.focus(); });
     };
     var rmsg = h("p", { class: "sub", role: "status" });
+    /* RAC Intelligence (só aparece quando estiver ligada): o resultado REAL vira o mesmo texto do fluxo manual e passa
+       pela mesma conferência (nota repetida, soma dos itens, salvar); a resposta DEMO fica só na prévia do botão */
+    if (typeof window.iaLigada === "function" && window.iaLigada()) ia.appendChild(window.iaBotao({ modulo: "mercado", acao: "mercado.nota",
+      real: function (r) { var t = window.RACnucleo.iaNotaTexto(r); if (!t) return; resp.value = t; tentarResp(); } }));
     ia.appendChild(h("ol", { class: "how" },
       h("li", null, "Toque em Abrir o Claude. O pedido já vai copiado."),
       h("li", null, "No app, anexe a foto do cupom, cole o pedido e envie."),

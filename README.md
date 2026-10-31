@@ -18,6 +18,12 @@ saúde (relógio Garmin), MBA, agenda, resumo e notificações no celular.
   `rumores.json` e `vagas.json`.
 - **PWA:** `manifest.webmanifest` + `sw.js` (rede primeiro para o site, cópia guardada para os JSON, push).
 
+## RAC Intelligence (IA)
+
+Camada única de IA: `supabase/functions/rac-ia` (Claude, da Anthropic), usada pelo site só por `racIA()` em `js/app.js`.
+Começa em DEMO, com orçamento travado no banco (`supabase/015_ia.sql`) e confirmação humana antes de salvar.
+Tudo em [docs/rac-intelligence.md](docs/rac-intelligence.md). A função `rac-ia` é publicada pela CLI, não pelo painel.
+
 ## Publicar
 
 1. `node --test tests/*.test.mjs` (tem que passar tudo).
@@ -38,6 +44,7 @@ saúde (relógio Garmin), MBA, agenda, resumo e notificações no celular.
 | `estrutura.test.mjs` | nomes repetidos, sintaxe de todos os arquivos, versões iguais, service worker, dados pessoais, padrão dos gráficos |
 | `seguranca.test.mjs` | sem login nada é lido nem gravado; a função recusa quem não entrou |
 | `banco.test.mjs` | o banco real tem as tabelas, views e funções que os arquivos SQL criam |
+| `ia.test.mjs` | RAC Intelligence sem rede e sem custo: orçamento, reserva, concorrência, DEMO, contrato, segurança do SQL |
 | `navegador.test.mjs` | abre o site num navegador de verdade (só no GitHub, com Playwright) e procura erros |
 
 `SEM_REDE=1` pula os testes que acessam o Supabase. Os testes rodam a cada publicação e toda segunda (`.github/workflows/testes.yml`).

@@ -14,10 +14,28 @@ const site = fs.readFileSync(new URL("mercado.js", raiz), "utf8");
 const URL_SB = /https:\/\/[a-z0-9]+\.supabase\.co/.exec(site)[0], CHAVE = /sb_publishable_[\w-]+/.exec(site)[0];
 const H = { apikey: CHAVE, Authorization: "Bearer " + CHAVE, "Content-Type": "application/json" };
 
-const sql = fs.readdirSync(new URL("supabase/", raiz)).filter((f) => f.endsWith(".sql")).map((f) => fs.readFileSync(new URL("supabase/" + f, raiz), "utf8")).join("\n");
+/* um .sql que começa com "-- status: pendente" ainda não foi rodado no banco (ex.: 015 antes da Fase B do RAC Intelligence):
+   o que ele cria aparece como TODO no relatório, em vez de falhar. Depois de rodar o arquivo, tire essa linha dele. */
+const arquivosSql = fs.readdirSync(new URL("supabase/", raiz)).filter((f) => f.endsWith(".sql")).map((f) => fs.readFileSync(new URL("supabase/" + f, raiz), "utf8"));
+const sql = arquivosSql.filter((t) => !/^-- status: pendente/.test(t)).join("\n");
+const sqlPendente = arquivosSql.filter((t) => /^-- status: pendente/.test(t)).join("\n");
 const achar = (re) => [...new Set([...sql.matchAll(re)].map((m) => m[1]))];
 const tabelas = achar(/create (?:or replace )?(?:table|view)(?: if not exists)? public\.([a-z_]+)/gi);
 const funcoes = achar(/create or replace function public\.([a-z_]+)/gi);
+const pendentes = [...new Set([...sqlPendente.matchAll(/create (?:or replace )?(?:table|view|function)(?: if not exists)? public\.([a-z_]+)/gi)].map((m) => m[1]))]
+  .filter((n) => !tabelas.includes(n) && !funcoes.includes(n));
+/* parâmetros declarados de cada função (pelo .sql) → um valor de mentira do tipo certo */
+function argumentosFalsos(nome) {
+  const m = new RegExp(`create or replace function public\\.${nome}\\(([^)]*)\\)`, "i").exec(sql);
+  const falso = { uuid: "00000000-0000-0000-0000-000000000000", text: "teste-banco-0001", numeric: 0, integer: 0, boolean: false, date: "2026-01-01" };
+  const o = {};
+  for (const p of (m ? m[1] : "").split(",").map((x) => x.trim()).filter(Boolean)) {
+    const [arg, tipo] = p.split(/\s+/);
+    o[arg] = tipo in falso ? falso[tipo] : "x";
+  }
+  return o;
+}
+for (const n of pendentes) test(`${n} ainda não existe no banco (arquivo SQL marcado como pendente)`, { todo: "rodar o .sql pendente no SQL Editor" }, () => {});
 
 test("os arquivos SQL criam tabelas e funções (a leitura dos .sql funcionou)", () => {
   assert.ok(tabelas.length >= 15 && funcoes.length >= 2, `achei ${tabelas.length} tabelas/views e ${funcoes.length} funções`);
@@ -34,8 +52,9 @@ for (const t of tabelas) {
 
 for (const f of funcoes) {
   test(`a função ${f} existe no banco`, { skip: pular }, async () => {
-    /* rac_rotina_ok pede um argumento; com argumento errado ela continua fechada, o que basta para provar que existe */
-    const r = await fetch(`${URL_SB}/rest/v1/rpc/${f}`, { method: "POST", headers: H, body: f === "rac_rotina_ok" ? '{"segredo":"x"}' : "{}" });
+    /* o Supabase só acha a função com os parâmetros certos: manda valores de mentira, um por parâmetro declarado no .sql.
+       Sem login ela continua fechada (42501), o que basta para provar que existe */
+    const r = await fetch(`${URL_SB}/rest/v1/rpc/${f}`, { method: "POST", headers: H, body: JSON.stringify(argumentosFalsos(f)) });
     const j = await r.json().catch(() => null);
     assert.notEqual(j && j.code, "PGRST202", `${f} não existe no banco: falta rodar o .sql que a cria`);
     if (f === "ping") assert.equal(r.status, 200, "ping responde sem login (mantém o banco acordado)");

@@ -240,5 +240,14 @@
     var a=ws(v.vaga),b=ws(c.t);if(!a.length||!b.length)return !!(v.empresa&&c.e&&chaveProduto(v.empresa)===chaveProduto(c.e)&&!a.length);
     var comum=a.filter(function(w){return b.indexOf(w)>=0}).length;if(comum/Math.min(a.length,b.length)<0.75)return false;
     return !(v.empresa&&c.e)||ws(v.empresa).some(function(w){return ws(c.e).indexOf(w)>=0})}
-  raiz.RACnucleo={norm:norm,urlAbs:urlAbs,lerAbast:lerAbast,TEMAS:TEMAS,temasDe:temasDe,juntarDados:juntarDados,SKILLS:SKILLS,compatVaga:compatVaga,omsZ:omsZ,omsValor:omsValor,percentilDeZ:percentilDeZ,csvLinhas:csvLinhas,napperLer:napperLer,bebeDias:bebeDias,VACINAS_PNI:VACINAS_PNI,vacinasCalendario:vacinasCalendario,mediana:mediana,prontidao:prontidao,somaDiasISO:somaDiasISO,correlacao:correlacao,chuvaAviso:chuvaAviso,diasEntre:diasEntre,chaveProduto:chaveProduto,previsaoCompras:previsaoCompras,padraoCompras:padraoCompras,itemBate:itemBate,notaItens:notaItens,dividirItens:dividirItens,lerEmailVaga:lerEmailVaga,vagaParecida:vagaParecida};
+  /* RAC Intelligence → o mesmo texto que a pessoa colaria no fluxo manual: assim a conferência e o salvar continuam os
+     de sempre. Resultado de demonstração (_demo) nunca vira texto (segunda proteção; a primeira é o botão não chamar). */
+  function iaAbastTexto(r){if(!r||typeof r!=="object"||r._demo)return "";
+    return JSON.stringify({veiculo:r.veiculo||null,data:r.data||null,km:r.km==null?null:r.km,litros:r.litros==null?null:r.litros,preco_litro:r.preco_litro==null?null:r.preco_litro,
+      total:r.total==null?null:r.total,combustivel:r.combustivel||null,posto:r.posto||"",alertas:Array.isArray(r.alertas)?r.alertas:[]})}
+  function iaNotaTexto(r){if(!r||typeof r!=="object"||r._demo||!Array.isArray(r.itens)||!r.itens.length)return "";
+    return JSON.stringify({mercado:r.mercado||"",cnpj:r.cnpj||"",data:r.data||"",numero:r.numero||"",serie:r.serie||"",chave:r.chave||"",pagamento:r.pagamento||"",
+      total_pago:r.total_pago==null?null:r.total_pago,desconto_nota:r.desconto_nota||0,
+      itens:r.itens.map(function(x){return [x.descricao,x.qtd==null?null:x.qtd,x.un||"un",x.unitario==null?null:x.unitario,x.total==null?null:x.total,x.desconto||0]})})}
+  raiz.RACnucleo={norm:norm,urlAbs:urlAbs,lerAbast:lerAbast,TEMAS:TEMAS,temasDe:temasDe,juntarDados:juntarDados,SKILLS:SKILLS,compatVaga:compatVaga,omsZ:omsZ,omsValor:omsValor,percentilDeZ:percentilDeZ,csvLinhas:csvLinhas,napperLer:napperLer,bebeDias:bebeDias,VACINAS_PNI:VACINAS_PNI,vacinasCalendario:vacinasCalendario,mediana:mediana,prontidao:prontidao,somaDiasISO:somaDiasISO,correlacao:correlacao,chuvaAviso:chuvaAviso,diasEntre:diasEntre,chaveProduto:chaveProduto,previsaoCompras:previsaoCompras,padraoCompras:padraoCompras,itemBate:itemBate,notaItens:notaItens,dividirItens:dividirItens,lerEmailVaga:lerEmailVaga,vagaParecida:vagaParecida,iaAbastTexto:iaAbastTexto,iaNotaTexto:iaNotaTexto};
 })(typeof window!=="undefined"?window:globalThis);

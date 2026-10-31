@@ -318,7 +318,7 @@
   /* ===== RAC Intelligence: gasto do mês (reservado, estimado pelo RAC, cobrado), alertas, modo, chamadas incertas e preços.
      Só o dono altera; a casa vê. A estimativa do RAC não é a fatura: a cobrança efetiva vem do Console da Anthropic. */
   function sisIA(){
-    var p=panel("RAC Intelligence","A IA do RAC: o quanto já foi usado no mês e o que está configurado."),corpo=h("div",null,h("p",{class:"sub",text:"Carregando…"}));p.appendChild(corpo);
+    var p=panel("RAC Intelligence","Quanto a IA já usou neste mês e o que precisa da sua atenção."),corpo=h("div",null,h("p",{class:"sub",text:"Carregando…"}));p.appendChild(corpo);
     var usd=NUCLEO.iaUsd;
     /* um indicador: rótulo, valor e, se houver, uma linha menor embaixo (ex.: o valor em reais) */
     function kpi(rot,val,sub){return h("div",null,h("span",{class:"kl",text:rot}),h("b",{class:"kv",text:val}),sub?h("span",{class:"ksub",text:sub}):null)}
@@ -348,7 +348,7 @@
           if(l.length<tot){var mais=h("button",{type:"button",class:"ghostbtn",text:"Ver mais"});mais.onclick=function(){HIST.n+=20;carregar()};lista.appendChild(h("div",{class:"vfil"},mais))}})
         .catch(function(e){lista.innerHTML="";lista.appendChild(h("p",{class:"empty",text:"Não consegui carregar o histórico ("+e.message+")."}))})}
       carregar();
-      return h("div",null,h("h3",{class:"dayh",text:"Histórico de chamadas pagas"}),
+      return h("div",null,
         h("p",{class:"sub",text:isOwner()?"Todas as chamadas pagas da casa. Leituras em demonstração não aparecem: elas não usam a IA de verdade.":"As suas chamadas pagas (o dono vê as da casa toda). Leituras em demonstração não aparecem."}),
         h("div",{class:"vfil"},sm,sd),lista)}
     /* conferência das chamadas incertas, dentro do painel: o campo começa vazio (nada de aceitar a reserva como cobrança),
@@ -426,11 +426,17 @@
         var sim=h("button",{type:"button",text:"Substituir"}),nao=h("button",{type:"button",class:"ghostbtn",text:"Cancelar"});
         sim.onclick=function(){gravar(o)};nao.onclick=function(){conf.innerHTML="";msg.textContent=""};
         msg.textContent=NUCLEO.iaNomeMes(m)+" já tem "+(ja.valor_usd==null?"um registro":usd(ja.valor_usd))+". Substituir por "+usd(a.valor)+"?";conf.appendChild(sim);conf.appendChild(nao)};
-      return h("div",null,h("h3",{class:"dayh",text:"Custos por mês: RAC × Console"}),
+      return h("div",null,
         h("p",{class:"sub",text:"\"Pelo RAC\" é o que o RAC registrou (estimativa das leituras e valores já conferidos). \"No Console\" é o que você copiou do Console da Anthropic, que mostra a conta inteira: outros usos da mesma conta aparecem lá e não aqui."}),
         box,h("div",{class:"wform iacob"},h("div",{class:"two"},h("label",null,"Mês da cobrança",mes),h("label",null,"Cobrado no Console (US$)",vu)),
           h("div",{class:"two"},h("label",null,"Pago em reais (R$)",vb),h("label",null,"Observação",ob))),
         h("div",{class:"vfil"},gr),conf,msg)}
+    /* seção recolhível; com uma função, o conteúdo só é montado (e só consulta o banco) quando a pessoa abre */
+    function secao(titulo,conteudo){var d=h("details",{class:"famvals iasec"},h("summary",{text:titulo})),feito=false;
+      if(typeof conteudo!=="function")d.appendChild(conteudo);
+      else d.addEventListener("toggle",function(){if(d.open&&!feito){feito=true;d.appendChild(conteudo())}});
+      return d}
+    function iaDias(iso){return Math.round((Date.now()-new Date(iso+"T12:00:00"))/864e5)}
     function desenhar(){
       Promise.all([SB.rpc("ia_totais_mes").then(sbOk),SB.from("ia_config").select("*").maybeSingle().then(sbOk),SB.from("ia_precos").select("*").then(sbOk),
         isOwner()?SB.from("ia_uso").select("id,criado_em,modulo,acao,modelo,estado,reservado_usd,erro_codigo,enviado_em").in("estado",["incerto","enviando"]).order("criado_em",{ascending:false}).limit(50).then(sbOk):Promise.resolve([]),
@@ -438,40 +444,50 @@
       .then(function(r){
         var t=r[0]||{},semConfig=!r[1],cfg=r[1]||{modo:"DEMO",limite_brl:50,cambio_brl_usd:6,margem_impostos:0.12,margem_seguranca:0.1},s=NUCLEO.iaResumo(t,cfg),al=NUCLEO.iaAlerta(s);
         function brl(v){return "≈ "+NUCLEO.iaBrl(v,cfg)}
-        var cobMes=(r[4]||[]).filter(function(x){return NUCLEO.iaMesIso(x.mes)===NUCLEO.iaMesIso(s.mes)})[0];
-        corpo.innerHTML="";
-        if(al)corpo.appendChild(h("p",{class:al.forte?"qrwarn":"sub",text:al.texto}));
-        corpo.appendChild(h("div",{class:"kgasto"},
-          kpi("Modo",cfg.modo==="REAL"?"REAL":"DEMO"),
-          kpi("Disponível no mês",usd(s.disponivel),brl(s.disponivel)),
-          kpi("Comprometido no mês",usd(s.comprometido)+" ("+s.pct+"%)",brl(s.comprometido)),
-          kpi("Teto interno",usd(s.teto),brl(s.teto)+" de "+NUCLEO.iaReais(cfg.limite_brl)),
-          kpi("Estimado pelo RAC",usd(s.estimado)),
-          kpi("Reservado em aberto",usd(s.aberto)),
-          kpi("Cobrança efetiva",cobMes&&cobMes.valor_usd!=null?usd(cobMes.valor_usd):"não conferida",cobMes&&cobMes.valor_brl!=null?NUCLEO.iaReais(cobMes.valor_brl)+" pagos":"do Console, neste mês")));
-        corpo.appendChild(h("p",{class:"sub",text:NUCLEO.iaEstados(t.por_estado)}));
+        var cobMes=(r[4]||[]).filter(function(x){return NUCLEO.iaMesIso(x.mes)===NUCLEO.iaMesIso(s.mes)})[0],mesAtual=s.mes||NUCLEO.iaCompetencias(hojeISO(),1)[0];
         /* modo por leitura, como o servidor decide: casa em REAL + leitura liberada (acoes_reais, 016) + papel; o Mercado fica sempre em DEMO nesta fase */
         var reais=cfg.modo==="REAL"&&Array.isArray(cfg.acoes_reais)?cfg.acoes_reais:[],reaisCasa=Array.isArray(cfg.acoes_reais_casa)?cfg.acoes_reais_casa:[];
+        corpo.innerHTML="";
+        /* 1) o que pede atenção primeiro: alerta do limite, configuração faltando, preço desatualizado */
+        if(al)corpo.appendChild(h("p",{class:al.forte?"qrwarn":"sub",text:al.texto}));
+        if(semConfig)corpo.appendChild(h("p",{class:"qrwarn",text:"A configuração da IA desta casa ainda não foi criada (é feita uma vez no SQL Editor; docs/rac-intelligence.md, Fase B). Até lá, tudo funciona só em DEMONSTRAÇÃO."}));
+        (r[2]||[]).filter(function(x){return iaDias(x.conferido_em)>30}).forEach(function(x){
+          corpo.appendChild(h("p",{class:"qrwarn",text:"⚠ O preço de "+x.modelo+" foi conferido há "+iaDias(x.conferido_em)+" dias. Confira na página oficial e atualize no SQL Editor."}))});
+        /* 2) a situação do mês: quatro números grandes; o resto em uma linha */
+        corpo.appendChild(h("h3",{class:"dayh",text:"Situação de "+(NUCLEO.iaNomeMes(s.mes)||"este mês")}));
+        corpo.appendChild(h("div",{class:"kgasto iakpi"},
+          kpi("Disponível no mês",usd(s.disponivel),brl(s.disponivel)),
+          kpi("Usado no mês",usd(s.comprometido),s.pct+"% do limite · "+brl(s.comprometido)),
+          kpi("Limite do mês",usd(s.teto),brl(s.teto)+" de "+NUCLEO.iaReais(cfg.limite_brl)),
+          kpi("Modo",cfg.modo==="REAL"?"REAL":"DEMO",cfg.modo==="REAL"?"leituras de verdade, pagas":"leituras simuladas, sem custo")));
+        corpo.appendChild(h("p",{class:"sub",text:NUCLEO.iaEstados(t.por_estado)}));
+        corpo.appendChild(h("p",{class:"sub",text:"Estimado pelo RAC "+usd(s.estimado)+" (leituras concluídas) · reservado em aberto "+usd(s.aberto)+" · cobrado no Console: "+
+          (cobMes&&cobMes.valor_usd!=null?usd(cobMes.valor_usd)+(cobMes.valor_brl!=null?" ("+NUCLEO.iaReais(cobMes.valor_brl)+")":""):"não conferido")+"."}));
         corpo.appendChild(h("p",{class:"sub",text:"Por leitura: Abastecimento "+(reais.indexOf("abastecimento.interpretar")>=0?"REAL ("+(reaisCasa.indexOf("abastecimento.interpretar")>=0?"dono e casa":"só o dono; a casa em DEMO")+")":"DEMO")+" · Nota do mercado DEMO (fixo nesta fase)."}));
-        var pm=t.por_modulo||{};if(Object.keys(pm).length)corpo.appendChild(h("p",{class:"sub",text:"Por módulo: "+Object.keys(pm).map(function(k){return k+" "+usd(pm[k])}).join(" · ")}));
-        corpo.appendChild(h("p",{class:"sub",text:"A estimativa do RAC (uso informado pela API × tabela de preços) não é a fatura. A cobrança efetiva está no Console da Anthropic. O teto interno acima é do RAC: quando acaba, o RAC não faz novas leituras REAL. O limite de gasto da conta na Anthropic é outro e é configurado no Console."}));
-        (r[2]||[]).forEach(function(x){var dias=Math.round((Date.now()-new Date(x.conferido_em+"T12:00:00"))/864e5);
-          corpo.appendChild(h("p",{class:dias>30?"qrwarn":"sub",text:x.modelo+": "+usd(x.entrada_usd_mtok)+" / "+usd(x.saida_usd_mtok)+" por milhão de tokens (entrada / saída), conferido em "+dataBR(x.conferido_em)+(dias>30?". Confira o preço de novo na página oficial.":".")}))});
-        corpo.appendChild(historico(s.mes||NUCLEO.iaCompetencias(hojeISO(),1)[0]));
-        if(!isOwner())return;
-        /* chamadas incertas: só o dono decide, depois de olhar o uso no Console; quem confere de verdade é o banco (ia_reconciliar) */
-        if(r[3].length)corpo.appendChild(conferir(r[3]));
-        corpo.appendChild(custos(s.mes,r[4]||[]));
-        /* configuração: modo, limite e margens. A linha da casa é criada pelo administrador no SQL Editor (o site não cria) */
-        if(semConfig){corpo.appendChild(h("p",{class:"qrwarn",text:"A configuração da IA desta casa ainda não foi criada. Ela é criada uma vez pelo administrador no SQL Editor (docs/rac-intelligence.md, Fase B). Até lá, tudo funciona só em DEMO."}));return}
-        /* o site não troca o modo nem as leituras liberadas: o banco só deixa o site alterar os campos de limite (016);
-           o modo muda só no SQL Editor (docs/rac-intelligence.md, Fase F) */
-        var aviso=h("p",{class:"sub",text:"O modo é decidido pelo servidor e não pode ser trocado pelo site: o modo REAL e as leituras liberadas mudam só pelo SQL Editor. Em DEMONSTRAÇÃO a leitura é simulada, não consome orçamento e não pode ser salva; em REAL ela usa o orçamento abaixo e só grava quando você toca em Salvar."});
+        var pm=t.por_modulo||{};if(Object.keys(pm).length)corpo.appendChild(h("p",{class:"sub",text:"Usado por módulo: "+Object.keys(pm).map(function(k){return NUCLEO.iaModulo(k)+" "+usd(pm[k])}).join(" · ")}));
+        /* 3) o que o dono precisa decidir: chamadas incertas (quem confere de verdade é o banco, ia_reconciliar) */
+        if(isOwner()&&r[3].length)corpo.appendChild(conferir(r[3]));
+        /* 4) o resto, recolhido */
+        corpo.appendChild(secao("Histórico de chamadas pagas",function(){return historico(mesAtual)}));
+        if(isOwner())corpo.appendChild(secao("Custos por mês: RAC × Console",function(){return custos(mesAtual,r[4]||[])}));
+        corpo.appendChild(secao("Preços dos modelos",h("div",null,(r[2]||[]).map(function(x){var dias=iaDias(x.conferido_em);
+            return h("p",{class:dias>30?"qrwarn":"sub",text:x.modelo+": "+usd(x.entrada_usd_mtok)+" / "+usd(x.saida_usd_mtok)+" por milhão de tokens (entrada / saída), conferido em "+dataBR(x.conferido_em)+(dias>30?". Confira o preço de novo na página oficial.":".")})}),
+          h("p",{class:"sub",text:"Os preços ficam numa tabela do banco, com a fonte e a data da conferência, e só mudam pelo SQL Editor."}))));
+        corpo.appendChild(secao("Como funciona",h("div",null,
+          h("p",{class:"sub",text:"DEMONSTRAÇÃO ou REAL: em DEMONSTRAÇÃO a leitura é simulada, não custa nada e não pode ser salva. Em REAL o Claude lê de verdade, usa o orçamento e nada é gravado antes de você tocar em Salvar. O modo é decidido pelo servidor e não pode ser trocado pelo site: o modo REAL e as leituras liberadas mudam só pelo SQL Editor."}),
+          h("p",{class:"sub",text:"Reserva: antes de cada leitura REAL, o RAC separa o máximo que ela pode custar. Se não couber no limite do mês, a leitura é recusada e nada é cobrado."}),
+          h("p",{class:"sub",text:"Usado no mês = leituras concluídas (pela estimativa) + reservas em aberto + valores já conferidos. Disponível = limite do mês − usado."}),
+          h("p",{class:"sub",text:"A estimativa do RAC (uso informado pela API × tabela de preços) não é a fatura: a cobrança efetiva está no Console da Anthropic. O limite do mês (o teto interno do RAC) é do RAC: quando acaba, o RAC não faz novas leituras REAL. O limite de gasto da conta na Anthropic é outro e é configurado no Console."}),
+          h("p",{class:"sub",text:"Chamada incerta: quando não deu para saber se a Anthropic cobrou (tempo esgotado, falha de rede). A reserva dela continua contando até você conferir."}))));
+        /* 5) configuração (só o dono, e só os campos de limite: o banco não deixa o site mudar o modo nem as leituras liberadas, 016) */
+        if(!isOwner()||semConfig)return;
         function campo(rot,k,passo){var i=h("input",{type:"number",step:passo,value:String(cfg[k]),"aria-label":rot});i.dataset.k=k;return h("label",null,rot,i)}
         var form=h("div",{class:"wform"},h("div",{class:"two"},campo("Limite mensal (R$)","limite_brl","1"),campo("Câmbio (R$ por US$)","cambio_brl_usd","0.01")),
           h("div",{class:"two"},campo("Margem de impostos (0,12 = 12%)","margem_impostos","0.01"),campo("Margem de segurança (0,10 = 10%)","margem_seguranca","0.01")));
         var salvar=h("button",{type:"button",text:"Salvar limites"});salvar.onclick=function(){var o={};form.querySelectorAll("input").forEach(function(i){o[i.dataset.k]=parseFloat(i.value)});gravar(o)};
-        corpo.appendChild(aviso);corpo.appendChild(form);corpo.appendChild(h("div",{class:"vfil"},salvar))})
+        corpo.appendChild(secao("Configurações do limite",h("div",null,
+          h("p",{class:"sub",text:"O limite do mês em dólar sai destes campos: limite em reais ÷ (câmbio × (1 + impostos)) × (1 − margem de segurança). O modo não muda por aqui."}),
+          form,h("div",{class:"vfil"},salvar))))})
       .catch(function(e){corpo.innerHTML="";corpo.appendChild(h("p",{class:"empty",text:"O RAC Intelligence ainda não está disponível ("+e.message+")."}))})}
     /* só altera a linha que já existe (UPDATE); se nada mudou, a linha não existe ou a pessoa não é o dono.
        Só os campos de limite passam: o modo nunca é enviado pelo site */

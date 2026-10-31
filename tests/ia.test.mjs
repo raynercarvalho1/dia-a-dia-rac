@@ -865,10 +865,28 @@ test("painel: cobrança por competência, com confirmação antes de substituir;
   assert.match(cus, /"não conferido"/); assert.match(cus, /os totais abaixo são parciais/);
   assert.match(trecho(painel, "function usoDesde(", "function custos("), /\.range\(i\*PAG,i\*PAG\+PAG-1\)/, "lê em páginas (o Supabase devolve até 1.000 linhas)");
   /* o indicador do mês mostra a cobrança do mesmo mês */
-  assert.match(painel, /var cobMes=\(r\[4\]\|\|\[\]\)\.filter\(function\(x\)\{return NUCLEO\.iaMesIso\(x\.mes\)===NUCLEO\.iaMesIso\(s\.mes\)\}\)\[0\];/);
+  assert.match(painel, /var cobMes=\(r\[4\]\|\|\[\]\)\.filter\(function\(x\)\{return NUCLEO\.iaMesIso\(x\.mes\)===NUCLEO\.iaMesIso\(s\.mes\)\}\)\[0\]/);
   /* o site só grava cobrança (RLS: só o dono) e os limites; nunca uso, preços, modo ou listas */
   const gravacoes = [...sisJs.matchAll(/from\("(ia_\w+)"\)\.(insert|update|upsert|delete)/g)].map((m) => m[1] + "." + m[2]).sort();
   assert.deepEqual(gravacoes, ["ia_cobranca.upsert", "ia_config.update"]);
+});
+
+test("painel: organizado por prioridade (alerta, situação do mês, o que conferir) e o resto recolhido, carregando só ao abrir", () => {
+  const painel = trecho(sisJs, "function sisIA(", "function renderSistema(");
+  const d = trecho(painel, "    function desenhar(){", "    /* só altera a linha que já existe");
+  const ordem = ["if(al)corpo.appendChild", "\"Situação de \"", "h(\"div\",{class:\"kgasto iakpi\"}", "conferir(r[3])", "secao(\"Histórico de chamadas pagas\"", "secao(\"Custos por mês: RAC × Console\"", "secao(\"Preços dos modelos\"", "secao(\"Como funciona\"", "secao(\"Configurações do limite\""];
+  const pos = ordem.map((x) => d.indexOf(x));
+  assert.ok(pos.every((x) => x >= 0), "faltou: " + ordem.filter((x, i) => pos[i] < 0).join(", "));
+  assert.deepEqual(pos, pos.slice().sort((a, b) => a - b), "ordem do painel");
+  /* histórico e custos só consultam o banco quando a seção é aberta */
+  assert.match(d, /secao\("Histórico de chamadas pagas",function\(\)\{return historico\(mesAtual\)\}\)/);
+  assert.match(d, /secao\("Custos por mês: RAC × Console",function\(\)\{return custos\(mesAtual,r\[4\]\|\|\[\]\)\}\)/);
+  assert.match(painel, /d\.addEventListener\("toggle",function\(\)\{if\(d\.open&&!feito\)/);
+  /* o aviso de preço velho fica fora das seções recolhidas */
+  assert.ok(d.indexOf("foi conferido há") < d.indexOf("secao(\"Preços dos modelos\""));
+  /* a configuração continua só para o dono e só com os campos de limite */
+  assert.match(d, /if\(!isOwner\(\)\|\|semConfig\)return;/);
+  assert.ok(!/Fase de demonstração|IA_SO_DEMO|Ligar o modo REAL|update\(\{[^}]*modo/.test(d), "nada de trocar o modo pelo site");
 });
 
 /* ---------- SQL 017: "Por módulo" com as regras do comprometido ---------- */
@@ -979,7 +997,7 @@ test("site: o painel do Sistema não oferece ligar o modo REAL e nunca envia o m
   assert.deepEqual(campos[1].split(",").map((x) => x.trim().replace(/"/g, "")), ["limite_brl", "cambio_brl_usd", "margem_impostos", "margem_seguranca"]);
   assert.match(painel, /SIS_IA_CAMPOS\.forEach\(function\(k\)\{if\(typeof mud\[k\]==="number"/);
   /* as informações continuam: modo, orçamento, teto, estimativa, reservado, cobrança, modelos */
-  for (const rot of ["\"Modo\"", "Comprometido no mês", "Teto interno", "Estimado pelo RAC", "Reservado em aberto", "Cobrança efetiva", "por milhão de tokens"])
+  for (const rot of ["\"Modo\"", "\"Disponível no mês\"", "\"Usado no mês\"", "\"Limite do mês\"", "Estimado pelo RAC", "reservado em aberto", "cobrado no Console", "por milhão de tokens", "teto interno do RAC"])
     assert.ok(painel.includes(rot), "o painel perdeu " + rot);
   /* dinheiro e contas pelas funções puras do núcleo (formato brasileiro, reais, níveis de alerta) */
   for (const f of ["NUCLEO.iaUsd", "NUCLEO.iaResumo(", "NUCLEO.iaAlerta(", "NUCLEO.iaBrl(", "NUCLEO.iaEstados(", "\"Disponível no mês\""]) assert.ok(painel.includes(f), "o painel não usa " + f);

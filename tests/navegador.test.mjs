@@ -108,8 +108,9 @@ test("IA: DEMO só na prévia, REAL vai à conferência com o texto certo, e o S
       li.querySelector("input").value = "0,0021"; botao("Confirmar").click(); await espera(100);
       Object.assign(out, { campoVazio, recsInvalido, recs, msgConf: li.querySelector("p.sub").textContent });
       /* custos por mês (dados de mentira): barras com racDica e mês sem cobrança "não conferido" */
-      const custos = [...painel2.querySelectorAll("h3")].find((x) => /Custos por mês/.test(x.textContent)).parentElement;
-      Object.assign(out, { barras: custos.querySelectorAll(".hbars .hb").length, custosTexto: custos.textContent });
+      const custos = [...painel2.querySelectorAll("details")].find((x) => /Custos por mês/.test(x.querySelector("summary").textContent));
+      const custosAntes = custos.querySelectorAll(".hbars .hb").length; custos.open = true; await espera(300);
+      Object.assign(out, { custosAntes, barras: custos.querySelectorAll(".hbars .hb").length, custosTexto: custos.textContent });
       return Object.assign(out, { painel: painel.textContent, botoesPainel: [...painel.querySelectorAll("button")].map((b) => b.textContent) });
     });
     assert.equal(r.ligada, true); assert.equal(r.soDemo, "undefined", "sem marca de modo no site");
@@ -118,11 +119,11 @@ test("IA: DEMO só na prévia, REAL vai à conferência com o texto certo, e o S
     assert.match(r.textoBotao, /DEMONSTRAÇÃO: resposta simulada, nada foi cobrado nem salvo/);
     assert.equal(r.realKm, 18240, "a resposta REAL chega à conferência"); assert.equal(r.previaReal, false, "REAL não mostra a prévia de demonstração");
     assert.match(r.statusReal, /^REAL · lido pelo Claude/); assert.match(r.statusReal, /nada foi gravado ainda/);
-    assert.match(r.painel, /não pode ser trocado pelo site/); assert.match(r.painel, /Teto interno/); assert.match(r.painel, /Modo\s*REAL/);
+    assert.match(r.painel, /não pode ser trocado pelo site/); assert.match(r.painel, /Limite do mês/); assert.match(r.painel, /Modo\s*REAL/);
     assert.match(r.painel, /Abastecimento REAL \(só o dono; a casa em DEMO\)/);
     assert.equal(r.campoVazio, true, "o valor da conferência começa vazio"); assert.equal(r.recsInvalido, 0, "valor inválido não vai ao banco");
     assert.deepEqual(r.recs, [{ p_id: "teste-incerta", p_cobrado: true, p_valor_usd: 0.0021 }]); assert.match(r.msgConf, /não pode mais ser conferida/);
-    assert.equal(r.barras, 2, "um mês: barra do RAC e barra do Console"); assert.match(r.custosTexto, /não conferido/); assert.match(r.painel, /Nota do mercado DEMO \(fixo nesta fase\)/);
+    assert.equal(r.custosAntes, 0, "custos só carregam quando a seção é aberta"); assert.equal(r.barras, 2, "um mês: barra do RAC e barra do Console"); assert.match(r.custosTexto, /não conferido/); assert.match(r.painel, /Nota do mercado DEMO \(fixo nesta fase\)/);
     assert.ok(!r.botoesPainel.some((b) => /modo REAL|Voltar para DEMO/i.test(b)) && !/Ligar o modo REAL/.test(r.painel), "nenhum botão de trocar o modo: " + r.botoesPainel.join(", "));
     assert.deepEqual(erros, [], "nenhum erro no navegador");
   } finally {

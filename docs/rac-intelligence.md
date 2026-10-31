@@ -3,6 +3,24 @@
 A camada de IA do RAC: um serviço único (`supabase/functions/rac-ia`) que todos os módulos usam pela mesma porta
 (`racIA()` em `js/app.js`). Provedor atual: Anthropic (Claude). Plano aprovado em 30/10/2026 (v2 com os ajustes finais).
 
+## Estado atual (31/10/2026)
+
+**O RAC Intelligence está em DEMO. Nenhuma chamada paga à Anthropic foi feita até agora** (nem geração, nem contagem):
+o modo da casa nunca esteve em REAL, e em DEMO a função responde antes de qualquer chamada à Anthropic.
+
+| Item | Estado | Conferido por |
+|---|---|---|
+| SQL `015_ia.sql` | Aplicado (Fase B) | Dono, no SQL Editor; testes de banco |
+| SQL `016_ia_acoes.sql` | **Aplicado e conferido**: modo DEMO mantido, `acoes_reais` e `acoes_reais_casa` vazias, UPDATE do site só nos 5 campos de limite, `mercado.nota` recusado pela constraint `ia_config_acoes_reais_permitidas` (erro 23514) | Dono, no SQL Editor |
+| Edge Function `rac-ia` | **Versão 3** publicada pela CLI (`--use-api --no-verify-jwt`); código publicado idêntico ao do commit `a131025` | Claude: download da versão publicada e comparação arquivo por arquivo; testes sem login |
+| Edge Function `garmin` | Não alterada (versão 9) | Claude: lista de funções |
+| Site | Publicado na versão **`2026-10-31.2`** | Claude: arquivos publicados iguais ao commit `a131025` |
+| Teste DEMO no iPhone | **Concluído** em Abastecimento e Mercado | Dono |
+| Anthropic | Workspace **`RAC`**; chave **`rac-ia`** nesse workspace, **sem expiração**; **US$ 10 em créditos pré-pagos comprados**; **recarga automática desligada** | Dono, no Console |
+| Secret `ANTHROPIC_API_KEY` | Cadastrado no Supabase (o valor nunca foi lido nem impresso) | Dono; Claude conferiu só o nome |
+| Modo | **DEMO**; listas de ações vazias | Dono, no SQL Editor |
+| Primeiro teste REAL | **Aguardando** uma nota fiscal (cupom do posto) verdadeira para a leitura de abastecimento; roteiro em "Fase F: ligar e desligar" | — |
+
 ## Princípios
 
 - **Uma porta só.** Nenhum arquivo do site fala com a Anthropic; só a função `rac-ia` (há teste).
@@ -13,7 +31,7 @@ A camada de IA do RAC: um serviço único (`supabase/functions/rac-ia`) que todo
 - **A IA nunca grava.** Ela só devolve JSON validado; o RAC mostra a conferência de sempre e só o clique em Salvar grava.
 - **DEMO isolado.** Resposta simulada só aparece numa prévia de leitura e nunca chega às funções que salvam.
 - **Orçamento em camadas.** Reserva transacional + margens + bloqueio + reconciliação, no RAC (R$ 50/mês); e, na
-  Anthropic, o saldo de créditos pré-pagos (compra inicial planejada de US$ 10, recarga automática desligada). Não há
+  Anthropic, o saldo de créditos pré-pagos (US$ 10 comprados, recarga automática desligada). Não há
   limite de gasto específico configurado no Console (veja "Limites: o do RAC e o da Anthropic").
   A estimativa do RAC não é a fatura.
 - **Sem repetição paga.** SDK com `maxRetries: 0`, chave de idempotência por clique, nada é repetido sozinho.
@@ -106,7 +124,7 @@ estado `incerto`), `provedor_indisponivel` (502), `provedor_ocupado` (503), `pro
 
 - **Teto interno:** `limite_brl ÷ (cambio × (1 + margem_impostos)) × (1 − margem_seguranca)` = 50 ÷ (6,00 × 1,12) × 0,90
   ≈ **US$ 6,70** (configurável em `ia_config`, só o dono altera).
-- **Na Anthropic:** créditos pré-pagos (compra inicial planejada de US$ 10, sem recarga automática), compartilhados por
+- **Na Anthropic:** créditos pré-pagos (US$ 10 comprados, sem recarga automática), compartilhados por
   toda a organização; nenhum limite de gasto específico no Console (veja "Limites: o do RAC e o da Anthropic" abaixo).
 - **Reserva antes de cada chamada:** (tokens de entrada × preço de entrada + saída máxima × preço de saída) ×
   (1 + margem de contagem 15%) × fator de correção. Os tokens de entrada vêm da contagem oficial da Anthropic
@@ -130,9 +148,9 @@ São coisas diferentes: o teto interno é do RAC; na Anthropic, o que segura o g
 | | Orçamento interno do RAC | Créditos pré-pagos na Anthropic | Limite de gasto no Console |
 |---|---|---|---|
 | O que é | O teto mensal de `ia_reservar` (≈ US$ 6,70 com R$ 50/mês) | O saldo comprado; acabou, a API para de atender | O máximo mensal que a organização pode gastar |
-| Onde fica | Banco do RAC (`ia_config`, `ia_teto_usd`) | Console da Anthropic (Billing) | Console da Anthropic (Billing → Spend limits) |
+| Onde fica | Banco do RAC (`ia_config`, `ia_teto_usd`) | Console da Anthropic (Billing), da organização; a chave `rac-ia` fica no workspace `RAC` | Console da Anthropic (Billing → Spend limits) |
 | O que conta | Só as chamadas feitas pela função `rac-ia`, pela estimativa do RAC (reservas abertas e incertas contam cheias) | Tudo o que a organização usa na API, com qualquer chave, pelo valor real faturado: **o saldo é compartilhado pela organização, não é exclusivo do RAC** | Tudo o que a organização usa na API |
-| Decisão atual | **Ativo**, R$ 50/mês | Compra inicial planejada de **US$ 10**, **recarga automática desligada** | **Não configurado.** A organização mostra US$ 500, que é o teto padrão do nível Start da Anthropic (não um limite escolhido pelo dono). Não existe limite específico de US$ 7 configurado |
+| Situação em 31/10/2026 | **Ativo**, R$ 50/mês | **US$ 10 comprados**, **recarga automática desligada** | **Não configurado.** A organização mostra US$ 500, que é o teto padrão do nível Start da Anthropic (não um limite escolhido pelo dono). Não existe limite específico de US$ 7 configurado |
 
 Com a recarga automática desligada, o gasto real na Anthropic fica limitado ao saldo comprado: o teto de US$ 500 do nível
 Start não chega a ser alcançado. No uso normal, o teto interno do RAC (≈ US$ 6,70 por mês) bloqueia antes.
@@ -152,7 +170,8 @@ teto. Sem reserva aprovada não há geração (a única chamada que cobra). Isso
   Com créditos pré-pagos e sem recarga automática, a perda real fica limitada ao saldo.
 - A chave em si não tem limite: se ela vazar, quem a tiver pode gastar o saldo da organização.
 
-Por isso o modo REAL só deve ser ligado com os créditos pré-pagos comprados e a recarga automática **desligada**.
+Por isso o modo REAL só deve ser ligado com os créditos pré-pagos comprados e a recarga automática **desligada** (as duas
+condições conferidas pelo dono em 31/10/2026).
 Quando o saldo acabar, a Anthropic recusa os pedidos: a leitura mostra o erro e o jeito manual continua. Se a recusa vier
 como 402, a chamada fica `incerto` até o dono conferir no Console (o lado conservador).
 
@@ -186,11 +205,12 @@ atingido e chave expirada) fica `concluido` com custo zero. Tempo esgotado, rede
 
 ## Chave da Anthropic
 
-- A chave usada pelo RAC se chama `rac-ia` no Console e fica **só** em Supabase → Edge Functions → Secrets, como
-  `ANTHROPIC_API_KEY` (cadastrada pelo dono). O valor nunca entra no repositório, no site ou em conversas.
-- **Validade:** se a chave foi criada com a expiração padrão do Console, ela vale **30 dias**. A data exata aparece no
-  Console, em API Keys. Anote a data e renove antes de ela vencer.
-- **Quando vencer:** a Anthropic responde 401. A contagem falha (o RAC usa a estimativa interna), a geração é recusada
+- A chave usada pelo RAC se chama `rac-ia`, fica no workspace `RAC` do Console e, no RAC, existe **só** em
+  Supabase → Edge Functions → Secrets, como `ANTHROPIC_API_KEY` (cadastrada pelo dono). O valor nunca entra no
+  repositório, no site ou em conversas.
+- **Validade:** a `rac-ia` foi criada **sem expiração** (conferido pelo dono no Console em 31/10/2026). Se um dia ela for
+  trocada por uma chave com validade, anote a data aqui e renove antes de ela vencer.
+- **Se a chave for revogada ou vencer:** a Anthropic responde 401. A contagem falha (o RAC usa a estimativa interna), a geração é recusada
   sem processar e fica `concluido` com custo zero, e o usuário vê "O serviço de IA recusou o pedido". Nada é cobrado
   e o jeito manual continua funcionando.
 - **Para renovar:** crie uma chave nova no Console, troque o valor de `ANTHROPIC_API_KEY` nos Secrets, faça uma leitura de
@@ -252,8 +272,8 @@ reservado ──► enviando ──► concluido            (resposta da API: su
 | B | Rodar `supabase/015_ia.sql` no SQL Editor; criar a configuração da casa do dono (abaixo); tirar a linha `-- status: pendente` do arquivo; rodar os testes de banco | Dono, depois Claude |
 | C | Publicar a `rac-ia` sem a chave, pela CLI (abaixo); trocar `RAC_IA_PUBLICADA` para `true` em `tests/seguranca.test.mjs` | Dono, depois Claude |
 | D | Ligar `IA_LIGADA`, publicar o site e testar o DEMO no celular | Claude, depois Dono |
-| E | Conta na Anthropic e chave `rac-ia` criadas; `ANTHROPIC_API_KEY` cadastrada nos Secrets (feito). Créditos pré-pagos: compra inicial planejada de US$ 10, recarga automática desligada (sem limite de gasto específico no Console; a organização mostra o teto padrão de US$ 500 do nível Start). Liberação por ação e por papel (016, código e testes) | Dono, depois Claude |
-| F | Publicar na ordem abaixo (016 → `rac-ia` → site); comprar os créditos (US$ 10, sem recarga automática); ligar o REAL só do abastecimento e só para o dono, no SQL Editor; uma leitura; voltar para DEMO; comparar com o Console | Dono |
+| E | **Feito.** Workspace `RAC` e chave `rac-ia` (sem expiração); `ANTHROPIC_API_KEY` nos Secrets; US$ 10 em créditos pré-pagos comprados, recarga automática desligada (sem limite de gasto específico no Console; a organização mostra o teto padrão de US$ 500 do nível Start). Liberação por ação e por papel (016, código e testes) | Dono, depois Claude |
+| F | **Publicação feita** (016 aplicado e conferido → `rac-ia` versão 3 → site `2026-10-31.2`; DEMO testado no iPhone). **Falta:** ligar o REAL só do abastecimento e só para o dono, no SQL Editor; uma leitura com nota fiscal verdadeira; voltar para DEMO; comparar com o Console | Dono |
 | G | Nota do mercado em REAL | Dono |
 
 ### Fase B: criar a configuração da casa (uma vez, no SQL Editor; nada disto vai para o repositório)
@@ -286,21 +306,22 @@ Publicação da função (no computador do dono, na pasta do projeto; o login ab
 
 ```
 npx supabase@2.121.0 login
-npx supabase@2.121.0 functions deploy rac-ia --use-api --project-ref hofnhbxnfebfnncwxrds
+npx supabase@2.121.0 functions deploy rac-ia --use-api --no-verify-jwt --project-ref hofnhbxnfebfnncwxrds
 ```
 
 O editor do painel do Supabase não tem controle de versão (a própria documentação recomenda só para protótipos), então a
-`rac-ia` é publicada pela CLI a partir dos arquivos do GitHub. Na Fase C confirmar se a CLI pede `supabase/config.toml`
-e se o navegador passa pela verificação de login do gateway (se não passar, publicar com `--no-verify-jwt`: a função
-confere o login sozinha).
+`rac-ia` é publicada pela CLI a partir dos arquivos do GitHub. A CLI não pede `supabase/config.toml`. A função é publicada
+com `--no-verify-jwt` (assim nas versões 1 a 3): o gateway não confere o login e a própria função recusa quem não entrou
+(401, há teste). Publicar sem essa opção mudaria a configuração atual. Nunca usar `--prune` (apagaria outras funções).
 
 ### Fase F: ordem de publicação
 
 1. **SQL `016_ia_acoes.sql`** no SQL Editor. Depende só do 015, que já rodou na Fase B: **não** é preciso rodar o 015
    de novo. O 016 roda numa transação (se der erro, nada muda), pode ser rodado de novo sem estragar nada e não liga
-   nada: as listas nascem vazias e o modo continua DEMO. Depois de rodar, tire a linha `-- status: pendente` do arquivo.
-2. **Função `rac-ia`**, republicada pela CLI (mesmo comando da Fase C).
-3. **Site**, pelo push no `main`.
+   nada: as listas nascem vazias e o modo continua DEMO. **Feito em 31/10/2026** (a marca `-- status: pendente` foi
+   retirada do arquivo).
+2. **Função `rac-ia`**, republicada pela CLI (mesmo comando da Fase C). **Feito: versão 3.**
+3. **Site**, pelo push no `main`. **Feito: versão `2026-10-31.2`.**
 
 Qualquer ordem é segura enquanto o modo estiver em DEMO: a função nova sem o 016 vê as listas faltando e fica em DEMO; a
 função antiga com o 016 só tentaria REAL com o modo em REAL, e mesmo assim o banco recusaria qualquer ação fora da lista.
@@ -308,7 +329,12 @@ A ordem acima é a recomendada porque cada passo já encontra o anterior pronto.
 
 ### Fase F: ligar e desligar (no SQL Editor; a casa do dono é a única linha de `ia_config`)
 
-Antes de ligar: créditos pré-pagos comprados (US$ 10), recarga automática desligada e a chave dentro da validade.
+Antes de ligar: créditos pré-pagos comprados (US$ 10), recarga automática desligada e a chave ativa (as três conferidas
+em 31/10/2026). O primeiro teste é **uma única leitura** de abastecimento, com uma nota fiscal (cupom do posto) verdadeira,
+feita com a conta do dono (não a da casa), com 1 foto e um único toque. Custo máximo calculado: US$ 0,0022 (reserva de
+US$ 0,0026); nenhuma chamada passa de US$ 0,0115.
+
+Conferir antes (só leitura): `select modo, acoes_reais, acoes_reais_casa from public.ia_config;` (DEMO, `{}`, `{}`).
 
 Ligar só o abastecimento, só para o dono:
 
@@ -321,6 +347,15 @@ Voltar tudo para DEMO (vale a qualquer momento):
 
 ```sql
 update public.ia_config set modo = 'DEMO', acoes_reais = '{}', acoes_reais_casa = '{}', atualizado_em = now();
+select modo, acoes_reais, acoes_reais_casa from public.ia_config;
+```
+
+Conferir a chamada (só leitura). O esperado é uma linha `concluido`; se vier `incerto`, não repita: reconcilie no Sistema
+depois de olhar o uso no Console.
+
+```sql
+select estado, modelo, contagem_oficial, tokens_entrada, tokens_saida, reservado_usd, estimado_usd, erro_codigo, ms
+from public.ia_uso order by criado_em desc limit 3;
 ```
 
 ## Testes

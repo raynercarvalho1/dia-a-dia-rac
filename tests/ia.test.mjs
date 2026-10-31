@@ -652,8 +652,8 @@ test("duas camadas por ação: se a liberação sair entre a leitura e a reserva
   }
 });
 
-test("SQL 016: marcado como pendente, numa transação, listas vazias e Mercado proibido no próprio banco", () => {
-  assert.match(sql16, /^-- status: pendente/);
+test("SQL 016: já aplicado (sem a marca de pendente), numa transação, listas vazias e Mercado proibido no próprio banco", () => {
+  assert.ok(!/^-- status: pendente/.test(sql16), "o 016 foi aplicado e conferido no banco em 31/10/2026");
   assert.match(sql16sem, /^\s*begin;/m); assert.match(sql16sem, /commit;\s*$/);
   assert.ok(!/^(rollback|savepoint)/im.test(sql16sem));
   assert.match(sql16sem, /add column if not exists acoes_reais text\[\] not null default '\{\}'/);
@@ -816,7 +816,7 @@ test("textos: o limite de US$ 7 na Anthropic não aparece como configurado; o li
   assert.ok(!/US\$ 7,00 no Console da Anthropic, sem recarga automática \(configurado pelo dono\)/.test(doc));
   assert.match(doc, /## Limites: o do RAC e o da Anthropic/); assert.match(doc, /\*\*Não configurado\.\*\* A organização mostra US\$ 500/);
   assert.match(doc, /## O que é contado e o que é cobrado/); assert.match(doc, /nenhuma geração paga acontece em DEMO nem quando alguma condição de autorização falha/);
-  assert.match(doc, /## Chave da Anthropic/); assert.match(doc, /vale \*\*30 dias\*\*/);
+  assert.match(doc, /## Chave da Anthropic/); assert.match(doc, /\*\*sem expiração\*\*/);
   assert.match(doc, /### Fase F: ordem de publicação/); assert.match(doc, /\*\*não\*\* é preciso rodar o 015\s+de novo/);
 });
 

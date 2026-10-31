@@ -1,4 +1,3 @@
--- status: pendente
 -- RAC Intelligence: modo REAL liberado por ação e por papel, no banco (docs/rac-intelligence.md, "Liberação por ação").
 -- Rode este arquivo inteiro no SQL Editor depois do 015; pode rodar de novo sem estragar nada. Ele NÃO liga o REAL:
 -- as listas novas nascem vazias e o modo da casa continua como está (DEMO).

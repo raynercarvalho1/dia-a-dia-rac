@@ -24,6 +24,17 @@ const tabelas = achar(/create (?:or replace )?(?:table|view)(?: if not exists)? 
 const funcoes = achar(/create or replace function public\.([a-z_]+)/gi);
 const pendentes = [...new Set([...sqlPendente.matchAll(/create (?:or replace )?(?:table|view|function)(?: if not exists)? public\.([a-z_]+)/gi)].map((m) => m[1]))]
   .filter((n) => !tabelas.includes(n) && !funcoes.includes(n));
+/* parâmetros declarados de cada função (pelo .sql) → um valor de mentira do tipo certo */
+function argumentosFalsos(nome) {
+  const m = new RegExp(`create or replace function public\\.${nome}\\(([^)]*)\\)`, "i").exec(sql);
+  const falso = { uuid: "00000000-0000-0000-0000-000000000000", text: "teste-banco-0001", numeric: 0, integer: 0, boolean: false, date: "2026-01-01" };
+  const o = {};
+  for (const p of (m ? m[1] : "").split(",").map((x) => x.trim()).filter(Boolean)) {
+    const [arg, tipo] = p.split(/\s+/);
+    o[arg] = tipo in falso ? falso[tipo] : "x";
+  }
+  return o;
+}
 for (const n of pendentes) test(`${n} ainda não existe no banco (arquivo SQL marcado como pendente)`, { todo: "rodar o .sql pendente no SQL Editor" }, () => {});
 
 test("os arquivos SQL criam tabelas e funções (a leitura dos .sql funcionou)", () => {
@@ -41,8 +52,9 @@ for (const t of tabelas) {
 
 for (const f of funcoes) {
   test(`a função ${f} existe no banco`, { skip: pular }, async () => {
-    /* rac_rotina_ok pede um argumento; com argumento errado ela continua fechada, o que basta para provar que existe */
-    const r = await fetch(`${URL_SB}/rest/v1/rpc/${f}`, { method: "POST", headers: H, body: f === "rac_rotina_ok" ? '{"segredo":"x"}' : "{}" });
+    /* o Supabase só acha a função com os parâmetros certos: manda valores de mentira, um por parâmetro declarado no .sql.
+       Sem login ela continua fechada (42501), o que basta para provar que existe */
+    const r = await fetch(`${URL_SB}/rest/v1/rpc/${f}`, { method: "POST", headers: H, body: JSON.stringify(argumentosFalsos(f)) });
     const j = await r.json().catch(() => null);
     assert.notEqual(j && j.code, "PGRST202", `${f} não existe no banco: falta rodar o .sql que a cria`);
     if (f === "ping") assert.equal(r.status, 200, "ping responde sem login (mantém o banco acordado)");

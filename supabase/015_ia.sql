@@ -1,4 +1,3 @@
--- status: pendente (rodar na Fase B do RAC Intelligence; enquanto isto estiver aqui, tests/banco.test.mjs só lista as tabelas abaixo como pendentes)
 -- RAC Intelligence (camada de IA): configuração por casa, preços, uso de cada chamada, cobrança informada pelo dono
 -- e as funções que reservam o orçamento. Rode este arquivo inteiro no SQL Editor; pode rodar de novo sem estragar nada.
 --

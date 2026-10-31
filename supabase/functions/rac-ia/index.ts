@@ -9,6 +9,7 @@ import { respostaErro } from "./contrato.ts";
 import { LIMITES, type ErroProvedor } from "./orcamento.ts";
 import { classificarPorFormato, provedorAnthropic, type ClienteMensagens } from "./provedores.ts";
 import { atenderPedido, type Banco } from "./servico.ts";
+import { chavePublica, chaveServidor } from "./chaves.ts";
 
 /* CORS: mesma lista da função garmin (copiada, para não mexer nela) */
 const ORIGENS = ["https://raynercarvalho.com.br", "https://www.raynercarvalho.com.br", "https://raynercarvalho1.github.io"];
@@ -22,11 +23,8 @@ const cabecalhos = (req: Request) => ({
   "Content-Type": "application/json",
 });
 
-/* chaves do próprio Supabase: formato novo (JSON por nome) ou antigo (texto) */
-const chaveSb = (nova: string, antiga: string) => {
-  try { const j = JSON.parse(Deno.env.get(nova) ?? ""); if (j?.default) return j.default as string; } catch (_) { /* formato antigo */ }
-  return Deno.env.get(antiga) ?? "";
-};
+/* chaves do próprio Supabase (chaves.ts, mesmo padrão da garmin): formato novo, antigo e, na pública, SUPABASE_PUBLISHABLE_KEY */
+const ambiente = (nome: string) => Deno.env.get(nome);
 
 /* erros do SDK pelas classes dele; o resto pelo formato */
 function classificar(e: unknown): ErroProvedor {
@@ -80,7 +78,7 @@ Deno.serve(async (req) => {
     const jwt = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
     if (!jwt) return json(respostaErro("nao_autenticado", {}));
     const url = Deno.env.get("SUPABASE_URL")!;
-    const publico = createClient(url, chaveSb("SUPABASE_PUBLISHABLE_KEYS", "SUPABASE_ANON_KEY"), { auth: { persistSession: false } });
+    const publico = createClient(url, chavePublica(ambiente), { auth: { persistSession: false } });
     const { data: u, error: eu } = await publico.auth.getUser(jwt);
     if (eu || !u?.user?.id) return json(respostaErro("nao_autenticado", {}));
 
@@ -89,7 +87,7 @@ Deno.serve(async (req) => {
     let corpo: unknown;
     try { corpo = JSON.parse(texto); } catch (_) { return json(respostaErro("entrada_invalida", { detalhe: "O corpo não é JSON." })); }
 
-    const admin = createClient(url, chaveSb("SUPABASE_SECRET_KEYS", "SUPABASE_SERVICE_ROLE_KEY"), { auth: { persistSession: false } });
+    const admin = createClient(url, chaveServidor(ambiente), { auth: { persistSession: false } });
     const chave = (Deno.env.get("ANTHROPIC_API_KEY") ?? "").trim();
     /* uma tentativa só: sem repetição automática do SDK; o tempo máximo também vale aqui */
     const cliente = chave ? new Anthropic({ apiKey: chave, maxRetries: 0, timeout: LIMITES.tempoChamadaMs }) : null;

@@ -9,6 +9,7 @@ import { respostaDemo } from "../supabase/functions/rac-ia/demo.ts";
 import * as O from "../supabase/functions/rac-ia/orcamento.ts";
 import { provedorAnthropic, classificarPorFormato } from "../supabase/functions/rac-ia/provedores.ts";
 import { atenderPedido } from "../supabase/functions/rac-ia/servico.ts";
+import { chavePublica, chaveServidor } from "../supabase/functions/rac-ia/chaves.ts";
 
 const raiz = new URL("../", import.meta.url);
 const PRECO_HAIKU = { entrada_usd_mtok: 0.1, saida_usd_mtok: 0.5, max_entrada_tokens: 100000, conferido_em: "2026-10-30" };
@@ -562,4 +563,40 @@ test("a geração (a chamada que pode cobrar) só acontece depois de uma reserva
   const r2 = b2.reservar.bind(b2); b2.reservar = (a) => r2(a).then((r) => { ordem.push(r.ok ? "reserva_aprovada" : "reserva_recusada"); return r; });
   await atenderPedido("rayner", pedido(), { banco: b2, provedor: pv });
   assert.deepEqual(ordem, ["contagem", "reserva_recusada"]);
+});
+
+/* ---------- chaves do próprio Supabase (P1 da auditoria da Fase C): mesmo padrão da função garmin ---------- */
+const ambienteCom = (vars) => (nome) => vars[nome];
+
+test("chave pública: só com SUPABASE_PUBLISHABLE_KEY disponível, a rac-ia usa ela (o fallback da garmin)", () => {
+  assert.equal(chavePublica(ambienteCom({ SUPABASE_PUBLISHABLE_KEY: "sb_publishable_soesta" })), "sb_publishable_soesta");
+});
+
+test("chave pública: os fallbacks atuais continuam na mesma ordem (JSON novo → anon antiga → SUPABASE_PUBLISHABLE_KEY)", () => {
+  const json = JSON.stringify({ default: "sb_publishable_json" });
+  assert.equal(chavePublica(ambienteCom({ SUPABASE_PUBLISHABLE_KEYS: json, SUPABASE_ANON_KEY: "anon", SUPABASE_PUBLISHABLE_KEY: "solta" })), "sb_publishable_json");
+  assert.equal(chavePublica(ambienteCom({ SUPABASE_ANON_KEY: "anon", SUPABASE_PUBLISHABLE_KEY: "solta" })), "anon");
+  assert.equal(chavePublica(ambienteCom({ SUPABASE_PUBLISHABLE_KEYS: "não é json", SUPABASE_ANON_KEY: "anon" })), "anon");
+  assert.equal(chavePublica(ambienteCom({ SUPABASE_PUBLISHABLE_KEYS: "{}", SUPABASE_PUBLISHABLE_KEY: "solta" })), "solta");
+  assert.equal(chavePublica(ambienteCom({})), "");
+});
+
+test("chave de servidor: igual a antes (JSON novo → service_role antiga), sem o fallback da pública", () => {
+  assert.equal(chaveServidor(ambienteCom({ SUPABASE_SECRET_KEYS: JSON.stringify({ default: "sb_secret_json" }), SUPABASE_SERVICE_ROLE_KEY: "srv" })), "sb_secret_json");
+  assert.equal(chaveServidor(ambienteCom({ SUPABASE_SERVICE_ROLE_KEY: "srv" })), "srv");
+  assert.equal(chaveServidor(ambienteCom({ SUPABASE_PUBLISHABLE_KEY: "solta" })), "", "a chave pública nunca vira chave de servidor");
+});
+
+test("chaves: a rac-ia segue o mesmo padrão da garmin e usa chaves.ts para os dois clientes", () => {
+  const garmin = fs.readFileSync(new URL("supabase/functions/garmin/index.ts", raiz), "utf8");
+  assert.match(garmin, /chavePublica = \(\) => chaveSb\("SUPABASE_PUBLISHABLE_KEYS", "SUPABASE_ANON_KEY"\) \|\| \(Deno\.env\.get\("SUPABASE_PUBLISHABLE_KEY"\) \?\? ""\)/);
+  assert.match(garmin, /chaveServidor = \(\) => chaveSb\("SUPABASE_SECRET_KEYS", "SUPABASE_SERVICE_ROLE_KEY"\)/);
+  const ch = fs.readFileSync(new URL("supabase/functions/rac-ia/chaves.ts", raiz), "utf8");
+  assert.match(ch, /chaveSb\(ler, "SUPABASE_PUBLISHABLE_KEYS", "SUPABASE_ANON_KEY"\) \|\| \(ler\("SUPABASE_PUBLISHABLE_KEY"\) \?\? ""\)/);
+  assert.match(ch, /chaveSb\(ler, "SUPABASE_SECRET_KEYS", "SUPABASE_SERVICE_ROLE_KEY"\)/);
+  const idx = fs.readFileSync(new URL("supabase/functions/rac-ia/index.ts", raiz), "utf8");
+  assert.match(idx, /createClient\(url, chavePublica\(ambiente\)/); assert.match(idx, /createClient\(url, chaveServidor\(ambiente\)/);
+  assert.ok(!/const chaveSb =/.test(idx), "sem cópia antiga da função de chaves no index.ts");
+  /* o login continua conferido no código, antes de tudo */
+  assert.match(idx, /await publico\.auth\.getUser\(jwt\)/);
 });

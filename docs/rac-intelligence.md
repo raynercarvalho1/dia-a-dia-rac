@@ -116,8 +116,13 @@ reservado ──► enviando ──► concluido            (resposta da API: su
 - Funções do orçamento: `SECURITY DEFINER`, `search_path` vazio, EXECUTE revogado de `public`, `anon` e `authenticated`;
   só a chave de servidor (dentro da função) executa. Para quem está logado: só `ia_reconciliar` (checa que é o dono) e
   `ia_totais_mes` (só a casa de quem chama).
-- RLS: `ia_config` a casa lê e só o dono altera; `ia_uso` o dono lê a casa, o membro lê o seu, ninguém grava pelo site;
-  `ia_precos` leitura; `ia_cobranca` só o dono.
+- RLS: `ia_config` a casa lê, só o dono altera (UPDATE) e **ninguém cria pelo site** (não há política nem permissão de
+  INSERT); `ia_uso` o dono lê a casa, o membro lê o seu, ninguém grava pelo site; `ia_precos` leitura; `ia_cobranca` só o dono.
+- **Quem pode usar a IA:** só a casa que tem linha em `ia_config`, e essa linha só nasce pelo SQL Editor (Fase B).
+  Uma conta nova (sem ser membro de uma casa, o RAC a trata como dona de uma casa vazia) não tem linha, não consegue
+  criar uma e recebe só DEMO: não reserva orçamento nem chama a Anthropic. Há testes para isso.
+- A migração roda inteira dentro de `begin … commit` (se algo falhar, nada fica pela metade) e não mexe em tabelas,
+  funções ou políticas existentes: só cria e altera objetos `ia_*` (a leitura de `membros` pelo servidor já vem do 014).
 - `ia_uso` não guarda conteúdo (texto, foto, resposta): só números, códigos, módulo, ação, modelo e horários.
 - Sem ferramentas, sem SQL e sem gravação pelo modelo. A saída é JSON obrigatório (`output_config.format`) e ainda
   passa pela validação do servidor (tipos, faixas, tamanhos, listas fechadas; campos desconhecidos descartados).
@@ -128,12 +133,26 @@ reservado ──► enviando ──► concluido            (resposta da API: su
 | Fase | O quê | Quem |
 |---|---|---|
 | A | Código, testes e documento, num branch local, sem publicar (`IA_LIGADA = false`) | Claude |
-| B | Rodar `supabase/015_ia.sql` no SQL Editor; tirar a linha `-- status: pendente` do arquivo; rodar os testes de banco | Dono, depois Claude |
+| B | Rodar `supabase/015_ia.sql` no SQL Editor; criar a configuração da casa do dono (abaixo); tirar a linha `-- status: pendente` do arquivo; rodar os testes de banco | Dono, depois Claude |
 | C | Publicar a `rac-ia` sem a chave, pela CLI (abaixo); trocar `RAC_IA_PUBLICADA` para `true` em `tests/seguranca.test.mjs` | Dono, depois Claude |
 | D | Ligar `IA_LIGADA`, publicar o site e testar o DEMO no celular | Claude, depois Dono |
 | E | Conta na Anthropic, limite de US$ 7 no Console, sem recarga automática, segredo `ANTHROPIC_API_KEY` | Dono |
 | F | Ligar o modo REAL no Sistema; uma leitura de abastecimento; comparar com o Console | Dono |
 | G | Nota do mercado em REAL | Dono |
+
+### Fase B: criar a configuração da casa (uma vez, no SQL Editor; nada disto vai para o repositório)
+
+1. Rode o `015_ia.sql` inteiro. Ele termina com `commit`; se aparecer erro, nada foi criado.
+2. Descubra o UUID da conta do dono: Authentication → Users → a conta do dono → copie o "User UID"
+   (não use o da conta de quem é da casa).
+3. Confira que essa conta não é membro de outra casa (tem que voltar 0 linhas):
+   `select count(*) from public.membros where membro = 'UUID-DO-DONO';`
+4. Crie a configuração, que começa em DEMO, com R$ 50, câmbio 6,00, 12% de impostos e 10% de margem:
+   `insert into public.ia_config (dono) values ('UUID-DO-DONO') on conflict (dono) do nothing;`
+5. Confira: `select dono, modo, limite_brl from public.ia_config;` (uma linha, modo DEMO).
+
+O UUID e o e-mail ficam só no SQL Editor: não entram no repositório nem no site. Quem é da casa usa a mesma configuração
+(o papel casa vem da tabela `membros`), limitado às ações de `acoes_casa`.
 
 Publicação da função (no computador do dono, na pasta do projeto; o login abre o navegador):
 
@@ -157,7 +176,8 @@ confere o login sozinha).
   chave vira DEMO, casa limitada, REAL completo, tempo esgotado fica incerto e não repete, 5xx/rede incertos,
   orçamento esgotado e repetição não chamam a IA, resposta inválida não preenche nada, contagem por excesso),
   concorrência (30 chamadas ao mesmo tempo nunca passam do teto; sem a trava o teste falha), SQL (search_path, EXECUTE,
-  RLS, nenhuma expiração) e segredos.
+  RLS, nenhuma expiração, sem INSERT em `ia_config`, `begin … commit`, `on delete set null`, nada fora dos objetos `ia_*`),
+  conta nova sem configuração só em DEMO, a casa (Fernanda) usando as ações liberadas, o Sistema só com UPDATE, e segredos.
 - `nucleo.test.mjs` e `mercado.test.mjs`: o resultado REAL passa pela mesma leitura do fluxo manual; DEMO não vira texto.
 - `seguranca.test.mjs` e `banco.test.mjs`: depois das Fases B e C, a função recusa sem login, CORS só do site, tabelas e
   funções existem e estão fechadas.

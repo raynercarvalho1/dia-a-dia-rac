@@ -13,8 +13,15 @@
 --   enviando  → incerto                     (tempo esgotado, rede, erro 5xx: a reserva CONTINUA valendo)
 --   incerto   → reconciliado                (só o dono, pelo id da chamada, no Sistema; idem "enviando" parado há 10+ min)
 -- Nada sai de "enviando" ou "incerto" por prazo.
+--
+-- Quem usa a IA: só a casa que tiver uma linha em ia_config. O site NÃO cria essa linha (não há permissão de inserir):
+-- o administrador cria a do dono uma única vez no SQL Editor, na Fase B (docs/rac-intelligence.md). Sem linha, a função
+-- rac-ia responde só em DEMO, então uma conta nova não consegue consumir a IA.
+--
+-- Tudo dentro de uma transação: se qualquer comando falhar, nada fica criado pela metade.
+begin;
 
--- 1) Configuração por casa (só o dono altera; quem é da casa lê)
+-- 1) Configuração por casa (só o dono altera; quem é da casa lê; ninguém cria pelo site)
 create table if not exists public.ia_config (
   dono              uuid primary key references auth.users(id) on delete cascade,
   modo              text not null default 'DEMO' check (modo in ('DEMO', 'REAL')),
@@ -30,15 +37,14 @@ create table if not exists public.ia_config (
 alter table public.ia_config enable row level security;
 drop policy if exists "casa le" on public.ia_config;
 create policy "casa le" on public.ia_config for select to authenticated using (dono = public.dono_da_casa());
+-- sem política de inserção: a linha da casa só nasce pelo SQL Editor (o drop remove a de versões anteriores deste arquivo)
 drop policy if exists "dono cria" on public.ia_config;
-create policy "dono cria" on public.ia_config for insert to authenticated
-  with check (dono = auth.uid() and not exists (select 1 from public.membros m where m.membro = auth.uid()));
 drop policy if exists "dono altera" on public.ia_config;
 create policy "dono altera" on public.ia_config for update to authenticated
   using (dono = auth.uid() and not exists (select 1 from public.membros m where m.membro = auth.uid()))
   with check (dono = auth.uid());
 revoke all on public.ia_config from anon, authenticated;
-grant select, insert, update on public.ia_config to authenticated;
+grant select, update on public.ia_config to authenticated;
 
 -- 2) Preços por modelo (USD por milhão de tokens). Conferidos na página oficial; trocar aqui quando mudarem.
 create table if not exists public.ia_precos (
@@ -85,7 +91,7 @@ create table if not exists public.ia_uso (
   reconciliado_cobrado     boolean,
   reconciliado_usd         numeric(12,6) check (reconciliado_usd >= 0),
   reconciliado_em          timestamptz,
-  reconciliado_por         uuid references auth.users(id),
+  reconciliado_por         uuid references auth.users(id) on delete set null,
   ms                       integer,
   erro_codigo              text check (erro_codigo is null or erro_codigo ~ '^[a-z_]{2,40}$'),
   unique (user_id, idempotencia)
@@ -117,8 +123,9 @@ create policy "so o dono" on public.ia_cobranca for all to authenticated
 revoke all on public.ia_cobranca from anon, authenticated;
 grant select, insert, update, delete on public.ia_cobranca to authenticated;
 
-grant select, insert, update on public.ia_config, public.ia_precos, public.ia_uso to service_role;
-grant select on public.ia_cobranca, public.membros to service_role;
+-- o servidor (função rac-ia) só lê configuração e preços; ia_uso ele muda pelas funções abaixo. A leitura de
+-- public.membros pelo servidor já existe desde o 014_servidor.sql: este arquivo não mexe em tabelas existentes.
+grant select on public.ia_config, public.ia_precos, public.ia_uso to service_role;
 
 -- 5) Funções do orçamento. Todas: SECURITY DEFINER, search_path vazio (nomes completos), EXECUTE revogado de todos
 --    e liberado só para quem precisa. As do servidor só a chave de servidor (dentro da Edge Function) executa.
@@ -273,3 +280,5 @@ grant execute on function public.ia_teto_usd(uuid), public.ia_comprometido_usd(u
   public.ia_falhou_sem_envio(uuid, text), public.ia_concluir(uuid, integer, integer, numeric, integer, text),
   public.ia_marcar_incerto(uuid, text, integer) to service_role;
 grant execute on function public.ia_reconciliar(uuid, boolean, numeric), public.ia_totais_mes() to authenticated;
+
+commit;

@@ -401,3 +401,56 @@ test("segredos: a chave da Anthropic e o SDK só existem dentro da função rac-
   const garmin = fs.readFileSync(new URL("supabase/functions/garmin/index.ts", raiz), "utf8");
   assert.ok(!/anthropic/i.test(garmin), "a função garmin não tem nada de IA");
 });
+
+/* ---------- correções da revisão do 015 (conta nova, transação, permissões) ---------- */
+test("conta nova (sem linha em ia_config) só recebe DEMO e nunca reserva nem chama a IA, mesmo com a chave no servidor", async () => {
+  for (const user of ["conta-nova-qualquer", "rayner"]) {
+    const b = bancoFalso({ cfg: null }), pv = provedorFalso(okAbast);
+    const r = await atenderPedido(user, pedido({ modo: "REAL" }), { banco: b, provedor: pv });
+    assert.equal(r.status, 200); assert.equal(r.corpo.modo, "DEMO"); assert.equal(r.corpo.resultado._demo, true);
+    assert.match(r.corpo.mensagem, /ainda não foi criada/);
+    assert.equal(pv.chamadas + pv.contagens, 0); assert.equal(b.linhas.length, 0); assert.ok(!b.log.includes("reservar"));
+  }
+});
+
+test("a Fernanda (papel casa) continua usando as ações liberadas da casa do dono", async () => {
+  const b = bancoFalso({ cfg: { modo: "REAL" } }), pv = provedorFalso(okAbast);
+  const r = await atenderPedido("fernanda", pedido(), { banco: b, provedor: pv });
+  assert.equal(r.corpo.modo, "REAL"); assert.equal(b.linhas[0].user, "fernanda");
+});
+
+test("SQL: ninguém cria configuração pelo site: sem política nem permissão de INSERT em ia_config", () => {
+  const semComentario = sql.replace(/^--.*$/gm, "");
+  assert.ok(!/create policy[^;]*on public\.ia_config for (insert|all)/i.test(semComentario), "não pode haver política de inserção em ia_config");
+  assert.match(semComentario, /drop policy if exists "dono cria" on public\.ia_config;/, "remove a política antiga se existir");
+  assert.match(semComentario, /grant select, update on public\.ia_config to authenticated;/);
+  for (const g of semComentario.matchAll(/grant ([^;]*?) on ([^;]*?) to ([^;]*?);/gi))
+    if (/ia_config/.test(g[2]) && /authenticated|anon/.test(g[3])) assert.ok(!/insert|all/i.test(g[1]), "INSERT em ia_config liberado: " + g[0]);
+  assert.match(semComentario, /"dono altera" on public\.ia_config for update to authenticated\s+using \(dono = auth\.uid\(\) and not exists/);
+});
+
+test("SQL: a migração inteira roda numa transação (begin … commit)", () => {
+  const comandos = sql.replace(/^--.*$/gm, "").split(";").map((s) => s.trim()).filter(Boolean);
+  assert.equal(comandos[0], "begin"); assert.equal(comandos.at(-1), "commit");
+  assert.equal((sql.match(/^begin;$/gm) || []).length, 1); assert.equal((sql.match(/^commit;$/gm) || []).length, 1);
+  assert.ok(!/^(rollback|savepoint)/im.test(sql));
+});
+
+test("SQL: reconciliado_por vira nulo se o usuário for apagado", () => {
+  assert.match(sql, /reconciliado_por\s+uuid references auth\.users\(id\) on delete set null/);
+});
+
+test("SQL: o 015 não mexe em tabelas, funções ou políticas que já existem (só nas ia_*)", () => {
+  const s = sql.replace(/^--.*$/gm, "");
+  for (const m of s.matchAll(/\b(grant|revoke)\b([^;]*?)\bon\b(?: function)?([^;]*?)\b(to|from)\b/gi))
+    for (const alvo of m[3].matchAll(/public\.(\w+)/g)) assert.match(alvo[1], /^ia_/, "permissão em objeto existente: " + m[0].slice(0, 80));
+  for (const m of s.matchAll(/\b(alter table|drop policy if exists "[^"]*" on|create policy "[^"]*" on|create (?:or replace )?(?:table|function)(?: if not exists)?|create index if not exists \w+ on)\s+public\.(\w+)/gi))
+    assert.match(m[2], /^ia_/, "mexe em objeto existente: " + m[0]);
+  assert.ok(!/public\.membros\s+to\s+service_role/.test(s), "a leitura de membros pelo servidor já vem do 014");
+});
+
+test("site: o Sistema altera a configuração com UPDATE na linha do dono, nunca cria (sem upsert)", () => {
+  const t = fs.readFileSync(new URL("js/sistema.js", raiz), "utf8");
+  assert.ok(!/from\("ia_config"\)\.(upsert|insert)/.test(t), "o site não pode criar a configuração");
+  assert.match(t, /from\("ia_config"\)\.update\([^]*?\.eq\("dono",EU\.id\)/);
+});

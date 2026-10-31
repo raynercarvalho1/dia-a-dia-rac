@@ -42,14 +42,17 @@ export async function atenderPedido(userId: string, corpoBruto: unknown, d: Depe
   if (!v.ok) return respostaErro(v.codigo, { detalhe: v.mensagem.replace(/^.*?\. /, "") });
   const p = v.pedido, a = ACOES[p.acao], base = { modulo: p.modulo, acao: p.acao, avisos: v.avisos };
 
-  let papel: "dono" | "casa", dono: string, cfg: Config;
+  let papel: "dono" | "casa", dono: string, cfg: Config, temConfig: boolean;
   try {
     ({ papel, dono } = await d.banco.papelEDono(userId));
-    cfg = configDe(await d.banco.config(dono));
+    const linha = await d.banco.config(dono);
+    /* sem linha em ia_config (conta nova ou casa ainda não configurada): só DEMO, nunca REAL */
+    temConfig = !!linha;
+    cfg = configDe(linha);
   } catch (_) { return respostaErro("configuracao", base); }
   if (!a.papeis.includes(papel) || (papel === "casa" && !cfg.acoes_casa.includes(a.id))) return respostaErro("sem_permissao", base);
 
-  const { modo, motivo } = decidirModo(cfg, !!d.provedor);
+  const { modo, motivo } = temConfig ? decidirModo(cfg, !!d.provedor) : { modo: "DEMO" as const, motivo: "A configuração da IA desta casa ainda não foi criada." };
   if (modo === "DEMO" || !d.provedor) return ok(respostaDemo(a.id, p.contexto, motivo, v.avisos));
 
   /* ---------- REAL ---------- */

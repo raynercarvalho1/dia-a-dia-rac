@@ -325,7 +325,7 @@
         isOwner()?SB.from("ia_uso").select("id,criado_em,modulo,acao,estado,reservado_usd,erro_codigo,enviado_em").in("estado",["incerto","enviando"]).order("criado_em",{ascending:false}).limit(20).then(sbOk):Promise.resolve([]),
         isOwner()?SB.from("ia_cobranca").select("*").order("mes",{ascending:false}).limit(1).then(sbOk):Promise.resolve([])])
       .then(function(r){
-        var t=r[0]||{},cfg=r[1]||{modo:"DEMO",limite_brl:50,cambio_brl_usd:6,margem_impostos:0.12,margem_seguranca:0.1},teto=+t.teto_usd||0,comp=+t.comprometido_usd||0,pct=teto?Math.round(comp/teto*100):0;
+        var t=r[0]||{},semConfig=!r[1],cfg=r[1]||{modo:"DEMO",limite_brl:50,cambio_brl_usd:6,margem_impostos:0.12,margem_seguranca:0.1},teto=+t.teto_usd||0,comp=+t.comprometido_usd||0,pct=teto?Math.round(comp/teto*100):0;
         corpo.innerHTML="";
         if(pct>=50)corpo.appendChild(h("p",{class:"qrwarn",text:pct>=100?"⚠ O limite do mês foi atingido: novas leituras com IA estão bloqueadas até o mês virar.":"⚠ A IA já usou "+pct+"% do limite do mês."}));
         corpo.appendChild(h("div",{class:"kgasto"},
@@ -349,7 +349,8 @@
             sim.onclick=function(){rec(true)};nao.onclick=function(){rec(false)};
             ul.appendChild(h("li",null,h("span",{class:"grow"},h("b",{text:u.acao+" · "+new Date(u.criado_em).toLocaleString("pt-BR")}),h("span",{class:"sub",text:"Id "+u.id+" · reservado "+usd(u.reservado_usd)+(u.erro_codigo?" · "+u.erro_codigo:"")})),h("span",{class:"end vfil"},sim,nao)))});
           corpo.appendChild(ul)}
-        /* configuração: modo, limite e margens */
+        /* configuração: modo, limite e margens. A linha da casa é criada pelo administrador no SQL Editor (o site não cria) */
+        if(semConfig){corpo.appendChild(h("p",{class:"qrwarn",text:"A configuração da IA desta casa ainda não foi criada. Ela é criada uma vez pelo administrador no SQL Editor (docs/rac-intelligence.md, Fase B). Até lá, tudo funciona só em DEMO."}));return}
         var modo=h("button",{type:"button",class:"ghostbtn"+(cfg.modo==="REAL"?"":" pri"),text:cfg.modo==="REAL"?"Voltar para DEMO":"Ligar o modo REAL"});
         modo.onclick=function(){var novo=cfg.modo==="REAL"?"DEMO":"REAL";
           if(novo==="REAL"&&!window.confirm("Ligar o modo REAL? Cada leitura com IA passa a ser paga (dentro do limite do mês)."))return;
@@ -362,7 +363,10 @@
         cobB.onclick=function(){var v=parseFloat(cob.value);if(!(v>=0))return;SB.from("ia_cobranca").upsert({dono:EU.id,mes:t.mes,valor_usd:v,informado_em:new Date().toISOString()}).then(sbOk).then(desenhar).catch(function(e){alert("Não consegui: "+e.message)})};
         corpo.appendChild(h("div",{class:"vfil"},modo));corpo.appendChild(form);corpo.appendChild(h("div",{class:"vfil"},salvar));corpo.appendChild(h("div",{class:"vfil"},cob,cobB))})
       .catch(function(e){corpo.innerHTML="";corpo.appendChild(h("p",{class:"empty",text:"O RAC Intelligence ainda não está disponível ("+e.message+")."}))})}
-    function gravar(mud){SB.from("ia_config").upsert(Object.assign({dono:EU.id,atualizado_em:new Date().toISOString()},mud)).then(sbOk).then(desenhar).catch(function(e){alert("Não consegui salvar: "+e.message)})}
+    /* só altera a linha que já existe (UPDATE); se nada mudou, a linha não existe ou a pessoa não é o dono */
+    function gravar(mud){SB.from("ia_config").update(Object.assign({atualizado_em:new Date().toISOString()},mud)).eq("dono",EU.id).select("dono").then(sbOk)
+      .then(function(l){if(!l||!l.length)alert("Não salvei: a configuração da IA desta casa ainda não existe ou só o dono pode alterar.");desenhar()})
+      .catch(function(e){alert("Não consegui salvar: "+e.message)})}
     desenhar();return p}
   function renderSistema(){
     var root=$("#sistema-view");root.innerHTML="";

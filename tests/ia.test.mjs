@@ -600,3 +600,58 @@ test("chaves: a rac-ia segue o mesmo padrão da garmin e usa chaves.ts para os d
   /* o login continua conferido no código, antes de tudo */
   assert.match(idx, /await publico\.auth\.getUser\(jwt\)/);
 });
+
+/* ---------- interface do site em demonstração (publicação só DEMO) ---------- */
+const appJs = fs.readFileSync(new URL("js/app.js", raiz), "utf8");
+const sisJs = fs.readFileSync(new URL("js/sistema.js", raiz), "utf8");
+const famJs = fs.readFileSync(new URL("js/familia.js", raiz), "utf8");
+const merJs = fs.readFileSync(new URL("mercado.js", raiz), "utf8");
+const trecho = (t, ini, fim) => { const i = t.indexOf(ini); assert.ok(i >= 0, "não achei " + ini); const j = t.indexOf(fim, i + ini.length); return t.slice(i, j < 0 ? undefined : j); };
+
+test("site: a interface de IA está ligada, na fase só de demonstração", () => {
+  assert.match(appJs, /var IA_LIGADA=true,IA_SO_DEMO=true;/);
+  assert.match(famJs, /if\(typeof iaLigada==="function"&&iaLigada\(\)\)f\.appendChild\(iaBotao\(\{modulo:"abastecimento",acao:"abastecimento\.interpretar"/);
+  assert.match(merJs, /if \(typeof window\.iaLigada === "function" && window\.iaLigada\(\)\) ia\.appendChild\(window\.iaBotao\(\{ modulo: "mercado", acao: "mercado\.nota"/);
+  assert.match(sisJs, /if\(typeof iaLigada==="function"&&iaLigada\(\)\)try\{root\.appendChild\(sisIA\(\)\)\}/);
+  /* os textos avisam que é demonstração */
+  assert.match(trecho(appJs, "function iaBotao(", "\n  /* ====="), /Nesta fase a resposta é simulada, não consome orçamento e não pode ser salva/);
+  assert.match(trecho(sisJs, "function sisIA(", "function renderSistema("), /Fase de demonstração: as leituras com IA são simuladas, não consomem orçamento/);
+});
+
+test("site: o painel do Sistema não oferece ligar o modo REAL e nunca envia o modo", () => {
+  const painel = trecho(sisJs, "function sisIA(", "function renderSistema(");
+  assert.ok(!/Ligar o modo REAL|Voltar para DEMO/.test(sisJs), "o botão de trocar o modo não pode existir nesta fase");
+  assert.ok(!/gravar\(\{\s*modo/.test(painel), "nenhuma gravação com o modo");
+  const campos = /var SIS_IA_CAMPOS=\[([^\]]*)\]/.exec(painel);
+  assert.ok(campos, "a gravação passa por uma lista fechada de campos");
+  assert.deepEqual(campos[1].split(",").map((x) => x.trim().replace(/"/g, "")), ["limite_brl", "cambio_brl_usd", "margem_impostos", "margem_seguranca"]);
+  assert.match(painel, /SIS_IA_CAMPOS\.forEach\(function\(k\)\{if\(typeof mud\[k\]==="number"/);
+  /* as informações continuam: modo, orçamento, teto, estimativa, reservado, cobrança, modelos */
+  for (const rot of ["\"Modo\"", "Comprometido no mês", "Teto interno", "Estimado pelo RAC", "Reservado em aberto", "Cobrança efetiva", "por milhão de tokens"])
+    assert.ok(painel.includes(rot), "o painel perdeu " + rot);
+});
+
+test("site: o pedido à IA não leva o modo nem quem é: o servidor decide", () => {
+  const corpo = /var corpo=\{(.*)\};/.exec(trecho(appJs, "function racIA(", "\n  /*"));
+  assert.ok(corpo);
+  assert.deepEqual(corpo[1].split(",").map((x) => x.split(":")[0].trim()), ["versao", "modulo", "acao", "idempotencia", "entrada", "contexto"]);
+});
+
+test("site: resposta DEMO vai só para a prévia (sem salvar); só REAL sem _demo chega à conferência", () => {
+  const b = trecho(appJs, "function iaBotao(", "\n  /* =====");
+  const demo = b.indexOf('if(r&&r.ok&&r.modo==="DEMO")'), real = b.indexOf('if(r&&r.ok&&r.modo==="REAL"&&r.resultado&&!r.resultado._demo)'), chamada = b.indexOf("o.real(");
+  assert.ok(demo >= 0 && real > demo && chamada > real, "ordem: DEMO → prévia e sai; só depois o ramo REAL chama o.real");
+  assert.equal((b.match(/o\.real\(/g) || []).length, 1, "o.real só num lugar");
+  assert.match(b.slice(demo, real), /previa\.appendChild\(iaPrevia\(r\)\);return\}/);
+  const previa = trecho(appJs, "function iaPrevia(", "\n  /* botão");
+  assert.ok(!/button|onclick|real\(/.test(previa), "a prévia não tem botão nem caminho para salvar");
+  /* e as conversões recusam _demo (segunda proteção) */
+  assert.match(famJs, /real:function\(r\)\{var t=NUCLEO\.iaAbastTexto\(r\);if\(!t\)return;/);
+  assert.match(merJs, /real: function \(r\) \{ var t = window\.RACnucleo\.iaNotaTexto\(r\); if \(!t\) return;/);
+});
+
+test("site: os jeitos manuais continuam lá (pedido ao Claude, colar a resposta, conferir e salvar)", () => {
+  const foto = trecho(famJs, "function veicFoto(", "\n  /* Formulário de registro");
+  for (const x of ["PEDIDO_ABAST", "Colar a resposta", "function ler()", "Salvar abastecimento", "salvar.onclick", "SB.from(\"registros\").insert(reg)"]) assert.ok(foto.includes(x), "veicFoto perdeu " + x);
+  for (const x of ["var PEDIDO =", "function tentarResp()", "function lerEConferir()", "Colar a resposta", "function salvarNota("]) assert.ok(merJs.includes(x), "Mercado perdeu " + x);
+});

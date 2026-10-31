@@ -47,9 +47,8 @@ test("a função só libera o navegador do próprio site (CORS)", { skip: pular 
   assert.equal(await origem("https://raynercarvalho.com.br"), "https://raynercarvalho.com.br", "o site continua podendo chamar");
 });
 
-// RAC Intelligence: a função rac-ia só existe depois da Fase C (publicação pela CLI). Até lá estes testes ficam como TODO;
-// na Fase C, trocar RAC_IA_PUBLICADA para true.
-const RAC_IA_PUBLICADA = false;
+// RAC Intelligence: a função rac-ia foi publicada na Fase C (pela CLI, sem a chave da Anthropic): estes testes valem.
+const RAC_IA_PUBLICADA = true;
 const opIa = { skip: pular, todo: RAC_IA_PUBLICADA ? false : "publicar a função rac-ia (Fase C)" };
 test("rac-ia recusa quem não fez login, sem chamar a IA", opIa, async () => {
   const r = await fetch(`${URL_SB}/functions/v1/rac-ia`, { method: "POST", headers: { ...H, "Content-Type": "application/json", Origin: "https://raynercarvalho.com.br" },

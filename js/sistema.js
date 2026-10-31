@@ -351,20 +351,22 @@
           corpo.appendChild(ul)}
         /* configuração: modo, limite e margens. A linha da casa é criada pelo administrador no SQL Editor (o site não cria) */
         if(semConfig){corpo.appendChild(h("p",{class:"qrwarn",text:"A configuração da IA desta casa ainda não foi criada. Ela é criada uma vez pelo administrador no SQL Editor (docs/rac-intelligence.md, Fase B). Até lá, tudo funciona só em DEMO."}));return}
-        var modo=h("button",{type:"button",class:"ghostbtn"+(cfg.modo==="REAL"?"":" pri"),text:cfg.modo==="REAL"?"Voltar para DEMO":"Ligar o modo REAL"});
-        modo.onclick=function(){var novo=cfg.modo==="REAL"?"DEMO":"REAL";
-          if(novo==="REAL"&&!window.confirm("Ligar o modo REAL? Cada leitura com IA passa a ser paga (dentro do limite do mês)."))return;
-          gravar({modo:novo})};
+        /* fase só de demonstração: o site não oferece trocar o modo (ele é decidido no servidor; o modo REAL volta a ter
+           controle aqui só na Fase F, de propósito) */
+        var aviso=h("p",{class:"sub",text:"Fase de demonstração: as leituras com IA são simuladas, não consomem orçamento e não podem ser salvas. O modo é decidido pelo servidor e não pode ser trocado pelo site nesta fase."});
         function campo(rot,k,passo){var i=h("input",{type:"number",step:passo,value:String(cfg[k]),"aria-label":rot});i.dataset.k=k;return h("label",null,rot,i)}
         var form=h("div",{class:"wform"},h("div",{class:"two"},campo("Limite mensal (R$)","limite_brl","1"),campo("Câmbio (R$ por US$)","cambio_brl_usd","0.01")),
           h("div",{class:"two"},campo("Margem de impostos (0,12 = 12%)","margem_impostos","0.01"),campo("Margem de segurança (0,10 = 10%)","margem_seguranca","0.01")));
         var salvar=h("button",{type:"button",text:"Salvar limites"});salvar.onclick=function(){var o={};form.querySelectorAll("input").forEach(function(i){o[i.dataset.k]=parseFloat(i.value)});gravar(o)};
         var cob=h("input",{type:"number",step:"0.01",placeholder:"US$ cobrados no mês (Console)","aria-label":"Cobrança efetiva do mês em US$"}),cobB=h("button",{type:"button",class:"ghostbtn",text:"Registrar cobrança do mês"});
         cobB.onclick=function(){var v=parseFloat(cob.value);if(!(v>=0))return;SB.from("ia_cobranca").upsert({dono:EU.id,mes:t.mes,valor_usd:v,informado_em:new Date().toISOString()}).then(sbOk).then(desenhar).catch(function(e){alert("Não consegui: "+e.message)})};
-        corpo.appendChild(h("div",{class:"vfil"},modo));corpo.appendChild(form);corpo.appendChild(h("div",{class:"vfil"},salvar));corpo.appendChild(h("div",{class:"vfil"},cob,cobB))})
+        corpo.appendChild(aviso);corpo.appendChild(form);corpo.appendChild(h("div",{class:"vfil"},salvar));corpo.appendChild(h("div",{class:"vfil"},cob,cobB))})
       .catch(function(e){corpo.innerHTML="";corpo.appendChild(h("p",{class:"empty",text:"O RAC Intelligence ainda não está disponível ("+e.message+")."}))})}
-    /* só altera a linha que já existe (UPDATE); se nada mudou, a linha não existe ou a pessoa não é o dono */
-    function gravar(mud){SB.from("ia_config").update(Object.assign({atualizado_em:new Date().toISOString()},mud)).eq("dono",EU.id).select("dono").then(sbOk)
+    /* só altera a linha que já existe (UPDATE); se nada mudou, a linha não existe ou a pessoa não é o dono.
+       Só os campos de limite passam: o modo nunca é enviado pelo site */
+    var SIS_IA_CAMPOS=["limite_brl","cambio_brl_usd","margem_impostos","margem_seguranca"];
+    function gravar(mud){var o={atualizado_em:new Date().toISOString()};SIS_IA_CAMPOS.forEach(function(k){if(typeof mud[k]==="number"&&isFinite(mud[k]))o[k]=mud[k]});
+      SB.from("ia_config").update(o).eq("dono",EU.id).select("dono").then(sbOk)
       .then(function(l){if(!l||!l.length)alert("Não salvei: a configuração da IA desta casa ainda não existe ou só o dono pode alterar.");desenhar()})
       .catch(function(e){alert("Não consegui salvar: "+e.message)})}
     desenhar();return p}

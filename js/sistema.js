@@ -351,9 +351,40 @@
       return h("div",null,h("h3",{class:"dayh",text:"Histórico de chamadas pagas"}),
         h("p",{class:"sub",text:isOwner()?"Todas as chamadas pagas da casa. Leituras em demonstração não aparecem: elas não usam a IA de verdade.":"As suas chamadas pagas (o dono vê as da casa toda). Leituras em demonstração não aparecem."}),
         h("div",{class:"vfil"},sm,sd),lista)}
+    /* conferência das chamadas incertas, dentro do painel: o campo começa vazio (nada de aceitar a reserva como cobrança),
+       o valor é validado antes e cada decisão pede confirmação. O banco só aceita "incerta" ou "parada há mais de 10 minutos",
+       da casa do dono, uma vez (o estado muda para "reconciliado") */
+    function conferir(l){
+      var ul=h("ul",{class:"wl iahist"});
+      l.forEach(function(u){
+        var x=NUCLEO.iaUsoLinha(u,Date.now()),acoes=h("div",{class:"vfil iaconf"}),msg=h("p",{class:"sub",role:"status"});
+        var li=h("li",null,h("span",{class:"grow"},h("b",{text:NUCLEO.iaModulo(u.modulo)+" · "+x.estado}),
+          h("span",{class:"sub",text:iaQuando(u.criado_em)+" · "+(u.modelo||"")+" · reserva "+usd(u.reservado_usd)+" · id "+u.id})),acoes,msg);
+        function inicio(){acoes.innerHTML="";msg.textContent="";
+          if(!x.conferir){msg.textContent="Ainda em andamento: dá para conferir 10 minutos depois do envio.";return}
+          var sim=h("button",{type:"button",class:"ghostbtn",text:"Foi cobrada"}),nao=h("button",{type:"button",class:"ghostbtn",text:"Não foi cobrada"});
+          sim.onclick=cobrada;nao.onclick=naoCobrada;acoes.appendChild(sim);acoes.appendChild(nao)}
+        function enviar(cobrado,valor,botoes){botoes.forEach(function(b){b.disabled=true});msg.textContent="Gravando…";
+          SB.rpc("ia_reconciliar",{p_id:u.id,p_cobrado:cobrado,p_valor_usd:cobrado?valor:0}).then(sbOk)
+          .then(function(okr){if(okr){desenhar();return}msg.textContent="Esta chamada não pode mais ser conferida (talvez já tenha sido). Recarregue o painel.";botoes.forEach(function(b){b.disabled=false})})
+          .catch(function(e){msg.textContent="Não consegui gravar: "+e.message;botoes.forEach(function(b){b.disabled=false})})}
+        function cobrada(){acoes.innerHTML="";msg.textContent="";
+          var v=h("input",{type:"text",inputmode:"decimal",placeholder:"ex.: 0,0021","aria-label":"Valor cobrado por esta chamada, em US$"}),
+            ok=h("button",{type:"button",text:"Confirmar"}),volta=h("button",{type:"button",class:"ghostbtn",text:"Cancelar"});
+          ok.onclick=function(){var r=NUCLEO.iaValorUsd(v.value,100);if(!r.ok){msg.textContent=r.motivo;return}enviar(true,r.valor,[ok,volta])};volta.onclick=inicio;
+          acoes.appendChild(h("label",null,"Quanto foi cobrado, em US$",v));acoes.appendChild(ok);acoes.appendChild(volta);
+          msg.textContent="Veja no Console da Anthropic (uso do dia desta chamada). Na dúvida, cancele: a reserva continua contando, que é o lado seguro.";v.focus()}
+        function naoCobrada(){acoes.innerHTML="";
+          var ok=h("button",{type:"button",text:"Confirmar: não foi cobrada"}),volta=h("button",{type:"button",class:"ghostbtn",text:"Cancelar"});
+          ok.onclick=function(){enviar(false,0,[ok,volta])};volta.onclick=inicio;acoes.appendChild(ok);acoes.appendChild(volta);
+          msg.textContent="Confirme só se o Console não mostrar cobrança: a reserva de "+usd(u.reservado_usd)+" deixa de contar no mês."}
+        inicio();ul.appendChild(li)});
+      return h("div",null,h("h3",{class:"dayh",text:"Chamadas para conferir"}),
+        h("p",{class:"sub",text:"A IA pode ter cobrado ou não (tempo esgotado, falha de rede). Até você conferir, a reserva de cada uma continua contando no mês."}),
+        ul,l.length>=50?h("p",{class:"sub",text:"Mostrando as 50 mais novas."}):null)}
     function desenhar(){
       Promise.all([SB.rpc("ia_totais_mes").then(sbOk),SB.from("ia_config").select("*").maybeSingle().then(sbOk),SB.from("ia_precos").select("*").then(sbOk),
-        isOwner()?SB.from("ia_uso").select("id,criado_em,modulo,acao,estado,reservado_usd,erro_codigo,enviado_em").in("estado",["incerto","enviando"]).order("criado_em",{ascending:false}).limit(20).then(sbOk):Promise.resolve([]),
+        isOwner()?SB.from("ia_uso").select("id,criado_em,modulo,acao,modelo,estado,reservado_usd,erro_codigo,enviado_em").in("estado",["incerto","enviando"]).order("criado_em",{ascending:false}).limit(50).then(sbOk):Promise.resolve([]),
         isOwner()?SB.from("ia_cobranca").select("*").order("mes",{ascending:false}).limit(1).then(sbOk):Promise.resolve([])])
       .then(function(r){
         var t=r[0]||{},semConfig=!r[1],cfg=r[1]||{modo:"DEMO",limite_brl:50,cambio_brl_usd:6,margem_impostos:0.12,margem_seguranca:0.1},s=NUCLEO.iaResumo(t,cfg),al=NUCLEO.iaAlerta(s);
@@ -378,15 +409,8 @@
           corpo.appendChild(h("p",{class:dias>30?"qrwarn":"sub",text:x.modelo+": "+usd(x.entrada_usd_mtok)+" / "+usd(x.saida_usd_mtok)+" por milhão de tokens (entrada / saída), conferido em "+dataBR(x.conferido_em)+(dias>30?". Confira o preço de novo na página oficial.":".")}))});
         corpo.appendChild(historico(s.mes||NUCLEO.iaCompetencias(hojeISO(),1)[0]));
         if(!isOwner())return;
-        /* chamadas incertas: só o dono decide, pelo id, depois de olhar o uso no Console */
-        if(r[3].length){corpo.appendChild(h("h3",{class:"dayh",text:"Chamadas incertas (a reserva continua contando)"}));
-          var ul=h("ul",{class:"wl"});r[3].forEach(function(u){
-            var sim=h("button",{type:"button",class:"ghostbtn",text:"Foi cobrada"}),nao=h("button",{type:"button",class:"ghostbtn",text:"Não foi cobrada"});
-            function rec(cobrado){var v=0;if(cobrado){v=parseFloat(String(window.prompt("Quanto foi cobrado por esta chamada, em US$? (veja no Console da Anthropic)",String(u.reservado_usd))||"").replace(",","."));if(!(v>=0))return}
-              SB.rpc("ia_reconciliar",{p_id:u.id,p_cobrado:cobrado,p_valor_usd:cobrado?v:0}).then(sbOk).then(function(okr){if(!okr)alert("Esta chamada não pode ser reconciliada agora.");desenhar()}).catch(function(e){alert("Não consegui: "+e.message)})}
-            sim.onclick=function(){rec(true)};nao.onclick=function(){rec(false)};
-            ul.appendChild(h("li",null,h("span",{class:"grow"},h("b",{text:u.acao+" · "+new Date(u.criado_em).toLocaleString("pt-BR")}),h("span",{class:"sub",text:"Id "+u.id+" · reservado "+usd(u.reservado_usd)+(u.erro_codigo?" · "+u.erro_codigo:"")})),h("span",{class:"end vfil"},sim,nao)))});
-          corpo.appendChild(ul)}
+        /* chamadas incertas: só o dono decide, depois de olhar o uso no Console; quem confere de verdade é o banco (ia_reconciliar) */
+        if(r[3].length)corpo.appendChild(conferir(r[3]));
         /* configuração: modo, limite e margens. A linha da casa é criada pelo administrador no SQL Editor (o site não cria) */
         if(semConfig){corpo.appendChild(h("p",{class:"qrwarn",text:"A configuração da IA desta casa ainda não foi criada. Ela é criada uma vez pelo administrador no SQL Editor (docs/rac-intelligence.md, Fase B). Até lá, tudo funciona só em DEMO."}));return}
         /* o site não troca o modo nem as leituras liberadas: o banco só deixa o site alterar os campos de limite (016);

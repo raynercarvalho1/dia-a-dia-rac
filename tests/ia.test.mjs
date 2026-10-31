@@ -835,6 +835,23 @@ test("painel: o histórico só LÊ ia_uso, filtra por mês e módulo, conta o to
   }
 });
 
+test("painel: conferência das incertas dentro do painel, com campo vazio, validação e confirmação; quem grava é o banco", () => {
+  const painel = trecho(sisJs, "function sisIA(", "function renderSistema(");
+  const conf = trecho(painel, "function conferir(", "function desenhar(");
+  assert.ok(!/prompt\(|alert\(/.test(conf), "sem janelas do navegador na conferência");
+  assert.ok(!/window\.prompt/.test(sisJs), "a janela antiga (preenchida com a reserva) saiu");
+  assert.match(conf, /h\("input",\{type:"text",inputmode:"decimal",placeholder:"ex\.: 0,0021"/); assert.ok(!/h\("input",\{[^}]*value:/.test(conf), "o campo começa vazio");
+  assert.match(conf, /NUCLEO\.iaValorUsd\(v\.value,100\);if\(!r\.ok\)\{msg\.textContent=r\.motivo;return\}/, "valor inválido não vai ao banco");
+  assert.match(conf, /"Confirmar: não foi cobrada"/); assert.match(conf, /text:"Confirmar"/); assert.match(conf, /"Cancelar"/);
+  assert.match(conf, /if\(!x\.conferir\)\{msg\.textContent="Ainda em andamento/, "em andamento há menos de 10 minutos: sem botões");
+  assert.match(conf, /SB\.rpc\("ia_reconciliar",\{p_id:u\.id,p_cobrado:cobrado,p_valor_usd:cobrado\?valor:0\}\)/);
+  assert.equal((sisJs.match(/rpc\("ia_reconciliar"/g) || []).length, 1, "um só lugar reconcilia");
+  /* a regra continua no banco: só o dono, só incerta ou parada há 10 minutos, uma vez */
+  const rec = /create or replace function public\.ia_reconciliar[\s\S]*?end \$\$;/.exec(sql)[0];
+  assert.match(rec, /estado = 'incerto' or \(estado = 'enviando' and enviado_em < pg_catalog\.now\(\) - interval '10 minutes'\)/);
+  assert.match(rec, /p_valor_usd > 100/); assert.match(rec, /dono = auth\.uid\(\)/);
+});
+
 /* ---------- chaves do próprio Supabase (P1 da auditoria da Fase C): mesmo padrão da função garmin ---------- */
 const ambienteCom = (vars) => (nome) => vars[nome];
 

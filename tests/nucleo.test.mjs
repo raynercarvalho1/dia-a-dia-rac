@@ -282,3 +282,14 @@ test("IA: chamada em andamento só pode ser conferida depois de 10 minutos (a me
   assert.equal(parada.conferir, true); assert.match(parada.estado, /Parada/); assert.equal(parada.custo, 0.0026);
   assert.equal(N.iaUsoLinha({ estado: "enviando" }, t).conferir, false, "sem a hora do envio não dá para conferir");
 });
+
+test("IA: valor da conferência validado antes de ir ao banco (vírgula ou ponto, 0 a 100)", () => {
+  const V = (t, m = 100) => N.iaValorUsd(t, m);
+  assert.deepEqual(V("0,0021"), { ok: true, valor: 0.0021 });
+  assert.deepEqual(V("US$ 0.0021"), { ok: true, valor: 0.0021 });
+  assert.deepEqual(V("0"), { ok: true, valor: 0 }, "zero é válido (cobrada, mas sem custo)");
+  assert.deepEqual(V("1.234,50", 2000), { ok: true, valor: 1234.5 });
+  for (const [t, re] of [["", /Digite/], ["abc", /números/], ["-1", /negativo/], ["150", /acima/], ["1.2.3", /inválido/], ["5,", /inválido/], [",5", /números/], [null, /Digite/]])
+    assert.match(V(t).motivo, re, JSON.stringify(t));
+  assert.equal(V("150", null).ok, true, "sem máximo, aceita");
+});

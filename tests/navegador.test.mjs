@@ -94,6 +94,19 @@ test("IA: DEMO só na prévia, REAL vai à conferência com o texto certo, e o S
       PAPEL = "dono"; EU = { id: "teste" };
       const painel = sisIA(); document.body.appendChild(painel);
       await espera(400);
+      /* conferência de uma incerta (dados de mentira): inválido não chama o banco; válido chama uma vez */
+      const recs = [], antes = Date.now() - 30 * 60000;
+      dados.ia_uso = [{ id: "teste-incerta", criado_em: new Date(antes).toISOString(), enviado_em: new Date(antes).toISOString(), modulo: "abastecimento", acao: "abastecimento.interpretar", modelo: "claude-haiku-5-5", estado: "incerto", reservado_usd: 0.0026, erro_codigo: "tempo_esgotado" }];
+      const rpcTotais = SB.rpc; SB.rpc = (n, a) => { if (n === "ia_reconciliar") { recs.push(a); return Promise.resolve({ error: null, data: false }); } return rpcTotais(n, a); };
+      const painel2 = sisIA(); document.body.appendChild(painel2); await espera(400);
+      const li = [...painel2.querySelectorAll("h3")].find((x) => /conferir/.test(x.textContent)).parentElement.querySelector("li");
+      const botao = (t) => [...li.querySelectorAll("button")].find((b) => b.textContent === t);
+      botao("Foi cobrada").click(); await espera(30);
+      const campoVazio = li.querySelector("input").value === "";
+      li.querySelector("input").value = "abc"; botao("Confirmar").click(); await espera(30);
+      const recsInvalido = recs.length;
+      li.querySelector("input").value = "0,0021"; botao("Confirmar").click(); await espera(100);
+      Object.assign(out, { campoVazio, recsInvalido, recs, msgConf: li.querySelector("p.sub").textContent });
       return Object.assign(out, { painel: painel.textContent, botoesPainel: [...painel.querySelectorAll("button")].map((b) => b.textContent) });
     });
     assert.equal(r.ligada, true); assert.equal(r.soDemo, "undefined", "sem marca de modo no site");
@@ -103,7 +116,9 @@ test("IA: DEMO só na prévia, REAL vai à conferência com o texto certo, e o S
     assert.equal(r.realKm, 18240, "a resposta REAL chega à conferência"); assert.equal(r.previaReal, false, "REAL não mostra a prévia de demonstração");
     assert.match(r.statusReal, /^REAL · lido pelo Claude/); assert.match(r.statusReal, /nada foi gravado ainda/);
     assert.match(r.painel, /não pode ser trocado pelo site/); assert.match(r.painel, /Teto interno/); assert.match(r.painel, /Modo\s*REAL/);
-    assert.match(r.painel, /Abastecimento REAL \(só o dono; a casa em DEMO\)/); assert.match(r.painel, /Nota do mercado DEMO \(fixo nesta fase\)/);
+    assert.match(r.painel, /Abastecimento REAL \(só o dono; a casa em DEMO\)/);
+    assert.equal(r.campoVazio, true, "o valor da conferência começa vazio"); assert.equal(r.recsInvalido, 0, "valor inválido não vai ao banco");
+    assert.deepEqual(r.recs, [{ p_id: "teste-incerta", p_cobrado: true, p_valor_usd: 0.0021 }]); assert.match(r.msgConf, /não pode mais ser conferida/); assert.match(r.painel, /Nota do mercado DEMO \(fixo nesta fase\)/);
     assert.ok(!r.botoesPainel.some((b) => /modo REAL|Voltar para DEMO/i.test(b)) && !/Ligar o modo REAL/.test(r.painel), "nenhum botão de trocar o modo: " + r.botoesPainel.join(", "));
     assert.deepEqual(erros, [], "nenhum erro no navegador");
   } finally {

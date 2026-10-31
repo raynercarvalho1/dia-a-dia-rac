@@ -296,5 +296,14 @@
     if(e==="reconciliado")return u.reconciliado_cobrado?r("Conferida: foi cobrada",+u.reconciliado_usd||0,"cobrado"):r("Conferida: não foi cobrada",0,"sem custo");
     if(e==="falhou_sem_envio")return r("Falhou antes do envio"+(erro?" ("+erro+")":""),0,"sem custo");
     return r(String(e||"?"),null,"")}
-  raiz.RACnucleo={norm:norm,urlAbs:urlAbs,lerAbast:lerAbast,TEMAS:TEMAS,temasDe:temasDe,juntarDados:juntarDados,SKILLS:SKILLS,compatVaga:compatVaga,omsZ:omsZ,omsValor:omsValor,percentilDeZ:percentilDeZ,csvLinhas:csvLinhas,napperLer:napperLer,bebeDias:bebeDias,VACINAS_PNI:VACINAS_PNI,vacinasCalendario:vacinasCalendario,mediana:mediana,prontidao:prontidao,somaDiasISO:somaDiasISO,correlacao:correlacao,chuvaAviso:chuvaAviso,diasEntre:diasEntre,chaveProduto:chaveProduto,previsaoCompras:previsaoCompras,padraoCompras:padraoCompras,itemBate:itemBate,notaItens:notaItens,dividirItens:dividirItens,lerEmailVaga:lerEmailVaga,vagaParecida:vagaParecida,iaAbastTexto:iaAbastTexto,iaNotaTexto:iaNotaTexto,iaNum:iaNum,iaUsd:iaUsd,iaReais:iaReais,iaBrl:iaBrl,iaResumo:iaResumo,iaAlerta:iaAlerta,iaEstados:iaEstados,iaNomeMes:iaNomeMes,iaCompetencias:iaCompetencias,iaModulo:iaModulo,iaUsoLinha:iaUsoLinha};
+  /* valor em dólar digitado pela pessoa ("0,0021", "US$ 0.0021", "1.234,50"): número entre 0 e o máximo, ou o motivo */
+  function iaValorUsd(txt,max){var t=String(txt==null?"":txt).replace(/US\$|\$|\s/gi,"");
+    if(!t)return {ok:false,motivo:"Digite o valor em dólar (pode ser 0)."};
+    if(!/^-?\d[\d.,]*$/.test(t))return {ok:false,motivo:"Use só números, com vírgula ou ponto (ex.: 0,0021)."};
+    if(t.indexOf(",")>=0)t=t.replace(/\./g,"").replace(",",".");else if((t.match(/\./g)||[]).length>1)return {ok:false,motivo:"Número inválido."};
+    var v=parseFloat(t);if(!isFinite(v)||/^-?[.,]|[.,]$/.test(t))return {ok:false,motivo:"Número inválido."};
+    if(v<0)return {ok:false,motivo:"O valor não pode ser negativo."};
+    if(max!=null&&v>max)return {ok:false,motivo:"Valor acima de US$ "+iaNum(max,2)+": confira no Console."};
+    return {ok:true,valor:Math.round(v*1e6)/1e6}}
+  raiz.RACnucleo={norm:norm,urlAbs:urlAbs,lerAbast:lerAbast,TEMAS:TEMAS,temasDe:temasDe,juntarDados:juntarDados,SKILLS:SKILLS,compatVaga:compatVaga,omsZ:omsZ,omsValor:omsValor,percentilDeZ:percentilDeZ,csvLinhas:csvLinhas,napperLer:napperLer,bebeDias:bebeDias,VACINAS_PNI:VACINAS_PNI,vacinasCalendario:vacinasCalendario,mediana:mediana,prontidao:prontidao,somaDiasISO:somaDiasISO,correlacao:correlacao,chuvaAviso:chuvaAviso,diasEntre:diasEntre,chaveProduto:chaveProduto,previsaoCompras:previsaoCompras,padraoCompras:padraoCompras,itemBate:itemBate,notaItens:notaItens,dividirItens:dividirItens,lerEmailVaga:lerEmailVaga,vagaParecida:vagaParecida,iaAbastTexto:iaAbastTexto,iaNotaTexto:iaNotaTexto,iaNum:iaNum,iaUsd:iaUsd,iaReais:iaReais,iaBrl:iaBrl,iaResumo:iaResumo,iaAlerta:iaAlerta,iaEstados:iaEstados,iaNomeMes:iaNomeMes,iaCompetencias:iaCompetencias,iaModulo:iaModulo,iaUsoLinha:iaUsoLinha,iaValorUsd:iaValorUsd};
 })(typeof window!=="undefined"?window:globalThis);

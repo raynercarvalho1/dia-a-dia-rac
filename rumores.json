@@ -1,12 +1,92 @@
 {
- "coletado": "2026-10-30T22:15:54.783881+00:00",
+ "coletado": "2026-10-31T05:35:44.464751+00:00",
  "fonte": "MLB Trade Rumors",
  "falhas": [],
  "liga": [
   {
+   "t": "Astros Hire Randy Flores As General Manager",
+   "link": "https://www.mlbtraderumors.com/2026/10/astros-hire-randy-flores-as-general-manager.html",
+   "data": "2026-10-31T04:30:39+00:00",
+   "resumo": "The Astros have hired Cardinals assistant GM/scouting director Randy Flores as their new general manager. The team announced the move on Friday evening. “Randy has had a huge impact on the Cardinals over the last 10 seasons,” Houston owner Jim Crane said in the press release.…",
+   "tags": [
+    "Houston Astros",
+    "Milwaukee Brewers",
+    "Newsstand",
+    "St. Louis Cardinals",
+    "Matt Kleine",
+    "Randy Flores"
+   ]
+  },
+  {
+   "t": "Clint Hurdle, Rockies Parting Ways",
+   "link": "https://www.mlbtraderumors.com/2026/10/clint-hurdle-rockies-parting-ways.html",
+   "data": "2026-10-31T04:00:00+00:00",
+   "resumo": "Clint Hurdle and the Rockies are parting ways, the baseball lifer announced on social media (link via Thomas Harding of MLB.com). Hurdle has been in the organization for the past five seasons, mostly in a special assistant role. The 69-year-old Hurdle is better known for his…",
+   "tags": [
+    "Colorado Rockies",
+    "Clint Hurdle"
+   ]
+  },
+  {
+   "t": "Kyle Higashioka, Jakob Junis To Become Free Agents",
+   "link": "https://www.mlbtraderumors.com/2026/10/kyle-higashioka-jakob-junis-to-become-free-agents.html",
+   "data": "2026-10-31T02:24:06+00:00",
+   "resumo": "All three of the Rangers’ mutual options will be bought out, reports Shawn McFarland of The Dallas Morning News. ESPN’s Jesse Rogers first reported this afternoon that designated hitter Joc Pederson passed on his end of an $18.5MM option. Catcher Kyle Higashioka will receive a…",
+   "tags": [
+    "Texas Rangers",
+    "Transactions",
+    "Jakob Junis",
+    "Kyle Higashioka"
+   ]
+  },
+  {
+   "t": "Rangers To Select Aidan Curry",
+   "link": "https://www.mlbtraderumors.com/2026/10/rangers-to-select-aidan-curry.html",
+   "data": "2026-10-31T02:06:35+00:00",
+   "resumo": "The Rangers are adding right-hander Aidan Curry to their 40-man roster, reports Joel Sherman of The New York Post. Curry signed as an undrafted free agent in 2020 and has appeared in parts of seven seasons in the minors. That meant he’d have qualified for minor league free…",
+   "tags": [
+    "Texas Rangers",
+    "Transactions",
+    "Aidan Curry"
+   ]
+  },
+  {
+   "t": "Michael Soroka Declines Mutual Option With D-Backs",
+   "link": "https://www.mlbtraderumors.com/2026/10/michael-soroka-declines-mutual-option-with-d-backs.html",
+   "data": "2026-10-31T00:04:34+00:00",
+   "resumo": "Michael Soroka has officially declined his end of a $10MM mutual option with the Diamondbacks, reports Nick Piecoro of The Arizona Republic. He’ll be paid a $1MM buyout and return to free agency. This was inevitable, as Soroka has put himself in position to do pretty well…",
+   "tags": [
+    "Arizona Diamondbacks",
+    "Transactions",
+    "Michael Soroka"
+   ]
+  },
+  {
+   "t": "Offseason Outlook: Tampa Bay Rays",
+   "link": "https://www.mlbtraderumors.com/2026/10/offseason-outlook-tampa-bay-rays-16.html",
+   "data": "2026-10-30T23:24:55+00:00",
+   "resumo": "The Rays posted the best record in the American League this season (98-64) and cemented their status as the Junior Circuit’s top team by toppling the Yankees and Guardians en route to the American League pennant. Tampa Bay ran into a Brewers buzzsaw in the World Series,…",
+   "tags": [
+    "2026-27 Offseason Outlook",
+    "Front Office Originals",
+    "Tampa Bay Rays"
+   ]
+  },
+  {
+   "t": "Angels Select Nicolò Pinazzi",
+   "link": "https://www.mlbtraderumors.com/2026/10/angels-select-nicolo-pinazzi.html",
+   "data": "2026-10-30T22:40:42+00:00",
+   "resumo": "The Angels announced that they have selected the contract of left-hander Nicolò Pinazzi. They also announced they have turned down a club option on righty Robert Stephenson, a move that was covered earlier today. Pinazzi, 27, hasn’t taken the typical path to a roster spot with…",
+   "tags": [
+    "Los Angeles Angels",
+    "Transactions",
+    "Nicolo Pinazzi"
+   ]
+  },
+  {
    "t": "Guardians Select Milan Tolentino",
    "link": "https://www.mlbtraderumors.com/2026/10/guardians-select-milan-tolentino.html",
-   "data": "2026-10-30T22:00:27+00:00",
+   "data": "2026-10-30T22:20:27+00:00",
    "resumo": "The Guardians announced that they have selected the contract of infielder Milan Tolentino. They also declined a club option on right-hander Trevor Stephan as well as their end of a mutual option with righty Shawn Armstrong. Tolentino, 25 next month, was a fourth-round pick in…",
    "tags": [
     "Cleveland Guardians",
@@ -25,17 +105,6 @@
     "San Francisco Giants",
     "Transactions",
     "Andrew Knizner"
-   ]
-  },
-  {
-   "t": "Angels Select Nicolò Pinazzi",
-   "link": "https://www.mlbtraderumors.com/2026/10/angels-select-nicolo-pinazzi.html",
-   "data": "2026-10-30T21:38:42+00:00",
-   "resumo": "The Angels announced that they have selected the contract of left-hander Nicolò Pinazzi. They also announced they have turned down a club option on righty Robert Stephenson, a move that was covered earlier today. More to come.",
-   "tags": [
-    "Los Angeles Angels",
-    "Transactions",
-    "Nicolo Pinazzi"
    ]
   },
   {
@@ -103,74 +172,6 @@
     "Seattle Mariners",
     "Washington Nationals",
     "CJ Gillman"
-   ]
-  },
-  {
-   "t": "Josh Bell’s Mutual Option Declined",
-   "link": "https://www.mlbtraderumors.com/2026/10/twins-josh-bell-decline-mutual-option.html",
-   "data": "2026-10-30T18:30:28+00:00",
-   "resumo": "Twins designated hitter Josh Bell is officially a free agent, the MLBPA announced today. His contract had a $10MM mutual option with a $1.25MM buyout. The team declined their end of the option, per Aaron Gleeman of AaronGleeman.com. Gleeman adds that the Twins declined their…",
-   "tags": [
-    "Minnesota Twins",
-    "Transactions",
-    "Joe Ryan",
-    "Josh Bell"
-   ]
-  },
-  {
-   "t": "Orioles Re-Sign Rece Hinds",
-   "link": "https://www.mlbtraderumors.com/2026/10/orioles-re-sign-rece-hinds.html",
-   "data": "2026-10-30T18:07:16+00:00",
-   "resumo": "The Orioles announced that outfielder Rece Hinds has been re-signed to a one-year Major League contract. The Baltimore Banner’s Andy Kostka reports that Hinds’ salary will be $4700 more than the next MLB minimum salary, which will be established when the next collective…",
-   "tags": [
-    "Baltimore Orioles",
-    "Transactions",
-    "Rece Hinds"
-   ]
-  },
-  {
-   "t": "Zach Eflin Becomes Free Agent",
-   "link": "https://www.mlbtraderumors.com/2026/10/zach-eflin-becomes-free-agent.html",
-   "data": "2026-10-30T17:55:00+00:00",
-   "resumo": "Right-hander Zach Eflin was listed in a batch of new free agents in a press release from the MLB Players Association. That indicates that Eflin’s 2027 mutual option was turned down, either by himself or the Orioles. It’s not a surprising development. It has been over a decade…",
-   "tags": [
-    "Baltimore Orioles",
-    "Transactions",
-    "Zach Eflin"
-   ]
-  },
-  {
-   "t": "Front Office Subscriber Chat Transcript",
-   "link": "https://www.mlbtraderumors.com/2026/10/front-office-subscriber-chat-with-anthony-franco-today-at-200pm-central-89.html",
-   "data": "2026-10-30T17:35:01+00:00",
-   "resumo": "Anthony Franco Good afternoon, hope all is well! Congratulations to Brewers fans on the well deserved championship! Busy time for us now obviously so I’m going to keep this one around an hour Let’s get rolling Joshua Take your shot…..what do you think will be the biggest trade…",
-   "tags": [
-    "Front Office Originals",
-    "MLBTR Chats"
-   ]
-  },
-  {
-   "t": "Angels Decline Club Option On Robert Stephenson",
-   "link": "https://www.mlbtraderumors.com/2026/10/angels-decline-club-option-on-robert-stephenson.html",
-   "data": "2026-10-30T17:26:39+00:00",
-   "resumo": "The MLBPA announced that Robert Stephenson is now a free agent, indicating that the Angels declined their $2.5MM club option on his services for 2027. Stephenson’s tenure in Los Angeles will now end with only 10 innings pitched over three seasons. A trade from the Pirates to…",
-   "tags": [
-    "Los Angeles Angels",
-    "Transactions",
-    "Robert Stephenson"
-   ]
-  },
-  {
-   "t": "Matthew Boyd, Carson Kelly Become Free Agents",
-   "link": "https://www.mlbtraderumors.com/2026/10/matthew-boyd-carson-kelly-become-free-agents.html",
-   "data": "2026-10-30T17:25:53+00:00",
-   "resumo": "Cubs lefty Matthew Boyd and catcher Carson Kelly are now free agents, the MLBPA announced Friday. Both players had mutual options — Boyd’s valued at $15MM and Kelly’s at $7.5MM. Boyd receives a $2MM buyout, while Kelly will receive a $1.5MM buyout. Both players likely declined…",
-   "tags": [
-    "Chicago Cubs",
-    "Newsstand",
-    "Transactions",
-    "Carson Kelly",
-    "Matthew Boyd"
    ]
   }
  ],

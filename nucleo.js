@@ -277,5 +277,24 @@
   var IA_MESES=["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
   /* "2026-10-01" → "outubro de 2026" */
   function iaNomeMes(iso){var m=/^(\d{4})-(\d{2})/.exec(String(iso||""));return m?IA_MESES[+m[2]-1]+" de "+m[1]:""}
-  raiz.RACnucleo={norm:norm,urlAbs:urlAbs,lerAbast:lerAbast,TEMAS:TEMAS,temasDe:temasDe,juntarDados:juntarDados,SKILLS:SKILLS,compatVaga:compatVaga,omsZ:omsZ,omsValor:omsValor,percentilDeZ:percentilDeZ,csvLinhas:csvLinhas,napperLer:napperLer,bebeDias:bebeDias,VACINAS_PNI:VACINAS_PNI,vacinasCalendario:vacinasCalendario,mediana:mediana,prontidao:prontidao,somaDiasISO:somaDiasISO,correlacao:correlacao,chuvaAviso:chuvaAviso,diasEntre:diasEntre,chaveProduto:chaveProduto,previsaoCompras:previsaoCompras,padraoCompras:padraoCompras,itemBate:itemBate,notaItens:notaItens,dividirItens:dividirItens,lerEmailVaga:lerEmailVaga,vagaParecida:vagaParecida,iaAbastTexto:iaAbastTexto,iaNotaTexto:iaNotaTexto,iaNum:iaNum,iaUsd:iaUsd,iaReais:iaReais,iaBrl:iaBrl,iaResumo:iaResumo,iaAlerta:iaAlerta,iaEstados:iaEstados,iaNomeMes:iaNomeMes};
+  /* os últimos n meses (competências), do atual para trás: "2026-10-01", "2026-09-01"… */
+  function iaCompetencias(mes,n){var m=/^(\d{4})-(\d{2})/.exec(String(mes||"")),l=[];if(!m)return l;var a=+m[1],k=+m[2];
+    for(var i=0;i<(n||12);i++){l.push(a+"-"+(k<10?"0":"")+k+"-01");k--;if(!k){k=12;a--}}return l}
+  var IA_MODULOS={abastecimento:"Abastecimento",mercado:"Nota do mercado"};
+  function iaModulo(m){return IA_MODULOS[m]||String(m||"")}
+  var IA_ERROS={recusado:"a IA não quis ler este conteúdo",resposta_invalida:"resposta fora do formato",provedor_recusou_pedido:"a Anthropic recusou o pedido",
+    provedor_ocupado:"serviço ocupado",provedor_indisponivel:"serviço fora do ar",tempo_esgotado:"tempo esgotado",rede:"falha de rede",registro_falhou:"a resposta não foi registrada",interno:"erro interno"};
+  /* uma linha de ia_uso → estado em português, custo que conta e se o dono já pode conferir. "Parada" segue o banco
+     (ia_reconciliar aceita "enviando" só com enviado_em há mais de 10 minutos) */
+  function iaUsoLinha(u,agora){u=u||{};var e=u.estado,erro=u.erro_codigo?(IA_ERROS[u.erro_codigo]||u.erro_codigo):"",res=+u.reservado_usd||0,
+      env=u.enviado_em?Date.parse(u.enviado_em):NaN,parada=e==="enviando"&&isFinite(env)&&(agora==null?Date.now():agora)-env>600000;
+    function r(estado,custo,custoTxt,conferir){return {estado:estado,custo:custo,custoTxt:custoTxt,conferir:!!conferir}}
+    if(e==="concluido")return erro?r("Recusada: "+erro,+u.estimado_usd||0,"estimado"):r("Concluída",+u.estimado_usd||0,"estimado");
+    if(e==="incerto")return r("Incerta"+(erro?" ("+erro+")":""),res,"reserva contando",true);
+    if(e==="enviando")return parada?r("Parada há mais de 10 minutos",res,"reserva contando",true):r("Em andamento",res,"reserva contando");
+    if(e==="reservado")return r("Reservada, antes do envio",res,"reserva contando");
+    if(e==="reconciliado")return u.reconciliado_cobrado?r("Conferida: foi cobrada",+u.reconciliado_usd||0,"cobrado"):r("Conferida: não foi cobrada",0,"sem custo");
+    if(e==="falhou_sem_envio")return r("Falhou antes do envio"+(erro?" ("+erro+")":""),0,"sem custo");
+    return r(String(e||"?"),null,"")}
+  raiz.RACnucleo={norm:norm,urlAbs:urlAbs,lerAbast:lerAbast,TEMAS:TEMAS,temasDe:temasDe,juntarDados:juntarDados,SKILLS:SKILLS,compatVaga:compatVaga,omsZ:omsZ,omsValor:omsValor,percentilDeZ:percentilDeZ,csvLinhas:csvLinhas,napperLer:napperLer,bebeDias:bebeDias,VACINAS_PNI:VACINAS_PNI,vacinasCalendario:vacinasCalendario,mediana:mediana,prontidao:prontidao,somaDiasISO:somaDiasISO,correlacao:correlacao,chuvaAviso:chuvaAviso,diasEntre:diasEntre,chaveProduto:chaveProduto,previsaoCompras:previsaoCompras,padraoCompras:padraoCompras,itemBate:itemBate,notaItens:notaItens,dividirItens:dividirItens,lerEmailVaga:lerEmailVaga,vagaParecida:vagaParecida,iaAbastTexto:iaAbastTexto,iaNotaTexto:iaNotaTexto,iaNum:iaNum,iaUsd:iaUsd,iaReais:iaReais,iaBrl:iaBrl,iaResumo:iaResumo,iaAlerta:iaAlerta,iaEstados:iaEstados,iaNomeMes:iaNomeMes,iaCompetencias:iaCompetencias,iaModulo:iaModulo,iaUsoLinha:iaUsoLinha};
 })(typeof window!=="undefined"?window:globalThis);

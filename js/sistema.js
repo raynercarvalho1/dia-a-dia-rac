@@ -322,6 +322,35 @@
     var usd=NUCLEO.iaUsd;
     /* um indicador: rótulo, valor e, se houver, uma linha menor embaixo (ex.: o valor em reais) */
     function kpi(rot,val,sub){return h("div",null,h("span",{class:"kl",text:rot}),h("b",{class:"kv",text:val}),sub?h("span",{class:"ksub",text:sub}):null)}
+    function iaQuando(iso){return new Date(iso).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"})}
+    /* histórico das chamadas pagas (o DEMO não grava): só leitura de ia_uso. O banco limita o que cada um vê: o dono, a casa
+       toda; quem é da casa, só as próprias chamadas. O filtro e a contagem ficam entre um desenho e outro */
+    var HIST={mes:"",modulo:"",n:20},HIST_COLS="id,criado_em,enviado_em,modulo,acao,modelo,estado,reservado_usd,estimado_usd,tokens_entrada,tokens_saida,ms,erro_codigo,reconciliado_cobrado,reconciliado_usd,reconciliado_em";
+    function historico(mesAtual){
+      if(!HIST.mes)HIST.mes=mesAtual;
+      function opc(v,t,sel){var o=h("option",{value:v,text:t});if(v===sel)o.selected=true;return o}
+      var sm=h("select",{"aria-label":"Mês do histórico"},NUCLEO.iaCompetencias(mesAtual,12).map(function(m){return opc(m,NUCLEO.iaNomeMes(m),HIST.mes)})),
+        sd=h("select",{"aria-label":"Módulo do histórico"},[["","Todos os módulos"],["abastecimento","Abastecimento"],["mercado","Nota do mercado"]].map(function(x){return opc(x[0],x[1],HIST.modulo)})),
+        lista=h("div",null,h("p",{class:"sub",text:"Carregando…"}));
+      sm.onchange=function(){HIST.mes=sm.value;HIST.n=20;carregar()};sd.onchange=function(){HIST.modulo=sd.value;HIST.n=20;carregar()};
+      function item(u){var x=NUCLEO.iaUsoLinha(u,Date.now()),det=[iaQuando(u.criado_em),u.modelo||""];
+        if(u.tokens_entrada!=null)det.push(NUCLEO.iaNum(u.tokens_entrada,0)+" → "+NUCLEO.iaNum(u.tokens_saida||0,0)+" tokens");
+        if(u.reconciliado_em)det.push("conferida em "+new Date(u.reconciliado_em).toLocaleDateString("pt-BR"));
+        return h("li",null,h("span",{class:"grow"},h("b",{text:NUCLEO.iaModulo(u.modulo)+" · "+x.estado}),h("span",{class:"sub",text:det.filter(Boolean).join(" · ")})),
+          h("span",{class:"end",text:x.custo==null?"—":usd(x.custo)+" · "+x.custoTxt}))}
+      function carregar(){
+        var q=SB.from("ia_uso").select(HIST_COLS,{count:"exact"}).eq("mes",HIST.mes);if(HIST.modulo)q=q.eq("modulo",HIST.modulo);
+        q.order("criado_em",{ascending:false}).range(0,HIST.n-1).then(function(r){if(r.error)throw new Error(r.error.message);
+          var l=r.data||[],tot=r.count==null?l.length:r.count;lista.innerHTML="";
+          if(!l.length){lista.appendChild(h("p",{class:"empty",text:"Nenhuma chamada paga em "+NUCLEO.iaNomeMes(HIST.mes)+(HIST.modulo?" neste módulo":"")+"."}));return}
+          lista.appendChild(h("p",{class:"sub",text:"Mostrando "+l.length+" de "+tot+(tot===1?" chamada":" chamadas")+", da mais nova para a mais antiga."}));
+          lista.appendChild(h("ul",{class:"wl iahist"},l.map(item)));
+          if(l.length<tot){var mais=h("button",{type:"button",class:"ghostbtn",text:"Ver mais"});mais.onclick=function(){HIST.n+=20;carregar()};lista.appendChild(h("div",{class:"vfil"},mais))}})
+        .catch(function(e){lista.innerHTML="";lista.appendChild(h("p",{class:"empty",text:"Não consegui carregar o histórico ("+e.message+")."}))})}
+      carregar();
+      return h("div",null,h("h3",{class:"dayh",text:"Histórico de chamadas pagas"}),
+        h("p",{class:"sub",text:isOwner()?"Todas as chamadas pagas da casa. Leituras em demonstração não aparecem: elas não usam a IA de verdade.":"As suas chamadas pagas (o dono vê as da casa toda). Leituras em demonstração não aparecem."}),
+        h("div",{class:"vfil"},sm,sd),lista)}
     function desenhar(){
       Promise.all([SB.rpc("ia_totais_mes").then(sbOk),SB.from("ia_config").select("*").maybeSingle().then(sbOk),SB.from("ia_precos").select("*").then(sbOk),
         isOwner()?SB.from("ia_uso").select("id,criado_em,modulo,acao,estado,reservado_usd,erro_codigo,enviado_em").in("estado",["incerto","enviando"]).order("criado_em",{ascending:false}).limit(20).then(sbOk):Promise.resolve([]),
@@ -347,6 +376,7 @@
         corpo.appendChild(h("p",{class:"sub",text:"A estimativa do RAC (uso informado pela API × tabela de preços) não é a fatura. A cobrança efetiva está no Console da Anthropic. O teto interno acima é do RAC: quando acaba, o RAC não faz novas leituras REAL. O limite de gasto da conta na Anthropic é outro e é configurado no Console."}));
         (r[2]||[]).forEach(function(x){var dias=Math.round((Date.now()-new Date(x.conferido_em+"T12:00:00"))/864e5);
           corpo.appendChild(h("p",{class:dias>30?"qrwarn":"sub",text:x.modelo+": "+usd(x.entrada_usd_mtok)+" / "+usd(x.saida_usd_mtok)+" por milhão de tokens (entrada / saída), conferido em "+dataBR(x.conferido_em)+(dias>30?". Confira o preço de novo na página oficial.":".")}))});
+        corpo.appendChild(historico(s.mes||NUCLEO.iaCompetencias(hojeISO(),1)[0]));
         if(!isOwner())return;
         /* chamadas incertas: só o dono decide, pelo id, depois de olhar o uso no Console */
         if(r[3].length){corpo.appendChild(h("h3",{class:"dayh",text:"Chamadas incertas (a reserva continua contando)"}));

@@ -88,7 +88,7 @@ test("IA: DEMO só na prévia, REAL vai à conferência com o texto certo, e o S
       await espera(400);
       Object.assign(out, { realKm: realRecebido && realRecebido.km, statusReal: el2.querySelector("[role=status]").textContent, previaReal: !!el2.querySelector(".iaprevia") });
       await precisa(["sistema"]);
-      const tabela = (d) => { const q = { select: () => q, in: () => q, order: () => q, limit: () => q, eq: () => q, maybeSingle: () => q, then: (ok, no) => Promise.resolve({ data: d, error: null }).then(ok, no) }; return q; };
+      const tabela = (d) => { const q = { select: () => q, in: () => q, order: () => q, limit: () => q, eq: () => q, gte: () => q, range: () => q, maybeSingle: () => q, then: (ok, no) => Promise.resolve({ data: d, error: null, count: Array.isArray(d) ? d.length : null }).then(ok, no) }; return q; };
       const dados = { ia_config: { modo: "REAL", acoes_reais: ["abastecimento.interpretar"], acoes_reais_casa: [], limite_brl: 50, cambio_brl_usd: 6, margem_impostos: 0.12, margem_seguranca: 0.1 }, ia_precos: [], ia_uso: [], ia_cobranca: [] };
       SB = { rpc: () => Promise.resolve({ error: null, data: { mes: "2026-10-01", teto_usd: 6.696429, comprometido_usd: 0, estimado_usd: 0, reservado_aberto_usd: 0, por_modulo: {}, por_estado: {} } }), from: (t) => tabela(dados[t]) };
       PAPEL = "dono"; EU = { id: "teste" };

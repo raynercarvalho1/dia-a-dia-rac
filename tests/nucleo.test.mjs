@@ -252,3 +252,33 @@ test("IA: contagem por estado e nome do mês", () => {
   assert.equal(N.iaNomeMes("2026-10-01"), "outubro de 2026");
   assert.equal(N.iaNomeMes("lixo"), "");
 });
+
+test("IA: meses do filtro (virada de ano) e nomes dos módulos", () => {
+  assert.deepEqual(N.iaCompetencias("2026-02-01", 4), ["2026-02-01", "2026-01-01", "2025-12-01", "2025-11-01"]);
+  assert.equal(N.iaCompetencias("2026-10-01", 12).length, 12);
+  assert.deepEqual(N.iaCompetencias("", 3), []);
+  assert.equal(N.iaModulo("abastecimento"), "Abastecimento");
+  assert.equal(N.iaModulo("mercado"), "Nota do mercado");
+  assert.equal(N.iaModulo("outro"), "outro");
+});
+
+test("IA: cada estado de ia_uso vira um texto e o custo que conta (como ia_comprometido_usd)", () => {
+  const L = (u, agora) => N.iaUsoLinha(u, agora);
+  assert.deepEqual(L({ estado: "concluido", estimado_usd: 0.0004 }), { estado: "Concluída", custo: 0.0004, custoTxt: "estimado", conferir: false });
+  assert.match(L({ estado: "concluido", estimado_usd: 0.0003, erro_codigo: "resposta_invalida" }).estado, /^Recusada: resposta fora do formato/);
+  assert.deepEqual(L({ estado: "incerto", reservado_usd: 0.0026, erro_codigo: "tempo_esgotado" }), { estado: "Incerta (tempo esgotado)", custo: 0.0026, custoTxt: "reserva contando", conferir: true });
+  assert.deepEqual(L({ estado: "reconciliado", reconciliado_cobrado: true, reconciliado_usd: 0.002 }), { estado: "Conferida: foi cobrada", custo: 0.002, custoTxt: "cobrado", conferir: false });
+  assert.deepEqual(L({ estado: "reconciliado", reconciliado_cobrado: false, reservado_usd: 0.0026 }), { estado: "Conferida: não foi cobrada", custo: 0, custoTxt: "sem custo", conferir: false });
+  assert.equal(L({ estado: "falhou_sem_envio", reservado_usd: 0.003 }).custo, 0);
+  assert.equal(L({ estado: "reservado", reservado_usd: 0.003 }).custoTxt, "reserva contando");
+  assert.equal(L({ estado: "desconhecido" }).custo, null);
+});
+
+test("IA: chamada em andamento só pode ser conferida depois de 10 minutos (a mesma regra do banco)", () => {
+  const env = "2026-10-31T15:00:00Z", t = Date.parse(env);
+  assert.equal(N.iaUsoLinha({ estado: "enviando", enviado_em: env }, t + 5 * 60000).conferir, false);
+  assert.equal(N.iaUsoLinha({ estado: "enviando", enviado_em: env }, t + 10 * 60000).conferir, false, "exatamente 10 minutos ainda não (o banco usa <)");
+  const parada = N.iaUsoLinha({ estado: "enviando", enviado_em: env, reservado_usd: 0.0026 }, t + 10 * 60000 + 1);
+  assert.equal(parada.conferir, true); assert.match(parada.estado, /Parada/); assert.equal(parada.custo, 0.0026);
+  assert.equal(N.iaUsoLinha({ estado: "enviando" }, t).conferir, false, "sem a hora do envio não dá para conferir");
+});

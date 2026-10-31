@@ -820,6 +820,21 @@ test("textos: o limite de US$ 7 na Anthropic não aparece como configurado; o li
   assert.match(doc, /### Fase F: ordem de publicação/); assert.match(doc, /\*\*não\*\* é preciso rodar o 015\s+de novo/);
 });
 
+/* ---------- painel do Sistema: histórico de chamadas ---------- */
+test("painel: o histórico só LÊ ia_uso, filtra por mês e módulo, conta o total e pagina", () => {
+  const painel = trecho(sisJs, "function sisIA(", "function renderSistema(");
+  const hist = trecho(painel, "function historico(", "function desenhar(");
+  assert.match(hist, /SB\.from\("ia_uso"\)\.select\(HIST_COLS,\{count:"exact"\}\)\.eq\("mes",HIST\.mes\)/);
+  assert.match(hist, /if\(HIST\.modulo\)q=q\.eq\("modulo",HIST\.modulo\)/);
+  assert.match(hist, /\.range\(0,HIST\.n-1\)/); assert.match(hist, /"Mostrando "\+l\.length\+" de "\+tot/); assert.match(hist, /"Ver mais"/);
+  for (const c of ["reconciliado_cobrado", "reconciliado_usd", "reconciliado_em", "estimado_usd", "modelo", "erro_codigo"]) assert.ok(painel.includes(c), "o histórico não traz " + c);
+  /* nenhum arquivo do site grava em ia_uso nem chama as funções do servidor */
+  for (const [nome, t] of [["app.js", appJs], ["sistema.js", sisJs], ["familia.js", famJs], ["mercado.js", merJs]]) {
+    assert.ok(!/from\("ia_uso"\)\s*\.\s*(insert|update|upsert|delete)/.test(t), nome + " grava em ia_uso");
+    assert.ok(!/rpc\("ia_(reservar|marcar_envio|concluir|marcar_incerto|falhou_sem_envio)"/.test(t), nome + " chama função do servidor");
+  }
+});
+
 /* ---------- chaves do próprio Supabase (P1 da auditoria da Fase C): mesmo padrão da função garmin ---------- */
 const ambienteCom = (vars) => (nome) => vars[nome];
 

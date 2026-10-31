@@ -11,12 +11,17 @@ export type Config = {
   margem_contagem: number;
   fator_correcao: number;
   acoes_casa: string[];
+  /* ações liberadas em REAL (016_ia_acoes.sql): sem a coluna ou vazia, nenhuma ação é REAL */
+  acoes_reais: string[];
+  /* das liberadas em REAL, as que quem é da casa também usa em REAL (o resto, para a casa, fica em DEMO) */
+  acoes_reais_casa: string[];
 };
 
 /* padrão aprovado: R$ 50, R$ 6,00 por dólar, 12% de impostos, 10% de margem de segurança → teto de US$ 6,70 */
 export const CONFIG_PADRAO: Config = {
   modo: "DEMO", limite_brl: 50, cambio_brl_usd: 6, margem_impostos: 0.12, margem_seguranca: 0.1,
   margem_contagem: 0.15, fator_correcao: 1, acoes_casa: ["abastecimento.interpretar", "mercado.nota"],
+  acoes_reais: [], acoes_reais_casa: [],
 };
 
 export const LIMITES = {
@@ -38,9 +43,11 @@ export function configDe(linha: Partial<Config> | null | undefined): Config {
     modo: c.modo === "REAL" ? "REAL" : "DEMO",
     limite_brl: num(c.limite_brl, 50), cambio_brl_usd: num(c.cambio_brl_usd, 6), margem_impostos: num(c.margem_impostos, 0.12),
     margem_seguranca: num(c.margem_seguranca, 0.1), margem_contagem: num(c.margem_contagem, 0.15),
-    fator_correcao: Math.max(1, num(c.fator_correcao, 1)), acoes_casa: Array.isArray(c.acoes_casa) ? c.acoes_casa.map(String) : [],
+    fator_correcao: Math.max(1, num(c.fator_correcao, 1)), acoes_casa: lista(c.acoes_casa),
+    acoes_reais: lista(c.acoes_reais), acoes_reais_casa: lista(c.acoes_reais_casa),
   };
 }
+function lista(v: unknown): string[] { return Array.isArray(v) ? v.map(String) : []; }
 
 const arred = (v: number) => Math.ceil(v * 1e6) / 1e6;
 
@@ -71,9 +78,14 @@ export function reservaUsd(p: Preco, tokensEntrada: number, maxTokensSaida: numb
   return arred(custoUsd(p, tokensEntrada, maxTokensSaida) * (1 + c.margem_contagem) * c.fator_correcao);
 }
 
-/* modo decidido só aqui, com dados do servidor: REAL exige o dono ter ligado e a chave existir */
-export function decidirModo(c: Config, temChave: boolean): { modo: "DEMO" | "REAL"; motivo: string } {
-  if (c.modo !== "REAL") return { modo: "DEMO", motivo: "O modo REAL está desligado no Sistema." };
+/* modo decidido só aqui, com dados do servidor (nada vem do site). REAL exige tudo ao mesmo tempo: o modo da casa em
+   REAL, a ação permitida no código (acao.real), a ação liberada no banco (acoes_reais), quem é da casa liberado
+   para ela (acoes_reais_casa) e a chave existir. Faltando qualquer um, DEMO */
+export function decidirModo(c: Config, temChave: boolean, acao: { id: string; real: boolean }, papel: "dono" | "casa"): { modo: "DEMO" | "REAL"; motivo: string } {
+  if (c.modo !== "REAL") return { modo: "DEMO", motivo: "O modo REAL está desligado para esta casa." };
+  if (!acao.real) return { modo: "DEMO", motivo: "Esta leitura funciona só em demonstração nesta fase." };
+  if (!c.acoes_reais.includes(acao.id)) return { modo: "DEMO", motivo: "O modo REAL não foi liberado para esta leitura." };
+  if (papel !== "dono" && !c.acoes_reais_casa.includes(acao.id)) return { modo: "DEMO", motivo: "O modo REAL desta leitura está liberado só para o dono." };
   if (!temChave) return { modo: "DEMO", motivo: "A chave da Anthropic não está configurada no servidor." };
   return { modo: "REAL", motivo: "" };
 }

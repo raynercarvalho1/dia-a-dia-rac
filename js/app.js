@@ -24,7 +24,7 @@
     n.id="pico";$("#pico").replaceWith(n);
     $("#ptitle").textContent=hit?hit.querySelector(".t").textContent:"Dia a Dia RAC"}
   /* ===== Módulos: cada seção grande fica em js/<seção>.js e só carrega quando é aberta ===== */
-  var MOD_VERSAO="2026-10-31.1",MODULOS={},MOD_OK={};
+  var MOD_VERSAO="2026-10-31.2",MODULOS={},MOD_OK={};
   var MOD_DEPS={conexoes:["mba"],sistema:["familia","mba","saude"],carreira:["sistema"],bebe:["familia","oms"],resumo:["saude","mba","familia"]};
   var ROTA_MODS={esportes:["esportes"],eddie:["familia"],olivia:["familia"],veiculos:["familia"],mba:["mba"],saude:["saude"],
     conexoes:["conexoes"],agenda:["sistema"],busca:["sistema"],sistema:["sistema"],lista:["lista"],carreira:["carreira"],documentos:["familia"],resumo:["resumo"],rede:["rede"]};
@@ -870,10 +870,9 @@
   var relogio=null,TEMPO_HOJE=null;
   /* ===== RAC Intelligence: a única porta do site para a IA (função rac-ia; docs/rac-intelligence.md) =====
      IA_LIGADA mostra os botões "Ler com IA" e o painel do Sistema (a função e as tabelas já existem).
-     IA_SO_DEMO marca a fase só de demonstração: o site não oferece ligar o modo REAL e os textos dizem que as leituras
-     são simuladas. Só muda a tela: o modo DEMO ou REAL continua decidido só no servidor (o site nunca manda o modo).
-     Resposta DEMO aparece só numa prévia de leitura e nunca chega ao que salva. */
-  var IA_LIGADA=true,IA_SO_DEMO=true;
+     O modo DEMO ou REAL é decidido só no servidor, por casa, por ação e por papel (o site nunca manda o modo nem o troca):
+     os textos seguem o modo que veio na resposta. Resposta DEMO aparece só numa prévia de leitura e nunca chega ao que salva. */
+  var IA_LIGADA=true;
   function iaLigada(){return IA_LIGADA}
   function iaNovaChave(){try{if(window.crypto&&crypto.randomUUID)return crypto.randomUUID()}catch(e){}return "k"+Date.now().toString(36)+Math.random().toString(36).slice(2,14)}
   /* uma chamada = uma chave de idempotência nova; quem chama nunca repete sozinho */
@@ -897,7 +896,8 @@
     var res=r.resultado||{},ul=h("ul",{class:"wl"});
     function val(v){if(v==null)return "—";if(Array.isArray(v))return v.map(function(x){return x&&typeof x==="object"?Object.keys(x).map(function(k){return x[k]==null?"—":x[k]}).join(" · "):String(x)}).join(" | ")||"—";return String(v)}
     Object.keys(res).filter(function(k){return k!=="_demo"}).forEach(function(k){ul.appendChild(h("li",null,h("span",{class:"grow"},h("b",{text:k}),h("span",{class:"sub",text:val(res[k])}))))});
-    return h("div",{class:"iaprevia",role:"note"},h("p",{class:"iademo",text:"DEMONSTRAÇÃO · resposta simulada, não veio do Claude e não pode ser salva."}),ul,
+    return h("div",{class:"iaprevia",role:"note"},h("p",{class:"iademo",text:"DEMONSTRAÇÃO · resposta simulada, não veio do Claude e não pode ser salva."}),
+      r.mensagem?h("p",{class:"sub",text:String(r.mensagem).replace(/^DEMONSTRAÇÃO:[^.]*\.[^.]*\.\s*/,"")}):null,ul,
       (r.avisos||[]).length?h("p",{class:"sub",text:r.avisos.join(" ")}):null)}
   /* botão "Ler com IA" de um módulo: fotos e texto opcionais; real(resultado) só recebe resposta REAL sem _demo */
   function iaBotao(o){
@@ -910,16 +910,14 @@
       b.disabled=true;st.textContent="Lendo com a IA…";previa.innerHTML="";
       Promise.all(arqs.map(iaFoto)).then(function(imgs){return racIA(o.modulo,o.acao,{texto:t,imagens:imgs},o.contexto?o.contexto():{})}).then(function(r){
         b.disabled=false;
-        if(r&&r.ok&&r.modo==="DEMO"){st.textContent="Demonstração: nada foi cobrado nem salvo. Para lançar de verdade, use o jeito manual abaixo.";previa.appendChild(iaPrevia(r));return}
+        if(r&&r.ok&&r.modo==="DEMO"){st.textContent="DEMONSTRAÇÃO: resposta simulada, nada foi cobrado nem salvo. Para lançar de verdade, use o jeito manual abaixo.";previa.appendChild(iaPrevia(r));return}
         if(r&&r.ok&&r.modo==="REAL"&&r.resultado&&!r.resultado._demo){
           var c=r.consumo&&r.consumo.mes;
-          st.textContent="✓ Lido. Confira abaixo antes de salvar."+((r.avisos||[]).length?" "+r.avisos.join(" "):"")+(c&&c.alerta?" ⚠ A IA já usou "+c.percentual+"% do limite do mês.":"");
+          st.textContent="REAL · lido pelo Claude, usou o orçamento de IA da casa. Confira abaixo antes de salvar: nada foi gravado ainda."+((r.avisos||[]).length?" "+r.avisos.join(" "):"")+(c&&c.alerta?" ⚠ A IA já usou "+c.percentual+"% do limite do mês.":"");
           o.real(r.resultado,r);return}
         st.textContent=(r&&r.mensagem||"A IA não respondeu.")+(r&&r.estado==="incerto"&&r.id?" Id da chamada: "+r.id+".":"")+" O jeito manual continua aqui embaixo.";
       }).catch(function(e){b.disabled=false;st.textContent="Não consegui ler: "+e.message;logErro("rac-ia",e)})};
-    return h("div",{class:"iabox"},h("p",{class:"sub",text:IA_SO_DEMO
-        ?"Ler com IA (demonstração): tire ou escolha as fotos"+(texto?" (ou escreva)":"")+" e toque no botão. Nesta fase a resposta é simulada, não consome orçamento e não pode ser salva."
-        :"Ler com IA: tire ou escolha as fotos"+(texto?" (ou escreva)":"")+" e toque no botão. Você confere tudo antes de salvar; cada leitura usa o orçamento de IA da casa."}),
+    return h("div",{class:"iabox"},h("p",{class:"sub",text:"Ler com IA: tire ou escolha as fotos"+(texto?" (ou escreva)":"")+" e toque no botão. A resposta diz o modo: DEMONSTRAÇÃO é simulada, não consome orçamento e não pode ser salva; REAL é lida pelo Claude, usa o orçamento da casa e você confere tudo antes de salvar."}),
       h("div",{class:"vfil"},fotos,texto,b),st,previa)}
 
   /* ===== Briefing falado: o resumo do dia lido em voz alta (Web Speech API, funciona no iPhone depois de um toque) ===== */

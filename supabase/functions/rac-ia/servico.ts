@@ -1,7 +1,7 @@
 // RAC Intelligence: o caminho de um pedido, do login já conferido até a resposta. Banco e provedor chegam de fora
 // (index.ts liga no Supabase e na Anthropic; os testes usam versões falsas), então o fluxo inteiro é testado sem rede.
 //
-// Ordem: valida o contrato → papel e casa (do banco) → permissão da ação → modo (do banco + chave) → DEMO responde sem
+// Ordem: valida o contrato → papel e casa (do banco) → permissão da ação → modo (do banco, da ação e do papel + chave) → DEMO responde sem
 // gravar nada; REAL: preço → contagem oficial (ou estimativa por excesso) → reserva no banco (trava, idempotência,
 // limites, orçamento) → marca envio → UMA chamada, com tempo máximo → concluído ou incerto → valida a resposta.
 
@@ -52,7 +52,7 @@ export async function atenderPedido(userId: string, corpoBruto: unknown, d: Depe
   } catch (_) { return respostaErro("configuracao", base); }
   if (!a.papeis.includes(papel) || (papel === "casa" && !cfg.acoes_casa.includes(a.id))) return respostaErro("sem_permissao", base);
 
-  const { modo, motivo } = temConfig ? decidirModo(cfg, !!d.provedor) : { modo: "DEMO" as const, motivo: "A configuração da IA desta casa ainda não foi criada." };
+  const { modo, motivo } = temConfig ? decidirModo(cfg, !!d.provedor, a, papel) : { modo: "DEMO" as const, motivo: "A configuração da IA desta casa ainda não foi criada." };
   if (modo === "DEMO" || !d.provedor) return ok(respostaDemo(a.id, p.contexto, motivo, v.avisos));
 
   /* ---------- REAL ---------- */

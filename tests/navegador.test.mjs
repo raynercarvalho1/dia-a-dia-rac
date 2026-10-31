@@ -49,7 +49,7 @@ test("o site abre no navegador, todos os módulos carregam e nada dá erro", { s
 
 // Interface do RAC Intelligence na fase só de demonstração, num navegador de verdade. O teste não tem login: as respostas
 // do servidor (DEMO) e do banco (só leitura) são simuladas dentro da página, só para conferir o que a tela faz com elas.
-test("IA em demonstração: botão mostra só a prévia, nunca chega ao salvar, e o Sistema não oferece o modo REAL", { skip: pular, timeout: 90000 }, async () => {
+test("IA: DEMO só na prévia, REAL vai à conferência com o texto certo, e o Sistema não oferece trocar o modo", { skip: pular, timeout: 90000 }, async () => {
   const servidor = http.createServer((req, res) => {
     let p = decodeURIComponent(new URL(req.url, "http://x").pathname);
     if (p.endsWith("/")) p += "index.html";
@@ -67,7 +67,7 @@ test("IA em demonstração: botão mostra só a prévia, nunca chega ao salvar, 
     await pag.goto(base + "/");
     await pag.waitForSelector("#gate", { state: "visible", timeout: 20000 });
     const r = await pag.evaluate(async () => {
-      const espera = (ms) => new Promise((ok) => setTimeout(ok, ms)), out = { ligada: iaLigada(), soDemo: IA_SO_DEMO };
+      const espera = (ms) => new Promise((ok) => setTimeout(ok, ms)), out = { ligada: iaLigada(), soDemo: typeof IA_SO_DEMO };
       let realChamado = false;
       SB = { functions: { invoke: () => Promise.resolve({ error: null, data: { ok: true, versao: 1, modo: "DEMO", estado: "demo", mensagem: "DEMONSTRAÇÃO", avisos: [],
         resultado: { veiculo: "moto", km: 0, litros: 1, total: 1, posto: "POSTO DEMONSTRAÇÃO", _demo: true } } }) } };
@@ -77,20 +77,33 @@ test("IA em demonstração: botão mostra só a prévia, nunca chega ao salvar, 
       el.querySelector("button").click();
       await espera(400);
       Object.assign(out, { previa: !!el.querySelector(".iaprevia"), botoesNaPrevia: el.querySelectorAll(".iaprevia button").length, realChamado, textoBotao: el.textContent });
+      /* resposta REAL (simulada aqui, sem rede): vai para a conferência e o texto diz REAL */
+      let realRecebido = null;
+      SB = { functions: { invoke: () => Promise.resolve({ error: null, data: { ok: true, versao: 1, modo: "REAL", estado: "concluido", mensagem: "Confira os dados antes de salvar.", avisos: [],
+        resultado: { veiculo: "moto", km: 18240, litros: 6.1, preco_litro: 6.29, total: 38.37, combustivel: "gasolina", posto: "", alertas: [] }, consumo: { mes: { percentual: 1, alerta: 0 } } } }) } };
+      const el2 = iaBotao({ modulo: "abastecimento", acao: "abastecimento.interpretar", texto: "x", real: (res) => { realRecebido = res; } });
+      document.body.appendChild(el2);
+      el2.querySelector("input[type=text]").value = "6,1 litros a 6,29";
+      el2.querySelector("button").click();
+      await espera(400);
+      Object.assign(out, { realKm: realRecebido && realRecebido.km, statusReal: el2.querySelector("[role=status]").textContent, previaReal: !!el2.querySelector(".iaprevia") });
       await precisa(["sistema"]);
       const tabela = (d) => { const q = { select: () => q, in: () => q, order: () => q, limit: () => q, eq: () => q, maybeSingle: () => q, then: (ok, no) => Promise.resolve({ data: d, error: null }).then(ok, no) }; return q; };
-      const dados = { ia_config: { modo: "DEMO", limite_brl: 50, cambio_brl_usd: 6, margem_impostos: 0.12, margem_seguranca: 0.1 }, ia_precos: [], ia_uso: [], ia_cobranca: [] };
+      const dados = { ia_config: { modo: "REAL", acoes_reais: ["abastecimento.interpretar"], acoes_reais_casa: [], limite_brl: 50, cambio_brl_usd: 6, margem_impostos: 0.12, margem_seguranca: 0.1 }, ia_precos: [], ia_uso: [], ia_cobranca: [] };
       SB = { rpc: () => Promise.resolve({ error: null, data: { mes: "2026-10-01", teto_usd: 6.696429, comprometido_usd: 0, estimado_usd: 0, reservado_aberto_usd: 0, por_modulo: {}, por_estado: {} } }), from: (t) => tabela(dados[t]) };
       PAPEL = "dono"; EU = { id: "teste" };
       const painel = sisIA(); document.body.appendChild(painel);
       await espera(400);
       return Object.assign(out, { painel: painel.textContent, botoesPainel: [...painel.querySelectorAll("button")].map((b) => b.textContent) });
     });
-    assert.equal(r.ligada, true); assert.equal(r.soDemo, true);
+    assert.equal(r.ligada, true); assert.equal(r.soDemo, "undefined", "sem marca de modo no site");
     assert.ok(r.previa, "a resposta DEMO aparece na prévia"); assert.equal(r.botoesNaPrevia, 0, "a prévia não tem botão (nem de salvar)");
     assert.equal(r.realChamado, false, "resposta DEMO nunca chega à conferência que salva");
-    assert.match(r.textoBotao, /demonstração/i); assert.match(r.textoBotao, /nada foi cobrado nem salvo/);
-    assert.match(r.painel, /Fase de demonstração/); assert.match(r.painel, /Teto interno/); assert.match(r.painel, /Modo\s*DEMO/);
+    assert.match(r.textoBotao, /DEMONSTRAÇÃO: resposta simulada, nada foi cobrado nem salvo/);
+    assert.equal(r.realKm, 18240, "a resposta REAL chega à conferência"); assert.equal(r.previaReal, false, "REAL não mostra a prévia de demonstração");
+    assert.match(r.statusReal, /^REAL · lido pelo Claude/); assert.match(r.statusReal, /nada foi gravado ainda/);
+    assert.match(r.painel, /não pode ser trocado pelo site/); assert.match(r.painel, /Teto interno/); assert.match(r.painel, /Modo\s*REAL/);
+    assert.match(r.painel, /Abastecimento REAL \(só o dono; a casa em DEMO\)/); assert.match(r.painel, /Nota do mercado DEMO \(fixo nesta fase\)/);
     assert.ok(!r.botoesPainel.some((b) => /modo REAL|Voltar para DEMO/i.test(b)) && !/Ligar o modo REAL/.test(r.painel), "nenhum botão de trocar o modo: " + r.botoesPainel.join(", "));
     assert.deepEqual(erros, [], "nenhum erro no navegador");
   } finally {

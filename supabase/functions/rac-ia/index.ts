@@ -47,7 +47,8 @@ function bancoSupabase(admin: ReturnType<typeof createClient>): Banco {
       return data ? { papel: "casa", dono: data.dono as string } : { papel: "dono", dono: userId };
     },
     async config(dono) {
-      const { data, error } = await admin.from("ia_config").select("modo,limite_brl,cambio_brl_usd,margem_impostos,margem_seguranca,margem_contagem,fator_correcao,acoes_casa").eq("dono", dono).maybeSingle();
+      /* todas as colunas: antes do 016 rodar, acoes_reais e acoes_reais_casa faltam e configDe() deixa tudo em DEMO */
+      const { data, error } = await admin.from("ia_config").select("*").eq("dono", dono).maybeSingle();
       if (error) throw new Error("ia_config: " + error.code);
       return data;
     },

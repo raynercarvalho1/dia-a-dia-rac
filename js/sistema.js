@@ -335,8 +335,11 @@
           h("div",null,h("span",{class:"kl",text:"Estimado pelo RAC"}),h("b",{class:"kv",text:usd(t.estimado_usd)})),
           h("div",null,h("span",{class:"kl",text:"Reservado em aberto"}),h("b",{class:"kv",text:usd(t.reservado_aberto_usd)})),
           h("div",null,h("span",{class:"kl",text:"Cobrança efetiva"}),h("b",{class:"kv",text:r[4][0]&&r[4][0].valor_usd!=null?usd(r[4][0].valor_usd)+" ("+String(r[4][0].mes).slice(0,7)+")":"não informada"}))));
+        /* modo por leitura, como o servidor decide: casa em REAL + leitura liberada (acoes_reais, 016) + papel; o Mercado fica sempre em DEMO nesta fase */
+        var reais=cfg.modo==="REAL"&&Array.isArray(cfg.acoes_reais)?cfg.acoes_reais:[],reaisCasa=Array.isArray(cfg.acoes_reais_casa)?cfg.acoes_reais_casa:[];
+        corpo.appendChild(h("p",{class:"sub",text:"Por leitura: Abastecimento "+(reais.indexOf("abastecimento.interpretar")>=0?"REAL ("+(reaisCasa.indexOf("abastecimento.interpretar")>=0?"dono e casa":"só o dono; a casa em DEMO")+")":"DEMO")+" · Nota do mercado DEMO (fixo nesta fase)."}));
         var pm=t.por_modulo||{};if(Object.keys(pm).length)corpo.appendChild(h("p",{class:"sub",text:"Por módulo: "+Object.keys(pm).map(function(k){return k+" "+usd(pm[k])}).join(" · ")}));
-        corpo.appendChild(h("p",{class:"sub",text:"A estimativa do RAC (uso informado pela API × tabela de preços) não é a fatura. A cobrança efetiva está no Console da Anthropic, onde o limite é de US$ 7, sem recarga automática."}));
+        corpo.appendChild(h("p",{class:"sub",text:"A estimativa do RAC (uso informado pela API × tabela de preços) não é a fatura. A cobrança efetiva está no Console da Anthropic. O teto interno acima é do RAC: quando acaba, o RAC não faz novas leituras REAL. O limite de gasto da conta na Anthropic é outro e é configurado no Console."}));
         (r[2]||[]).forEach(function(x){var dias=Math.round((Date.now()-new Date(x.conferido_em+"T12:00:00"))/864e5);
           corpo.appendChild(h("p",{class:dias>30?"qrwarn":"sub",text:x.modelo+": US$ "+x.entrada_usd_mtok+" / "+x.saida_usd_mtok+" por milhão de tokens (entrada / saída), conferido em "+dataBR(x.conferido_em)+(dias>30?". Confira o preço de novo na página oficial.":".")}))});
         if(!isOwner())return;
@@ -351,9 +354,9 @@
           corpo.appendChild(ul)}
         /* configuração: modo, limite e margens. A linha da casa é criada pelo administrador no SQL Editor (o site não cria) */
         if(semConfig){corpo.appendChild(h("p",{class:"qrwarn",text:"A configuração da IA desta casa ainda não foi criada. Ela é criada uma vez pelo administrador no SQL Editor (docs/rac-intelligence.md, Fase B). Até lá, tudo funciona só em DEMO."}));return}
-        /* fase só de demonstração: o site não oferece trocar o modo (ele é decidido no servidor; o modo REAL volta a ter
-           controle aqui só na Fase F, de propósito) */
-        var aviso=h("p",{class:"sub",text:"Fase de demonstração: as leituras com IA são simuladas, não consomem orçamento e não podem ser salvas. O modo é decidido pelo servidor e não pode ser trocado pelo site nesta fase."});
+        /* o site não troca o modo nem as leituras liberadas: o banco só deixa o site alterar os campos de limite (016);
+           o modo muda só no SQL Editor (docs/rac-intelligence.md, Fase F) */
+        var aviso=h("p",{class:"sub",text:"O modo é decidido pelo servidor e não pode ser trocado pelo site: o modo REAL e as leituras liberadas mudam só pelo SQL Editor. Em DEMONSTRAÇÃO a leitura é simulada, não consome orçamento e não pode ser salva; em REAL ela usa o orçamento abaixo e só grava quando você toca em Salvar."});
         function campo(rot,k,passo){var i=h("input",{type:"number",step:passo,value:String(cfg[k]),"aria-label":rot});i.dataset.k=k;return h("label",null,rot,i)}
         var form=h("div",{class:"wform"},h("div",{class:"two"},campo("Limite mensal (R$)","limite_brl","1"),campo("Câmbio (R$ por US$)","cambio_brl_usd","0.01")),
           h("div",{class:"two"},campo("Margem de impostos (0,12 = 12%)","margem_impostos","0.01"),campo("Margem de segurança (0,10 = 10%)","margem_seguranca","0.01")));

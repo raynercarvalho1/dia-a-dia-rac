@@ -13,6 +13,8 @@ export type Acao = {
   modulo: string;
   modelo: string;
   papeis: Papel[];
+  /* teto no código: false = esta ação nunca roda em REAL, mesmo com o banco liberando (só muda com novo código e publicação) */
+  real: boolean;
   maxTokens: number;
   esforco: "low" | "medium" | "high";
   imagensMax: number;
@@ -56,6 +58,7 @@ const abastecimento: Acao = {
   modulo: "abastecimento",
   modelo: "claude-haiku-5-5",
   papeis: ["dono", "casa"],
+  real: true,
   maxTokens: 3000,
   esforco: "low",
   imagensMax: 4,
@@ -112,6 +115,7 @@ const mercadoNota: Acao = {
   modulo: "mercado",
   modelo: "claude-sonnet-5-5",
   papeis: ["dono", "casa"],
+  real: false, // Mercado obrigatoriamente em DEMO nesta fase
   maxTokens: 12000,
   esforco: "low",
   imagensMax: 4,

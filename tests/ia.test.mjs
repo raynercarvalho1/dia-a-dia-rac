@@ -17,6 +17,7 @@ const PRECO_SONNET = { entrada_usd_mtok: 2, saida_usd_mtok: 10, max_entrada_toke
 const IMG = { tipo: "image/jpeg", base64: "/9j/4AAQSkZJRgABAQ==" };
 let seq = 0;
 const pedido = (extra = {}) => ({ versao: 1, modulo: "abastecimento", acao: "abastecimento.interpretar", idempotencia: "teste-" + (++seq).toString().padStart(4, "0"), entrada: { texto: "6,1 litros a 6,29", imagens: [IMG] }, contexto: { veiculo_sugerido: "moto", ultima_km: 18172 }, ...extra });
+const REAL = { modo: "REAL", acoes_reais: ["abastecimento.interpretar"], acoes_reais_casa: ["abastecimento.interpretar"] };
 const RESP_ABAST = { veiculo: "moto", data: null, km: 18240, litros: 6.1, preco_litro: 6.29, total: 38.37, combustivel: "gasolina", posto: "", alertas: [] };
 
 /* ---------- orçamento ---------- */
@@ -45,10 +46,11 @@ test("orçamento: alertas em 50%, 80% e 100%", () => {
   assert.deepEqual([0, 49, 50, 79, 80, 99, 100, 140].map(O.nivelAlerta), [0, 0, 50, 50, 80, 80, 100, 100]);
 });
 
-test("orçamento: o modo REAL exige o dono ter ligado E a chave existir; o resto é DEMO", () => {
-  assert.equal(O.decidirModo(O.CONFIG_PADRAO, true).modo, "DEMO");
-  assert.equal(O.decidirModo({ ...O.CONFIG_PADRAO, modo: "REAL" }, false).modo, "DEMO");
-  assert.equal(O.decidirModo({ ...O.CONFIG_PADRAO, modo: "REAL" }, true).modo, "REAL");
+test("orçamento: o modo REAL exige o dono ter ligado, a ação liberada E a chave existir; o resto é DEMO", () => {
+  const ab = ACOES["abastecimento.interpretar"], liberado = O.configDe(REAL);
+  assert.equal(O.decidirModo(O.CONFIG_PADRAO, true, ab, "dono").modo, "DEMO");
+  assert.equal(O.decidirModo(liberado, false, ab, "dono").modo, "DEMO");
+  assert.equal(O.decidirModo(liberado, true, ab, "dono").modo, "REAL");
   assert.equal(O.configDe({ modo: "QUALQUER" }).modo, "DEMO");
 });
 
@@ -199,7 +201,7 @@ test("provedor: recusa, resposta cortada e erros viram tipos conhecidos", async 
 /* ---------- fluxo completo (banco e provedor falsos) ---------- */
 function bancoFalso(opcoes = {}) {
   const linhas = [], log = [];
-  const cfg = opcoes.cfg === undefined ? { modo: "REAL" } : opcoes.cfg;
+  const cfg = opcoes.cfg === undefined ? REAL : opcoes.cfg;
   let trava = Promise.resolve();
   return {
     linhas, log,
@@ -214,6 +216,8 @@ function bancoFalso(opcoes = {}) {
         const naReserva = opcoes.cfgNaReserva === undefined ? cfg : opcoes.cfgNaReserva;
         if (!naReserva) return { ok: false, codigo: "configuracao_ausente" };
         if (naReserva.modo !== "REAL") return { ok: false, codigo: "modo_demo" };
+        if (!(naReserva.acoes_reais ?? []).includes(a.acao)) return { ok: false, codigo: "acao_em_demo" };
+        if (a.user !== a.dono && !(naReserva.acoes_reais_casa ?? []).includes(a.acao)) return { ok: false, codigo: "papel_em_demo" };
         const ex = linhas.find((l) => l.user === a.user && l.idem === a.idempotencia);
         if (ex) return { ok: false, id: ex.id, codigo: ["reservado", "enviando"].includes(ex.estado) ? "em_andamento" : "repetida" };
         if (linhas.filter((l) => l.user === a.user && ["reservado", "enviando"].includes(l.estado)).length >= 2) return { ok: false, codigo: "limite_de_uso" };
@@ -255,7 +259,7 @@ test("fluxo: em DEMO nada é gravado nem chamado, mesmo que o site peça REAL (A
 });
 
 test("fluxo: sem a chave no servidor tudo vira DEMO, sem quebrar nada", async () => {
-  const b = bancoFalso({ cfg: { modo: "REAL" } });
+  const b = bancoFalso({ cfg: REAL });
   const r = await atenderPedido("rayner", pedido(), { banco: b, provedor: null });
   assert.equal(r.status, 200); assert.equal(r.corpo.modo, "DEMO"); assert.match(r.corpo.mensagem, /chave/);
   assert.equal(b.linhas.length, 0);
@@ -270,9 +274,9 @@ test("fluxo: sem as tabelas ainda (antes da Fase B) responde erro de configuraç
 
 test("fluxo: papel casa usa só as ações liberadas para a casa (Fernanda)", async () => {
   const pv = provedorFalso(okAbast);
-  const nega = await atenderPedido("fernanda", pedido(), { banco: bancoFalso({ cfg: { modo: "REAL", acoes_casa: ["mercado.nota"] } }), provedor: pv });
+  const nega = await atenderPedido("fernanda", pedido(), { banco: bancoFalso({ cfg: { ...REAL, acoes_casa: ["mercado.nota"] } }), provedor: pv });
   assert.equal(nega.status, 403); assert.equal(pv.contagens + pv.chamadas, 0, "recusada antes de qualquer chamada à Anthropic");
-  const libera = await atenderPedido("fernanda", pedido(), { banco: bancoFalso({ cfg: { modo: "REAL" } }), provedor: pv });
+  const libera = await atenderPedido("fernanda", pedido(), { banco: bancoFalso({ cfg: REAL }), provedor: pv });
   assert.equal(libera.corpo.ok, true);
 });
 
@@ -425,7 +429,7 @@ test("conta nova (sem linha em ia_config) só recebe DEMO e nunca reserva nem ch
 });
 
 test("a Fernanda (papel casa) continua usando as ações liberadas da casa do dono", async () => {
-  const b = bancoFalso({ cfg: { modo: "REAL" } }), pv = provedorFalso(okAbast);
+  const b = bancoFalso({ cfg: REAL }), pv = provedorFalso(okAbast);
   const r = await atenderPedido("fernanda", pedido(), { banco: b, provedor: pv });
   assert.equal(r.corpo.modo, "REAL"); assert.equal(b.linhas[0].user, "fernanda");
 });
@@ -434,7 +438,8 @@ test("SQL: ninguém cria configuração pelo site: sem política nem permissão 
   const semComentario = sql.replace(/^--.*$/gm, "");
   assert.ok(!/create policy[^;]*on public\.ia_config for (insert|all)/i.test(semComentario), "não pode haver política de inserção em ia_config");
   assert.match(semComentario, /drop policy if exists "dono cria" on public\.ia_config;/, "remove a política antiga se existir");
-  assert.match(semComentario, /grant select, update on public\.ia_config to authenticated;/);
+  assert.match(semComentario, /grant select on public\.ia_config to authenticated;/);
+  assert.match(semComentario, /grant update \(limite_brl, cambio_brl_usd, margem_impostos, margem_seguranca, atualizado_em\) on public\.ia_config to authenticated;/);
   for (const g of semComentario.matchAll(/grant ([^;]*?) on ([^;]*?) to ([^;]*?);/gi))
     if (/ia_config/.test(g[2]) && /authenticated|anon/.test(g[3])) assert.ok(!/insert|all/i.test(g[1]), "INSERT em ia_config liberado: " + g[0]);
   assert.match(semComentario, /"dono altera" on public\.ia_config for update to authenticated\s+using \(dono = auth\.uid\(\) and not exists/);
@@ -532,7 +537,7 @@ test("duas camadas: se a configuração mudar entre a leitura e a reserva, o ban
   /* a janela: 1) a função lê REAL; 2) conta os tokens na Anthropic (gratuito); 3) o dono volta para DEMO ou a
      configuração some; 4) ia_reservar recusa. Resultado: nenhuma reserva e nenhuma geração; a contagem, sim. */
   for (const [naReserva, codigo, status] of [[{ modo: "DEMO" }, "modo_demo", 409], [null, "configuracao_ausente", 503]]) {
-    const b = bancoFalso({ cfg: { modo: "REAL" }, cfgNaReserva: naReserva }), pv = provedorFalso(okAbast);
+    const b = bancoFalso({ cfg: REAL, cfgNaReserva: naReserva }), pv = provedorFalso(okAbast);
     const r = await atenderPedido("rayner", pedido(), { banco: b, provedor: pv });
     assert.equal(r.status, status); assert.equal(r.corpo.erro.codigo, codigo); assert.equal(r.corpo.ok, false);
     assert.equal(pv.contagens, 1, "a contagem de tokens (gratuita) aconteceu antes da reserva");
@@ -541,7 +546,7 @@ test("duas camadas: se a configuração mudar entre a leitura e a reserva, o ban
     assert.deepEqual(b.log.filter((x) => ["preco", "reservar"].includes(x)), ["preco", "reservar"], "ordem do fluxo mantida");
   }
   /* com o banco em REAL, segue normalmente: uma contagem e uma geração, depois da reserva */
-  const b = bancoFalso({ cfg: { modo: "REAL" } }), pv = provedorFalso(okAbast);
+  const b = bancoFalso({ cfg: REAL }), pv = provedorFalso(okAbast);
   assert.equal((await atenderPedido("rayner", pedido(), { banco: b, provedor: pv })).corpo.ok, true);
   assert.equal(pv.contagens, 1); assert.equal(pv.chamadas, 1);
 });
@@ -549,7 +554,7 @@ test("duas camadas: se a configuração mudar entre a leitura e a reserva, o ban
 test("a geração (a chamada que pode cobrar) só acontece depois de uma reserva aprovada", async () => {
   /* banco e provedor gravam a ordem dos eventos numa linha só */
   const ordem = [];
-  const b = bancoFalso({ cfg: { modo: "REAL" } });
+  const b = bancoFalso({ cfg: REAL });
   const reservar = b.reservar.bind(b), marcarEnvio = b.marcarEnvio.bind(b);
   b.reservar = (a) => reservar(a).then((r) => { ordem.push(r.ok ? "reserva_aprovada" : "reserva_recusada"); return r; });
   b.marcarEnvio = (id) => marcarEnvio(id).then((r) => { ordem.push("envio_marcado"); return r; });
@@ -559,10 +564,260 @@ test("a geração (a chamada que pode cobrar) só acontece depois de uma reserva
   assert.deepEqual(ordem, ["contagem", "reserva_aprovada", "envio_marcado", "geracao"]);
   /* reserva recusada: a lista termina na recusa, sem geração */
   ordem.length = 0;
-  const b2 = bancoFalso({ cfg: { modo: "REAL" }, cfgNaReserva: { modo: "DEMO" } });
+  const b2 = bancoFalso({ cfg: REAL, cfgNaReserva: { modo: "DEMO" } });
   const r2 = b2.reservar.bind(b2); b2.reservar = (a) => r2(a).then((r) => { ordem.push(r.ok ? "reserva_aprovada" : "reserva_recusada"); return r; });
   await atenderPedido("rayner", pedido(), { banco: b2, provedor: pv });
   assert.deepEqual(ordem, ["contagem", "reserva_recusada"]);
+});
+
+/* ---------- liberação por ação e por papel (016_ia_acoes.sql + acoes.ts + orcamento.ts) ---------- */
+const sql16 = fs.readFileSync(new URL("supabase/016_ia_acoes.sql", raiz), "utf8");
+const sql16sem = sql16.replace(/\/\*[\s\S]*?\*\//g, "").replace(/--.*$/gm, "");
+const TUDO_LIBERADO = { ...REAL, acoes_reais: ["abastecimento.interpretar", "mercado.nota"], acoes_reais_casa: ["abastecimento.interpretar", "mercado.nota"] };
+
+test("ações: só o abastecimento pode ser REAL no código; o Mercado é DEMO fixo", () => {
+  assert.equal(ACOES["abastecimento.interpretar"].real, true);
+  assert.equal(ACOES["mercado.nota"].real, false);
+  for (const a of Object.values(ACOES)) assert.equal(typeof a.real, "boolean", a.id + " sem o teto de REAL");
+});
+
+test("modo: cada condição sozinha deixa em DEMO (casa, ação no código, ação no banco, papel, chave)", () => {
+  const ab = ACOES["abastecimento.interpretar"], me = ACOES["mercado.nota"];
+  const M = (cfg, chave, acao, papel) => O.decidirModo(O.configDe(cfg), chave, acao, papel);
+  assert.equal(M(TUDO_LIBERADO, true, ab, "dono").modo, "REAL");
+  assert.equal(M(TUDO_LIBERADO, true, ab, "casa").modo, "REAL");
+  assert.match(M({ ...TUDO_LIBERADO, modo: "DEMO" }, true, ab, "dono").motivo, /desligado/);
+  assert.match(M(TUDO_LIBERADO, true, me, "dono").motivo, /só em demonstração/, "o Mercado nunca é REAL, mesmo com o banco liberando");
+  assert.equal(M(TUDO_LIBERADO, true, me, "casa").modo, "DEMO");
+  assert.match(M({ ...TUDO_LIBERADO, acoes_reais: [] }, true, ab, "dono").motivo, /não foi liberado/);
+  assert.match(M({ ...TUDO_LIBERADO, acoes_reais_casa: [] }, true, ab, "casa").motivo, /só para o dono/);
+  assert.equal(M({ ...TUDO_LIBERADO, acoes_reais_casa: [] }, true, ab, "dono").modo, "REAL", "o dono não depende da lista da casa");
+  assert.match(M(TUDO_LIBERADO, false, ab, "dono").motivo, /chave/);
+  /* antes do 016 rodar as colunas não existem: tudo DEMO, sem quebrar */
+  assert.deepEqual([O.configDe({ modo: "REAL" }).acoes_reais, O.configDe({ modo: "REAL" }).acoes_reais_casa], [[], []]);
+  assert.equal(M({ modo: "REAL" }, true, ab, "dono").modo, "DEMO");
+  assert.deepEqual(O.configDe({ modo: "REAL", acoes_reais: "abastecimento.interpretar" }).acoes_reais, [], "só lista vale");
+});
+
+test("fluxo: o Mercado fica em DEMO mesmo com a casa em REAL e o banco liberando: nada contado, reservado ou gerado", async () => {
+  const nota = { versao: 1, modulo: "mercado", acao: "mercado.nota", idempotencia: "mercado-demo-0001", entrada: { texto: "", imagens: [IMG] }, contexto: {} };
+  for (const user of ["rayner", "fernanda"]) {
+    const b = bancoFalso({ cfg: TUDO_LIBERADO }), pv = provedorFalso(okAbast);
+    const r = await atenderPedido(user, { ...nota, modo: "REAL", real: true }, { banco: b, provedor: pv });
+    assert.equal(r.corpo.modo, "DEMO"); assert.equal(r.corpo.resultado._demo, true); assert.match(r.corpo.mensagem, /só em demonstração/);
+    assert.equal(pv.contagens + pv.chamadas, 0); assert.equal(b.linhas.length, 0); assert.ok(!b.log.includes("preco") && !b.log.includes("reservar"));
+  }
+});
+
+test("fluxo: com a casa em REAL e nada liberado, o abastecimento também fica em DEMO, sem nenhuma chamada", async () => {
+  const b = bancoFalso({ cfg: { modo: "REAL" } }), pv = provedorFalso(okAbast);
+  const r = await atenderPedido("rayner", pedido(), { banco: b, provedor: pv });
+  assert.equal(r.corpo.modo, "DEMO"); assert.match(r.corpo.mensagem, /não foi liberado/);
+  assert.equal(pv.contagens + pv.chamadas, 0); assert.equal(b.linhas.length, 0);
+});
+
+test("fluxo: papel casa só usa REAL se a leitura estiver liberada para a casa; o dono, sim", async () => {
+  const pv = provedorFalso(okAbast), b = bancoFalso({ cfg: { ...REAL, acoes_reais_casa: [] } });
+  const casa = await atenderPedido("fernanda", pedido(), { banco: b, provedor: pv });
+  assert.equal(casa.corpo.modo, "DEMO"); assert.match(casa.corpo.mensagem, /só para o dono/);
+  assert.equal(pv.contagens + pv.chamadas, 0, "a casa em DEMO não chega nem à contagem");
+  const dono = await atenderPedido("rayner", pedido(), { banco: b, provedor: pv });
+  assert.equal(dono.corpo.modo, "REAL"); assert.equal(pv.chamadas, 1); assert.equal(b.linhas.length, 1);
+  /* a casa sem a ação em acoes_casa continua sem permissão (antes de qualquer modo) */
+  const sem = await atenderPedido("fernanda", pedido(), { banco: bancoFalso({ cfg: { ...REAL, acoes_casa: [] } }), provedor: pv });
+  assert.equal(sem.status, 403); assert.equal(pv.chamadas, 1);
+});
+
+test("fluxo: o site não consegue pedir REAL, liberar ação, trocar papel, modelo, preço ou orçamento", async () => {
+  const tentativa = pedido({ modo: "REAL", real: true, acoes_reais: ["mercado.nota"], acoes_reais_casa: ["abastecimento.interpretar"], papel: "dono",
+    dono: "rayner", user_id: "rayner", modelo: "claude-opus-5-5", limite_brl: 500, reservado_usd: 0.000001, preco: 0 });
+  const v = validarPedido(tentativa, ACOES);
+  assert.ok(v.ok); assert.equal(v.avisos.filter((a) => /ignorado/.test(a)).length, 11, "os 11 campos falsos foram ignorados");
+  assert.deepEqual(Object.keys(v.pedido).sort(), ["acao", "contexto", "entrada", "idempotencia", "modulo", "versao"]);
+  /* casa em DEMO: continua DEMO */
+  const b = bancoFalso({ cfg: { modo: "DEMO", acoes_reais: [], acoes_reais_casa: [] } }), pv = provedorFalso(okAbast);
+  assert.equal((await atenderPedido("rayner", tentativa, { banco: b, provedor: pv })).corpo.modo, "DEMO");
+  /* a Fernanda dizendo que é o dono continua sendo a casa (o papel vem do banco) */
+  const r2 = await atenderPedido("fernanda", tentativa, { banco: bancoFalso({ cfg: { ...REAL, acoes_reais_casa: [] } }), provedor: pv });
+  assert.equal(r2.corpo.modo, "DEMO"); assert.match(r2.corpo.mensagem, /só para o dono/);
+  assert.equal(pv.contagens + pv.chamadas, 0);
+});
+
+test("duas camadas por ação: se a liberação sair entre a leitura e a reserva, o banco barra a geração paga", async () => {
+  for (const [naReserva, user, codigo, status] of [[{ ...REAL, acoes_reais: [], acoes_reais_casa: [] }, "rayner", "acao_em_demo", 409], [{ ...REAL, acoes_reais_casa: [] }, "fernanda", "papel_em_demo", 403]]) {
+    const b = bancoFalso({ cfg: REAL, cfgNaReserva: naReserva }), pv = provedorFalso(okAbast);
+    const r = await atenderPedido(user, pedido(), { banco: b, provedor: pv });
+    assert.equal(r.corpo.erro.codigo, codigo); assert.equal(r.status, status);
+    assert.equal(pv.contagens, 1, "só a contagem gratuita"); assert.equal(pv.chamadas, 0, "sem geração paga"); assert.equal(b.linhas.length, 0);
+  }
+});
+
+test("SQL 016: marcado como pendente, numa transação, listas vazias e Mercado proibido no próprio banco", () => {
+  assert.match(sql16, /^-- status: pendente/);
+  assert.match(sql16sem, /^\s*begin;/m); assert.match(sql16sem, /commit;\s*$/);
+  assert.ok(!/^(rollback|savepoint)/im.test(sql16sem));
+  assert.match(sql16sem, /add column if not exists acoes_reais text\[\] not null default '\{\}'/);
+  assert.match(sql16sem, /add column if not exists acoes_reais_casa text\[\] not null default '\{\}'/);
+  assert.match(sql16sem, /check \(acoes_reais <@ array\['abastecimento\.interpretar'\]::text\[\]\)/, "o banco recusa mercado.nota na lista REAL");
+  assert.match(sql16sem, /check \(acoes_reais_casa <@ acoes_reais\)/);
+  /* pode rodar de novo: cada constraint é removida antes de ser criada */
+  for (const c of ["ia_config_acoes_reais_permitidas", "ia_config_acoes_reais_casa_liberadas"]) {
+    const d = sql16sem.indexOf("drop constraint if exists " + c), a = sql16sem.indexOf("add constraint " + c);
+    assert.ok(d >= 0 && d < a, c);
+  }
+  /* não liga nada: sem gravar dados, e nada grava o modo REAL */
+  assert.ok(!/\bupdate\s+public\./i.test(sql16sem) && !/\binsert\s+into\s+public\.ia_config/i.test(sql16sem) && !/\bdelete\s+from/i.test(sql16sem));
+  assert.equal((sql16sem.match(/'REAL'/g) || []).length, 1, "o único 'REAL' é a verificação de ia_reservar");
+  assert.ok(!/to anon/.test(sql16sem) && !/garmin/i.test(sql16sem));
+});
+
+test("SQL 016: o site só altera os campos de limite (nem modo, nem listas, nem fator de correção)", () => {
+  assert.match(sql16sem, /revoke update on public\.ia_config from anon, authenticated;/);
+  const g = /grant update \(([^)]*)\) on public\.ia_config to authenticated;/.exec(sql16sem);
+  assert.ok(g);
+  const cols = g[1].split(",").map((x) => x.trim());
+  assert.deepEqual(cols, ["limite_brl", "cambio_brl_usd", "margem_impostos", "margem_seguranca", "atualizado_em"]);
+  assert.ok(!/grant[^;(]*\b(update|all)\b[^;(]*on public\.ia_config to authenticated/i.test(sql16sem + sql.replace(/^--.*$/gm, "")), "nenhum UPDATE da tabela inteira");
+  /* o painel do Sistema manda só campos liberados */
+  const campos = /var SIS_IA_CAMPOS=\[([^\]]*)\]/.exec(sisJs)[1].split(",").map((x) => x.trim().replace(/"/g, ""));
+  for (const c of campos) assert.ok(cols.includes(c), c + " precisa estar liberado no banco");
+});
+
+test("SQL 016: ia_reservar exige ação e papel liberados logo depois do modo REAL e antes de tudo o que já existia", () => {
+  assert.deepEqual(problemasReservar(sql16), [], "as regras do 015 continuam, na mesma ordem");
+  const c = corpoReservar(sql16), pos = (re) => { const m = re.exec(c); return m ? m.index : -1; };
+  const demo = pos(/'modo_demo'/), acao = pos(/'acao_em_demo'/), papel = pos(/'papel_em_demo'/), idem = pos(/idempotencia\s*=\s*p_idempotencia/);
+  assert.ok(demo >= 0 && acao > demo && papel > acao && idem > papel, `ordem: modo → ação → papel → idempotência (${demo}, ${acao}, ${papel}, ${idem})`);
+  assert.match(c, /select c\.acoes_reais, c\.acoes_reais_casa into v_reais, v_reais_casa from public\.ia_config c where c\.dono = p_dono;/);
+  assert.match(c, /not \(p_acao = any \(coalesce\(v_reais, '\{\}'\)\)\)/);
+  assert.match(c, /p_user is distinct from p_dono and not \(p_acao = any \(coalesce\(v_reais_casa, '\{\}'\)\)\)/);
+  assert.equal((c.match(/insert\s+into\s+public\.ia_uso/gi) || []).length, 1, "as recusas novas não gravam nada");
+  assert.match(sql16, /security definer set search_path = ''/);
+  assert.match(sql16sem, /revoke execute on function public\.ia_reservar\(uuid, uuid, text, text, text, text, numeric, integer, boolean\) from public, anon, authenticated;/);
+  assert.match(sql16sem, /grant execute on function public\.ia_reservar\(uuid, uuid, text, text, text, text, numeric, integer, boolean\) to service_role;/);
+  /* a conferência pega a versão sem as verificações novas */
+  const n = sql16.replace(/\r\n/g, "\n"), sem = n.replace(/\n  \/\* a ação precisa estar liberada[\s\S]*?'papel_em_demo'\);\n  end if;\n/, "\n");
+  assert.notEqual(sem, n); assert.ok(!/acao_em_demo/.test(corpoReservar(sem)));
+  /* os códigos novos existem no contrato */
+  for (const k of ["acao_em_demo", "papel_em_demo"]) assert.equal(respostaErro(k, {}).corpo.erro.codigo, k);
+});
+
+test("função: lê a configuração inteira (antes do 016, as listas faltam e tudo fica em DEMO, sem erro)", () => {
+  const idx = fs.readFileSync(new URL("supabase/functions/rac-ia/index.ts", raiz), "utf8");
+  assert.match(idx, /from\("ia_config"\)\.select\("\*"\)\.eq\("dono", dono\)/);
+  const srv = fs.readFileSync(new URL("supabase/functions/rac-ia/servico.ts", raiz), "utf8");
+  assert.match(srv, /decidirModo\(cfg, !!d\.provedor, a, papel\)/, "o modo considera a ação e o papel");
+});
+
+/* ---------- o que é contado e o que é cobrado (docs/rac-intelligence.md, "O que é contado e o que é cobrado") ----------
+   contagens = contagem oficial na Anthropic (gratuita, mas o conteúdo sai do servidor)
+   chamadas  = geração (a única que cobra)
+   linhas    = reservas gravadas no banco */
+const NOTA = (extra = {}) => ({ versao: 1, modulo: "mercado", acao: "mercado.nota", idempotencia: "matriz-nota-" + (++seq), entrada: { texto: "", imagens: [IMG] }, contexto: {}, ...extra });
+
+test("matriz A: DEMO ou autorização negada na leitura da função: nenhuma contagem, nenhuma reserva, nenhuma geração", async () => {
+  const casos = [
+    ["pedido inválido", "rayner", { ...pedido(), versao: 2 }, {}],
+    ["sem permissão (casa sem a ação em acoes_casa)", "fernanda", pedido(), { cfg: { ...REAL, acoes_casa: [] } }],
+    ["sem as tabelas", "rayner", pedido(), { semTabela: true }],
+    ["sem configuração da casa", "rayner", pedido({ modo: "REAL" }), { cfg: null }],
+    ["casa em DEMO", "rayner", pedido({ modo: "REAL" }), { cfg: { ...TUDO_LIBERADO, modo: "DEMO" } }],
+    ["Mercado (DEMO fixo no código)", "rayner", NOTA({ modo: "REAL" }), { cfg: TUDO_LIBERADO }],
+    ["ação não liberada no banco", "rayner", pedido(), { cfg: { ...REAL, acoes_reais: [], acoes_reais_casa: [] } }],
+    ["casa sem a ação liberada para a casa", "fernanda", pedido(), { cfg: { ...REAL, acoes_reais_casa: [] } }],
+    ["sem preço cadastrado", "rayner", pedido(), { cfg: REAL, semPreco: true }],
+    ["sem a chave no servidor", "rayner", pedido(), { cfg: REAL, semChave: true }],
+  ];
+  for (const [nome, user, corpo, op] of casos) {
+    const b = bancoFalso(op), pv = provedorFalso(okAbast);
+    if (op.semPreco) b.preco = async () => { b.log.push("preco"); return null; };
+    const r = await atenderPedido(user, corpo, { banco: b, provedor: op.semChave ? null : pv });
+    assert.equal(pv.contagens, 0, nome + ": nenhuma contagem oficial");
+    assert.equal(pv.chamadas, 0, nome + ": nenhuma geração paga");
+    assert.equal(b.linhas.length, 0, nome + ": nenhuma reserva");
+    assert.ok(!b.log.includes("reservar") && !b.log.includes("envio"), nome + ": o banco nem foi chamado para reservar");
+    if (r.corpo.ok) {
+      assert.equal(r.corpo.modo, "DEMO", nome);
+      assert.equal(r.corpo.consumo.uso_api, null, nome + ": DEMO não informa uso da API");
+      assert.equal(r.corpo.consumo.reservado_usd, null, nome + ": DEMO não reserva");
+    }
+  }
+});
+
+test("matriz B: REAL autorizado, mas recusado depois da contagem: só a contagem gratuita, sem reserva nem geração", async () => {
+  const ocupado = bancoFalso({ cfg: REAL });
+  ocupado.linhas.push({ id: "x1", user: "rayner", idem: "outra-1", estado: "enviando", reservado: 0.001 }, { id: "x2", user: "rayner", idem: "outra-2", estado: "enviando", reservado: 0.001 });
+  const casos = [
+    ["pedido grande demais (contado acima do limite do modelo)", "rayner", bancoFalso({ cfg: REAL }), 200000, "muito_grande"],
+    ["orçamento esgotado", "rayner", bancoFalso({ cfg: REAL, teto: 0.000001 }), 2100, "orcamento_esgotado"],
+    ["limite de uso (2 em andamento)", "rayner", ocupado, 2100, "limite_de_uso"],
+    ["modo voltou para DEMO antes da reserva", "rayner", bancoFalso({ cfg: REAL, cfgNaReserva: { ...REAL, modo: "DEMO" } }), 2100, "modo_demo"],
+    ["configuração apagada antes da reserva", "rayner", bancoFalso({ cfg: REAL, cfgNaReserva: null }), 2100, "configuracao_ausente"],
+    ["ação desliberada antes da reserva", "rayner", bancoFalso({ cfg: REAL, cfgNaReserva: { ...REAL, acoes_reais: [], acoes_reais_casa: [] } }), 2100, "acao_em_demo"],
+    ["casa desliberada antes da reserva", "fernanda", bancoFalso({ cfg: REAL, cfgNaReserva: { ...REAL, acoes_reais_casa: [] } }), 2100, "papel_em_demo"],
+  ];
+  for (const [nome, user, b, contar, codigo] of casos) {
+    const pv = provedorFalso(okAbast, contar), antes = b.linhas.length;
+    const r = await atenderPedido(user, pedido(), { banco: b, provedor: pv });
+    assert.equal(r.corpo.ok, false, nome); assert.equal(r.corpo.erro.codigo, codigo, nome);
+    assert.equal(pv.contagens, 1, nome + ": uma contagem oficial (gratuita)");
+    assert.equal(pv.chamadas, 0, nome + ": nenhuma geração paga");
+    assert.equal(b.linhas.length, antes, nome + ": nenhuma reserva nova");
+    assert.ok(!b.log.includes("envio"), nome + ": nada marcado como enviado");
+  }
+  /* repetição do mesmo clique: conta de novo (gratuito), mas não gera de novo */
+  const b = bancoFalso({ cfg: REAL }), pv = provedorFalso(okAbast), p1 = pedido();
+  await atenderPedido("rayner", p1, { banco: b, provedor: pv });
+  const rep = await atenderPedido("rayner", p1, { banco: b, provedor: pv });
+  assert.equal(rep.corpo.erro.codigo, "repetida"); assert.deepEqual([pv.contagens, pv.chamadas, b.linhas.length], [2, 1, 1]);
+});
+
+test("matriz C: só com tudo autorizado e a reserva aprovada há uma geração, e ela é a única", async () => {
+  for (const user of ["rayner", "fernanda"]) {
+    const b = bancoFalso({ cfg: REAL }), pv = provedorFalso(okAbast);
+    const r = await atenderPedido(user, pedido(), { banco: b, provedor: pv });
+    assert.equal(r.corpo.modo, "REAL", user);
+    assert.deepEqual([pv.contagens, pv.chamadas, b.linhas.length], [1, 1, 1], user);
+    assert.deepEqual(r.corpo.consumo.uso_api, { tokens_entrada: 2100, tokens_saida: 300 }, user + ": os tokens faturáveis vêm do uso informado pela API");
+  }
+  /* contagem oficial indisponível: só a estimativa interna (nada sai além da tentativa), e a reserva fica maior */
+  const b = bancoFalso({ cfg: REAL }), pv = provedorFalso(okAbast, new Error("fora do ar"));
+  await atenderPedido("rayner", pedido(), { banco: b, provedor: pv });
+  assert.equal(b.linhas[0].oficial, false); assert.ok(b.linhas[0].tokens > 2100); assert.equal(pv.chamadas, 1);
+});
+
+test("limite interno: com a Anthropic aceitando tudo (como uma conta em US$ 500), as gerações param quando o teto do RAC acaba", async () => {
+  const teto = 0.01, b = bancoFalso({ cfg: REAL, teto }), pv = provedorFalso(okAbast);
+  const codigos = [];
+  for (let i = 0; i < 80; i++) {
+    const r = await atenderPedido("rayner", pedido({ idempotencia: "teto-seq-" + i }), { banco: b, provedor: pv });
+    codigos.push(r.corpo.ok ? "ok" : r.corpo.erro.codigo);
+  }
+  const primeiro = codigos.indexOf("orcamento_esgotado");
+  assert.ok(primeiro > 0, "algumas leituras passam e depois o teto barra: " + codigos.join(","));
+  assert.ok(codigos.slice(primeiro).every((c) => c === "orcamento_esgotado"), "depois de esgotado, nada mais passa");
+  assert.equal(pv.chamadas, primeiro, "uma geração por leitura aceita, nenhuma depois do esgotamento");
+  const comp = O.comprometidoUsd(b.linhas.map((l) => ({ estado: l.estado, reservado_usd: l.reservado, estimado_usd: l.estimado })), O.CONFIG_PADRAO);
+  assert.ok(comp <= teto, `comprometido ${comp} dentro do teto ${teto}`);
+});
+
+test("SQL: o teto do RAC é conferido no banco sem depender de nada externo, antes de gravar a reserva", () => {
+  for (const [nome, texto] of [["015", sql], ["016", sql16]]) {
+    const c = corpoReservar(texto);
+    assert.match(c, /v_teto := public\.ia_teto_usd\(p_dono\);\s*v_comp := public\.ia_comprometido_usd\(p_dono, v_mes\);\s*if v_comp \+ p_reservado_usd > v_teto then\s*return jsonb_build_object\('ok', false, 'codigo', 'orcamento_esgotado'/, nome);
+    assert.ok(c.indexOf("'orcamento_esgotado'") < c.search(/insert\s+into\s+public\.ia_uso/i), nome + ": recusa antes de gravar");
+  }
+});
+
+test("textos: o limite de US$ 7 na Anthropic não aparece como configurado; o limite interno e a validade da chave estão explicados", () => {
+  assert.ok(!/limite é de US\$ 7/.test(sisJs), "o Sistema não pode dizer que o limite de US$ 7 existe");
+  assert.match(trecho(sisJs, "function sisIA(", "function renderSistema("), /O limite de gasto da conta na Anthropic é outro e é configurado no Console/);
+  const doc = fs.readFileSync(new URL("docs/rac-intelligence.md", raiz), "utf8");
+  assert.ok(!/US\$ 7,00 no Console da Anthropic, sem recarga automática \(configurado pelo dono\)/.test(doc));
+  assert.match(doc, /## Limites: o do RAC e o da Anthropic/); assert.match(doc, /\*\*Não configurado\.\*\* A organização mostra US\$ 500/);
+  assert.match(doc, /## O que é contado e o que é cobrado/); assert.match(doc, /nenhuma geração paga acontece em DEMO nem quando alguma condição de autorização falha/);
+  assert.match(doc, /## Chave da Anthropic/); assert.match(doc, /vale \*\*30 dias\*\*/);
+  assert.match(doc, /### Fase F: ordem de publicação/); assert.match(doc, /\*\*não\*\* é preciso rodar o 015\s+de novo/);
 });
 
 /* ---------- chaves do próprio Supabase (P1 da auditoria da Fase C): mesmo padrão da função garmin ---------- */
@@ -608,14 +863,24 @@ const famJs = fs.readFileSync(new URL("js/familia.js", raiz), "utf8");
 const merJs = fs.readFileSync(new URL("mercado.js", raiz), "utf8");
 const trecho = (t, ini, fim) => { const i = t.indexOf(ini); assert.ok(i >= 0, "não achei " + ini); const j = t.indexOf(fim, i + ini.length); return t.slice(i, j < 0 ? undefined : j); };
 
-test("site: a interface de IA está ligada, na fase só de demonstração", () => {
-  assert.match(appJs, /var IA_LIGADA=true,IA_SO_DEMO=true;/);
+test("site: a interface de IA está ligada e os textos seguem o modo que veio do servidor", () => {
+  assert.match(appJs, /var IA_LIGADA=true;/);
+  assert.ok(!/IA_SO_DEMO/.test(appJs + sisJs), "sem marca de modo no site: quem decide é o servidor");
   assert.match(famJs, /if\(typeof iaLigada==="function"&&iaLigada\(\)\)f\.appendChild\(iaBotao\(\{modulo:"abastecimento",acao:"abastecimento\.interpretar"/);
   assert.match(merJs, /if \(typeof window\.iaLigada === "function" && window\.iaLigada\(\)\) ia\.appendChild\(window\.iaBotao\(\{ modulo: "mercado", acao: "mercado\.nota"/);
   assert.match(sisJs, /if\(typeof iaLigada==="function"&&iaLigada\(\)\)try\{root\.appendChild\(sisIA\(\)\)\}/);
-  /* os textos avisam que é demonstração */
-  assert.match(trecho(appJs, "function iaBotao(", "\n  /* ====="), /Nesta fase a resposta é simulada, não consome orçamento e não pode ser salva/);
-  assert.match(trecho(sisJs, "function sisIA(", "function renderSistema("), /Fase de demonstração: as leituras com IA são simuladas, não consomem orçamento/);
+  /* os textos distinguem DEMONSTRAÇÃO (simulada, sem custo, não salva) e REAL (usa o orçamento, conferir antes de salvar) */
+  const botao = trecho(appJs, "function iaBotao(", "\n  /* =====");
+  assert.match(botao, /DEMONSTRAÇÃO é simulada, não consome orçamento e não pode ser salva; REAL é lida pelo Claude, usa o orçamento da casa/);
+  const demo = botao.slice(botao.indexOf('r.modo==="DEMO"'), botao.indexOf('r.modo==="REAL"'));
+  assert.match(demo, /st\.textContent="DEMONSTRAÇÃO: resposta simulada, nada foi cobrado nem salvo/);
+  const real = botao.slice(botao.indexOf('r.modo==="REAL"'), botao.indexOf("o.real("));
+  assert.match(real, /st\.textContent="REAL · lido pelo Claude, usou o orçamento de IA da casa\. Confira abaixo antes de salvar/);
+  assert.match(trecho(appJs, "function iaPrevia(", "\n  /* botão"), /r\.mensagem\?h\("p",\{class:"sub"/, "a prévia DEMO mostra por que não foi REAL");
+  const painel = trecho(sisJs, "function sisIA(", "function renderSistema(");
+  assert.match(painel, /O modo é decidido pelo servidor e não pode ser trocado pelo site/);
+  assert.match(painel, /"Por leitura: Abastecimento "/); assert.match(painel, /Nota do mercado DEMO \(fixo nesta fase\)/);
+  assert.ok(!/Fase de demonstração: as leituras com IA são simuladas/.test(painel), "o texto antigo diria DEMO mesmo em REAL");
 });
 
 test("site: o painel do Sistema não oferece ligar o modo REAL e nunca envia o modo", () => {

@@ -17,6 +17,7 @@
 -- o administrador cria a do dono uma única vez no SQL Editor, na Fase B (docs/rac-intelligence.md). Sem linha, a função
 -- rac-ia responde só em DEMO, então uma conta nova não consegue consumir a IA.
 --
+-- Depois do 016_ia_acoes.sql: se rodar este arquivo de novo, rode o 016 logo em seguida (ele traz a ia_reservar atual).
 -- Tudo dentro de uma transação: se qualquer comando falhar, nada fica criado pela metade.
 begin;
 
@@ -43,7 +44,9 @@ create policy "dono altera" on public.ia_config for update to authenticated
   using (dono = auth.uid() and not exists (select 1 from public.membros m where m.membro = auth.uid()))
   with check (dono = auth.uid());
 revoke all on public.ia_config from anon, authenticated;
-grant select, update on public.ia_config to authenticated;
+grant select on public.ia_config to authenticated;
+-- o site só altera os campos de limite: modo e listas de ações só pelo SQL Editor (016_ia_acoes.sql)
+grant update (limite_brl, cambio_brl_usd, margem_impostos, margem_seguranca, atualizado_em) on public.ia_config to authenticated;
 
 -- 2) Preços por modelo (USD por milhão de tokens). Conferidos na página oficial; trocar aqui quando mudarem.
 create table if not exists public.ia_precos (

@@ -296,14 +296,32 @@
     if(e==="reconciliado")return u.reconciliado_cobrado?r("Conferida: foi cobrada",+u.reconciliado_usd||0,"cobrado"):r("Conferida: não foi cobrada",0,"sem custo");
     if(e==="falhou_sem_envio")return r("Falhou antes do envio"+(erro?" ("+erro+")":""),0,"sem custo");
     return r(String(e||"?"),null,"")}
-  /* valor em dólar digitado pela pessoa ("0,0021", "US$ 0.0021", "1.234,50"): número entre 0 e o máximo, ou o motivo */
-  function iaValorUsd(txt,max){var t=String(txt==null?"":txt).replace(/US\$|\$|\s/gi,"");
-    if(!t)return {ok:false,motivo:"Digite o valor em dólar (pode ser 0)."};
+  /* valor digitado pela pessoa ("0,0021", "US$ 0.0021", "1.234,50"): número entre 0 e o máximo, ou o motivo.
+     brl=true: em reais (só muda as mensagens) */
+  function iaValorUsd(txt,max,brl){var t=String(txt==null?"":txt).replace(/US\$|R\$|\$|\s/gi,""),moeda=brl?"R$ ":"US$ ";
+    if(!t)return {ok:false,motivo:brl?"Digite o valor em reais.":"Digite o valor em dólar (pode ser 0)."};
     if(!/^-?\d[\d.,]*$/.test(t))return {ok:false,motivo:"Use só números, com vírgula ou ponto (ex.: 0,0021)."};
     if(t.indexOf(",")>=0)t=t.replace(/\./g,"").replace(",",".");else if((t.match(/\./g)||[]).length>1)return {ok:false,motivo:"Número inválido."};
     var v=parseFloat(t);if(!isFinite(v)||/^-?[.,]|[.,]$/.test(t))return {ok:false,motivo:"Número inválido."};
     if(v<0)return {ok:false,motivo:"O valor não pode ser negativo."};
-    if(max!=null&&v>max)return {ok:false,motivo:"Valor acima de US$ "+iaNum(max,2)+": confira no Console."};
+    if(max!=null&&v>max)return {ok:false,motivo:"Valor acima de "+moeda+iaNum(max,2)+": confira no Console."};
     return {ok:true,valor:Math.round(v*1e6)/1e6}}
-  raiz.RACnucleo={norm:norm,urlAbs:urlAbs,lerAbast:lerAbast,TEMAS:TEMAS,temasDe:temasDe,juntarDados:juntarDados,SKILLS:SKILLS,compatVaga:compatVaga,omsZ:omsZ,omsValor:omsValor,percentilDeZ:percentilDeZ,csvLinhas:csvLinhas,napperLer:napperLer,bebeDias:bebeDias,VACINAS_PNI:VACINAS_PNI,vacinasCalendario:vacinasCalendario,mediana:mediana,prontidao:prontidao,somaDiasISO:somaDiasISO,correlacao:correlacao,chuvaAviso:chuvaAviso,diasEntre:diasEntre,chaveProduto:chaveProduto,previsaoCompras:previsaoCompras,padraoCompras:padraoCompras,itemBate:itemBate,notaItens:notaItens,dividirItens:dividirItens,lerEmailVaga:lerEmailVaga,vagaParecida:vagaParecida,iaAbastTexto:iaAbastTexto,iaNotaTexto:iaNotaTexto,iaNum:iaNum,iaUsd:iaUsd,iaReais:iaReais,iaBrl:iaBrl,iaResumo:iaResumo,iaAlerta:iaAlerta,iaEstados:iaEstados,iaNomeMes:iaNomeMes,iaCompetencias:iaCompetencias,iaModulo:iaModulo,iaUsoLinha:iaUsoLinha,iaValorUsd:iaValorUsd};
+  /* "2026-10" (campo de mês) ou "2026-10-15" → "2026-10-01" */
+  function iaMesIso(v){var m=/^(\d{4})-(\d{2})/.exec(String(v||""));return m&&+m[2]>=1&&+m[2]<=12?m[1]+"-"+m[2]+"-01":""}
+  /* custo por mês: o que o RAC registrou (concluídas pelo estimado + conferidas pelo valor cobrado; sem o fator de
+     correção) × o que a pessoa copiou do Console. Mês sem cobrança registrada fica "não conferido" (null), nunca zero.
+     O Console mostra a organização inteira: outros usos da mesma conta entram lá e não no RAC */
+  function iaMeses(linhas,cobrancas){var por={};
+    function m(k){k=iaMesIso(k);return por[k]||(por[k]={mes:k,rac:0,aberto:0,n:0,cobrado:null,cobradoBrl:null,obs:""})}
+    (linhas||[]).forEach(function(u){if(!iaMesIso(u.mes))return;var x=m(u.mes);x.n++;
+      if(u.estado==="concluido")x.rac+=+u.estimado_usd||0;
+      else if(u.estado==="reconciliado"){if(u.reconciliado_cobrado)x.rac+=+u.reconciliado_usd||0}
+      else if(u.estado==="reservado"||u.estado==="enviando"||u.estado==="incerto")x.aberto+=+u.reservado_usd||0});
+    (cobrancas||[]).forEach(function(c){if(!iaMesIso(c.mes))return;var x=m(c.mes);x.cobrado=c.valor_usd==null?null:+c.valor_usd;x.cobradoBrl=c.valor_brl==null?null:+c.valor_brl;x.obs=c.observacao||""});
+    return Object.keys(por).sort().reverse().map(function(k){var x=por[k];x.rac=Math.round(x.rac*1e6)/1e6;x.aberto=Math.round(x.aberto*1e6)/1e6;
+      if(x.cobrado==null){x.dif=null;x.difPct=null;x.difTxt="não conferido"}
+      else{x.dif=Math.round((x.cobrado-x.rac)*1e6)/1e6;x.difPct=x.rac>0?Math.round(x.dif/x.rac*1000)/10:null;
+        x.difTxt=Math.abs(x.dif)<0.00005?"igual ao RAC":"Console "+iaUsd(Math.abs(x.dif))+(x.dif>0?" acima":" abaixo")+(x.difPct==null?"":" ("+(x.dif>0?"+":"−")+iaNum(Math.abs(x.difPct),1)+"%)")}
+      return x})}
+  raiz.RACnucleo={norm:norm,urlAbs:urlAbs,lerAbast:lerAbast,TEMAS:TEMAS,temasDe:temasDe,juntarDados:juntarDados,SKILLS:SKILLS,compatVaga:compatVaga,omsZ:omsZ,omsValor:omsValor,percentilDeZ:percentilDeZ,csvLinhas:csvLinhas,napperLer:napperLer,bebeDias:bebeDias,VACINAS_PNI:VACINAS_PNI,vacinasCalendario:vacinasCalendario,mediana:mediana,prontidao:prontidao,somaDiasISO:somaDiasISO,correlacao:correlacao,chuvaAviso:chuvaAviso,diasEntre:diasEntre,chaveProduto:chaveProduto,previsaoCompras:previsaoCompras,padraoCompras:padraoCompras,itemBate:itemBate,notaItens:notaItens,dividirItens:dividirItens,lerEmailVaga:lerEmailVaga,vagaParecida:vagaParecida,iaAbastTexto:iaAbastTexto,iaNotaTexto:iaNotaTexto,iaNum:iaNum,iaUsd:iaUsd,iaReais:iaReais,iaBrl:iaBrl,iaResumo:iaResumo,iaAlerta:iaAlerta,iaEstados:iaEstados,iaNomeMes:iaNomeMes,iaCompetencias:iaCompetencias,iaModulo:iaModulo,iaUsoLinha:iaUsoLinha,iaValorUsd:iaValorUsd,iaMesIso:iaMesIso,iaMeses:iaMeses};
 })(typeof window!=="undefined"?window:globalThis);

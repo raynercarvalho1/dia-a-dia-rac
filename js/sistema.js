@@ -382,13 +382,63 @@
       return h("div",null,h("h3",{class:"dayh",text:"Chamadas para conferir"}),
         h("p",{class:"sub",text:"A IA pode ter cobrado ou não (tempo esgotado, falha de rede). Até você conferir, a reserva de cada uma continua contando no mês."}),
         ul,l.length>=50?h("p",{class:"sub",text:"Mostrando as 50 mais novas."}):null)}
+    /* uso dos últimos meses para o comparativo: lido em páginas (o Supabase devolve até 1.000 linhas por consulta).
+       Passando de 10 páginas, avisa que é parcial em vez de mostrar um total errado */
+    function usoDesde(desde){var tudo=[],PAG=1000,MAX=10;
+      function pag(i){return SB.from("ia_uso").select("mes,estado,estimado_usd,reservado_usd,reconciliado_cobrado,reconciliado_usd").gte("mes",desde)
+        .order("criado_em",{ascending:true}).order("id",{ascending:true}).range(i*PAG,i*PAG+PAG-1)
+        .then(function(r){if(r.error)throw new Error(r.error.message);var l=r.data||[];tudo=tudo.concat(l);return l.length===PAG&&i+1<MAX?pag(i+1):{linhas:tudo,parcial:l.length===PAG}})}
+      return pag(0)}
+    /* custos por mês: o que o RAC registrou × o que foi cobrado no Console (copiado pelo dono), com a diferença.
+       Mês sem cobrança registrada fica "não conferido"; nada é inventado */
+    function custos(mesAtual,cobs){
+      var box=h("div",null,h("p",{class:"sub",text:"Carregando…"})),meses=NUCLEO.iaCompetencias(mesAtual,12);
+      usoDesde(meses[meses.length-1]).then(function(u){
+        var l=NUCLEO.iaMeses(u.linhas,cobs).filter(function(x){return x.mes>=meses[meses.length-1]});box.innerHTML="";
+        if(u.parcial)box.appendChild(h("p",{class:"qrwarn",text:"⚠ Há chamadas demais para somar aqui: os totais abaixo são parciais."}));
+        if(!l.length){box.appendChild(h("p",{class:"empty",text:"Ainda não há chamadas pagas nem cobranças registradas."}));return}
+        var mx=Math.max.apply(null,l.map(function(x){return Math.max(x.rac,x.cobrado||0)}).concat([0]))||1;
+        function barra(x,tipo){var v=tipo==="rac"?x.rac:x.cobrado,nome=(tipo==="rac"?"RAC":"Console")+" · "+NUCLEO.iaNomeMes(x.mes),
+            txt=tipo==="rac"?usd(x.rac):x.cobrado==null?"não conferido":usd(x.cobrado),
+            b=h("button",{type:"button",class:"hb"},h("span",{class:"hbl"},tipo==="rac"?"Pelo RAC":"No Console",h("small",{text:NUCLEO.iaNomeMes(x.mes)})),
+              h("span",{class:"hbt"},h("span",{class:"hbf"+(tipo==="rac"?"":" iacons"),style:"width:"+(v?Math.max(2,v/mx*100):0).toFixed(1)+"%"})),h("span",{class:"hbv",text:txt}));
+          racDica.ligar(b,function(){return [nome,tipo==="rac"?x.n+(x.n===1?" chamada":" chamadas")+(x.aberto?" · "+usd(x.aberto)+" ainda em aberto":""):x.difTxt+(x.cobradoBrl!=null?" · "+NUCLEO.iaReais(x.cobradoBrl)+" pagos":"")]});return b}
+        box.appendChild(h("div",{class:"hbars"},l.slice(0,6).map(function(x){return [barra(x,"rac"),barra(x,"cons")]})));
+        box.appendChild(h("ul",{class:"wl iahist"},l.map(function(x){
+          return h("li",null,h("span",{class:"grow"},h("b",{text:NUCLEO.iaNomeMes(x.mes)}),
+            h("span",{class:"sub",text:"RAC "+usd(x.rac)+" · Console "+(x.cobrado==null?"não conferido":usd(x.cobrado)+(x.cobradoBrl!=null?" ("+NUCLEO.iaReais(x.cobradoBrl)+")":""))+(x.aberto?" · em aberto "+usd(x.aberto):"")+(x.obs?" · "+x.obs:"")})),
+            h("span",{class:"end",text:x.difTxt}))})))})
+      .catch(function(e){box.innerHTML="";box.appendChild(h("p",{class:"empty",text:"Não consegui somar os meses ("+e.message+")."}))});
+      /* registrar o que o Console cobrou, por competência (o mês da fatura), com confirmação antes de substituir */
+      var mes=h("input",{type:"month",value:String(mesAtual||"").slice(0,7),"aria-label":"Mês da cobrança"}),
+        vu=h("input",{type:"text",inputmode:"decimal",placeholder:"ex.: 0,42","aria-label":"Valor cobrado em US$"}),
+        vb=h("input",{type:"text",inputmode:"decimal",placeholder:"opcional","aria-label":"Valor pago em R$ (opcional)"}),
+        ob=h("input",{type:"text",maxlength:"300",placeholder:"opcional (ex.: inclui outros usos da conta)","aria-label":"Observação"}),
+        gr=h("button",{type:"button",text:"Registrar cobrança"}),msg=h("p",{class:"sub",role:"status"}),conf=h("div",{class:"vfil"});
+      function gravar(o){gr.disabled=true;msg.textContent="Gravando…";conf.innerHTML="";
+        SB.from("ia_cobranca").upsert(o).then(sbOk).then(function(){desenhar()}).catch(function(e){gr.disabled=false;msg.textContent="Não consegui gravar: "+e.message})}
+      gr.onclick=function(){conf.innerHTML="";var m=NUCLEO.iaMesIso(mes.value),a=NUCLEO.iaValorUsd(vu.value,1000),r=vb.value.trim()?NUCLEO.iaValorUsd(vb.value,100000,true):{ok:true,valor:null};
+        if(!m){msg.textContent="Escolha o mês da cobrança.";return}if(m>NUCLEO.iaMesIso(mesAtual)){msg.textContent="Esse mês ainda não chegou.";return}
+        if(!a.ok){msg.textContent=a.motivo;return}if(!r.ok){msg.textContent=r.motivo;return}
+        var o={dono:EU.id,mes:m,valor_usd:a.valor,valor_brl:r.valor,observacao:ob.value.trim().slice(0,300)||null,informado_em:new Date().toISOString()},
+          ja=cobs.filter(function(x){return NUCLEO.iaMesIso(x.mes)===m})[0];
+        if(!ja){gravar(o);return}
+        var sim=h("button",{type:"button",text:"Substituir"}),nao=h("button",{type:"button",class:"ghostbtn",text:"Cancelar"});
+        sim.onclick=function(){gravar(o)};nao.onclick=function(){conf.innerHTML="";msg.textContent=""};
+        msg.textContent=NUCLEO.iaNomeMes(m)+" já tem "+(ja.valor_usd==null?"um registro":usd(ja.valor_usd))+". Substituir por "+usd(a.valor)+"?";conf.appendChild(sim);conf.appendChild(nao)};
+      return h("div",null,h("h3",{class:"dayh",text:"Custos por mês: RAC × Console"}),
+        h("p",{class:"sub",text:"\"Pelo RAC\" é o que o RAC registrou (estimativa das leituras e valores já conferidos). \"No Console\" é o que você copiou do Console da Anthropic, que mostra a conta inteira: outros usos da mesma conta aparecem lá e não aqui."}),
+        box,h("div",{class:"wform iacob"},h("div",{class:"two"},h("label",null,"Mês da cobrança",mes),h("label",null,"Cobrado no Console (US$)",vu)),
+          h("div",{class:"two"},h("label",null,"Pago em reais (R$)",vb),h("label",null,"Observação",ob))),
+        h("div",{class:"vfil"},gr),conf,msg)}
     function desenhar(){
       Promise.all([SB.rpc("ia_totais_mes").then(sbOk),SB.from("ia_config").select("*").maybeSingle().then(sbOk),SB.from("ia_precos").select("*").then(sbOk),
         isOwner()?SB.from("ia_uso").select("id,criado_em,modulo,acao,modelo,estado,reservado_usd,erro_codigo,enviado_em").in("estado",["incerto","enviando"]).order("criado_em",{ascending:false}).limit(50).then(sbOk):Promise.resolve([]),
-        isOwner()?SB.from("ia_cobranca").select("*").order("mes",{ascending:false}).limit(1).then(sbOk):Promise.resolve([])])
+        isOwner()?SB.from("ia_cobranca").select("*").order("mes",{ascending:false}).limit(24).then(sbOk):Promise.resolve([])])
       .then(function(r){
         var t=r[0]||{},semConfig=!r[1],cfg=r[1]||{modo:"DEMO",limite_brl:50,cambio_brl_usd:6,margem_impostos:0.12,margem_seguranca:0.1},s=NUCLEO.iaResumo(t,cfg),al=NUCLEO.iaAlerta(s);
         function brl(v){return "≈ "+NUCLEO.iaBrl(v,cfg)}
+        var cobMes=(r[4]||[]).filter(function(x){return NUCLEO.iaMesIso(x.mes)===NUCLEO.iaMesIso(s.mes)})[0];
         corpo.innerHTML="";
         if(al)corpo.appendChild(h("p",{class:al.forte?"qrwarn":"sub",text:al.texto}));
         corpo.appendChild(h("div",{class:"kgasto"},
@@ -398,7 +448,7 @@
           kpi("Teto interno",usd(s.teto),brl(s.teto)+" de "+NUCLEO.iaReais(cfg.limite_brl)),
           kpi("Estimado pelo RAC",usd(s.estimado)),
           kpi("Reservado em aberto",usd(s.aberto)),
-          kpi("Cobrança efetiva",r[4][0]&&r[4][0].valor_usd!=null?usd(r[4][0].valor_usd)+" ("+String(r[4][0].mes).slice(0,7)+")":"não informada")));
+          kpi("Cobrança efetiva",cobMes&&cobMes.valor_usd!=null?usd(cobMes.valor_usd):"não conferida",cobMes&&cobMes.valor_brl!=null?NUCLEO.iaReais(cobMes.valor_brl)+" pagos":"do Console, neste mês")));
         corpo.appendChild(h("p",{class:"sub",text:NUCLEO.iaEstados(t.por_estado)}));
         /* modo por leitura, como o servidor decide: casa em REAL + leitura liberada (acoes_reais, 016) + papel; o Mercado fica sempre em DEMO nesta fase */
         var reais=cfg.modo==="REAL"&&Array.isArray(cfg.acoes_reais)?cfg.acoes_reais:[],reaisCasa=Array.isArray(cfg.acoes_reais_casa)?cfg.acoes_reais_casa:[];
@@ -411,6 +461,7 @@
         if(!isOwner())return;
         /* chamadas incertas: só o dono decide, depois de olhar o uso no Console; quem confere de verdade é o banco (ia_reconciliar) */
         if(r[3].length)corpo.appendChild(conferir(r[3]));
+        corpo.appendChild(custos(s.mes,r[4]||[]));
         /* configuração: modo, limite e margens. A linha da casa é criada pelo administrador no SQL Editor (o site não cria) */
         if(semConfig){corpo.appendChild(h("p",{class:"qrwarn",text:"A configuração da IA desta casa ainda não foi criada. Ela é criada uma vez pelo administrador no SQL Editor (docs/rac-intelligence.md, Fase B). Até lá, tudo funciona só em DEMO."}));return}
         /* o site não troca o modo nem as leituras liberadas: o banco só deixa o site alterar os campos de limite (016);
@@ -420,9 +471,7 @@
         var form=h("div",{class:"wform"},h("div",{class:"two"},campo("Limite mensal (R$)","limite_brl","1"),campo("Câmbio (R$ por US$)","cambio_brl_usd","0.01")),
           h("div",{class:"two"},campo("Margem de impostos (0,12 = 12%)","margem_impostos","0.01"),campo("Margem de segurança (0,10 = 10%)","margem_seguranca","0.01")));
         var salvar=h("button",{type:"button",text:"Salvar limites"});salvar.onclick=function(){var o={};form.querySelectorAll("input").forEach(function(i){o[i.dataset.k]=parseFloat(i.value)});gravar(o)};
-        var cob=h("input",{type:"number",step:"0.01",placeholder:"US$ cobrados no mês (Console)","aria-label":"Cobrança efetiva do mês em US$"}),cobB=h("button",{type:"button",class:"ghostbtn",text:"Registrar cobrança do mês"});
-        cobB.onclick=function(){var v=parseFloat(cob.value);if(!(v>=0))return;SB.from("ia_cobranca").upsert({dono:EU.id,mes:t.mes,valor_usd:v,informado_em:new Date().toISOString()}).then(sbOk).then(desenhar).catch(function(e){alert("Não consegui: "+e.message)})};
-        corpo.appendChild(aviso);corpo.appendChild(form);corpo.appendChild(h("div",{class:"vfil"},salvar));corpo.appendChild(h("div",{class:"vfil"},cob,cobB))})
+        corpo.appendChild(aviso);corpo.appendChild(form);corpo.appendChild(h("div",{class:"vfil"},salvar))})
       .catch(function(e){corpo.innerHTML="";corpo.appendChild(h("p",{class:"empty",text:"O RAC Intelligence ainda não está disponível ("+e.message+")."}))})}
     /* só altera a linha que já existe (UPDATE); se nada mudou, a linha não existe ou a pessoa não é o dono.
        Só os campos de limite passam: o modo nunca é enviado pelo site */

@@ -293,3 +293,34 @@ test("IA: valor da conferência validado antes de ir ao banco (vírgula ou ponto
     assert.match(V(t).motivo, re, JSON.stringify(t));
   assert.equal(V("150", null).ok, true, "sem máximo, aceita");
 });
+
+test("IA: custo por mês, RAC × Console; mês sem cobrança fica 'não conferido' (nunca zero)", () => {
+  const L = [
+    { mes: "2026-10-01", estado: "concluido", estimado_usd: 0.0004 },
+    { mes: "2026-10-01", estado: "reconciliado", reconciliado_cobrado: true, reconciliado_usd: 0.002 },
+    { mes: "2026-10-01", estado: "reconciliado", reconciliado_cobrado: false, reservado_usd: 0.0026 },
+    { mes: "2026-10-01", estado: "incerto", reservado_usd: 0.0026 },
+    { mes: "2026-10-01", estado: "falhou_sem_envio", reservado_usd: 0.0026 },
+    { mes: "2026-09-01", estado: "concluido", estimado_usd: 0.01 },
+    { mes: "lixo", estado: "concluido", estimado_usd: 9 },
+  ];
+  const [out, set] = N.iaMeses(L, [{ mes: "2026-09-01", valor_usd: 0.012, valor_brl: 0.08, observacao: "conta toda" }, { mes: "2026-08-01", valor_usd: 0 }]);
+  assert.deepEqual([out.mes, out.rac, out.aberto, out.n, out.cobrado, out.dif, out.difTxt], ["2026-10-01", 0.0024, 0.0026, 5, null, null, "não conferido"]);
+  assert.deepEqual([set.rac, set.cobrado, set.cobradoBrl, set.dif, set.difPct, set.obs], [0.01, 0.012, 0.08, 0.002, 20, "conta toda"]);
+  assert.equal(set.difTxt, "Console US$ 0,002 acima (+20,0%)");
+  const ago = N.iaMeses([], [{ mes: "2026-08-01", valor_usd: 0 }])[0];
+  assert.deepEqual([ago.rac, ago.cobrado, ago.difTxt], [0, 0, "igual ao RAC"], "cobrança zero registrada é zero, não 'não conferido'");
+  assert.match(N.iaMeses([{ mes: "2026-07-01", estado: "concluido", estimado_usd: 1 }], [{ mes: "2026-07-01", valor_usd: 0.5 }])[0].difTxt, /abaixo \(−50,0%\)/);
+  assert.equal(N.iaMeses(L, []).length, 2, "linha com mês inválido é ignorada");
+  assert.deepEqual(N.iaMeses(null, null), []);
+});
+
+test("IA: mês da cobrança e validação em reais", () => {
+  assert.equal(N.iaMesIso("2026-10"), "2026-10-01");
+  assert.equal(N.iaMesIso("2026-10-15"), "2026-10-01");
+  assert.equal(N.iaMesIso("2026-13"), "");
+  assert.equal(N.iaMesIso(""), "");
+  assert.deepEqual(N.iaValorUsd("R$ 2,85", 100000, true), { ok: true, valor: 2.85 });
+  assert.match(N.iaValorUsd("", 100000, true).motivo, /reais/);
+  assert.match(N.iaValorUsd("2000", 1000, true).motivo, /acima de R\$ 1\.000,00/);
+});

@@ -837,7 +837,7 @@ test("painel: o histórico só LÊ ia_uso, filtra por mês e módulo, conta o to
 
 test("painel: conferência das incertas dentro do painel, com campo vazio, validação e confirmação; quem grava é o banco", () => {
   const painel = trecho(sisJs, "function sisIA(", "function renderSistema(");
-  const conf = trecho(painel, "function conferir(", "function desenhar(");
+  const conf = trecho(painel, "function conferir(", "function usoDesde(");
   assert.ok(!/prompt\(|alert\(/.test(conf), "sem janelas do navegador na conferência");
   assert.ok(!/window\.prompt/.test(sisJs), "a janela antiga (preenchida com a reserva) saiu");
   assert.match(conf, /h\("input",\{type:"text",inputmode:"decimal",placeholder:"ex\.: 0,0021"/); assert.ok(!/h\("input",\{[^}]*value:/.test(conf), "o campo começa vazio");
@@ -850,6 +850,25 @@ test("painel: conferência das incertas dentro do painel, com campo vazio, valid
   const rec = /create or replace function public\.ia_reconciliar[\s\S]*?end \$\$;/.exec(sql)[0];
   assert.match(rec, /estado = 'incerto' or \(estado = 'enviando' and enviado_em < pg_catalog\.now\(\) - interval '10 minutes'\)/);
   assert.match(rec, /p_valor_usd > 100/); assert.match(rec, /dono = auth\.uid\(\)/);
+});
+
+test("painel: cobrança por competência, com confirmação antes de substituir; comparativo RAC × Console sem inventar valores", () => {
+  const painel = trecho(sisJs, "function sisIA(", "function renderSistema(");
+  const cus = trecho(painel, "function custos(", "function desenhar(");
+  assert.match(cus, /h\("input",\{type:"month"/); assert.match(cus, /var m=NUCLEO\.iaMesIso\(mes\.value\)/);
+  assert.match(cus, /\{dono:EU\.id,mes:m,valor_usd:a\.valor,valor_brl:r\.valor,observacao:/, "grava o mês escolhido (não o mês corrente fixo)");
+  assert.ok(!/mes:t\.mes/.test(painel), "sem o registro antigo preso ao mês corrente");
+  assert.match(cus, /if\(m>NUCLEO\.iaMesIso\(mesAtual\)\)\{msg\.textContent="Esse mês ainda não chegou\."/);
+  assert.match(cus, /if\(!ja\)\{gravar\(o\);return\}/); assert.match(cus, /text:"Substituir"/, "pede confirmação antes de substituir um mês já registrado");
+  assert.match(cus, /NUCLEO\.iaValorUsd\(vu\.value,1000\)/); assert.match(cus, /NUCLEO\.iaValorUsd\(vb\.value,100000,true\)/);
+  assert.match(cus, /racDica\.ligar\(b,/, "o gráfico usa a dica padrão"); assert.match(cus, /h\("span",\{class:"hbv",text:txt\}\)/, "valor fixo em cada barra");
+  assert.match(cus, /"não conferido"/); assert.match(cus, /os totais abaixo são parciais/);
+  assert.match(trecho(painel, "function usoDesde(", "function custos("), /\.range\(i\*PAG,i\*PAG\+PAG-1\)/, "lê em páginas (o Supabase devolve até 1.000 linhas)");
+  /* o indicador do mês mostra a cobrança do mesmo mês */
+  assert.match(painel, /var cobMes=\(r\[4\]\|\|\[\]\)\.filter\(function\(x\)\{return NUCLEO\.iaMesIso\(x\.mes\)===NUCLEO\.iaMesIso\(s\.mes\)\}\)\[0\];/);
+  /* o site só grava cobrança (RLS: só o dono) e os limites; nunca uso, preços, modo ou listas */
+  const gravacoes = [...sisJs.matchAll(/from\("(ia_\w+)"\)\.(insert|update|upsert|delete)/g)].map((m) => m[1] + "." + m[2]).sort();
+  assert.deepEqual(gravacoes, ["ia_cobranca.upsert", "ia_config.update"]);
 });
 
 /* ---------- SQL 017: "Por módulo" com as regras do comprometido ---------- */

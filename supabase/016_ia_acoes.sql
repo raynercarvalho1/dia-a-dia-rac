@@ -9,7 +9,7 @@
 -- O site não altera mais modo, listas, margens de contagem nem fator de correção: o UPDATE pelo site fica limitado
 -- aos campos de limite do painel do Sistema. O modo e as listas só mudam aqui, no SQL Editor.
 --
--- Se o 015 for rodado de novo, rode este arquivo logo depois (o 015 traz a versão antiga de ia_reservar).
+-- Se o 015 for rodado de novo, rode este arquivo e o 017 logo depois (o 015 traz as versões antigas das funções).
 begin;
 
 -- 1) As listas por ação, vazias: nada fica REAL por causa deste arquivo

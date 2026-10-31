@@ -17,7 +17,8 @@
 -- o administrador cria a do dono uma única vez no SQL Editor, na Fase B (docs/rac-intelligence.md). Sem linha, a função
 -- rac-ia responde só em DEMO, então uma conta nova não consegue consumir a IA.
 --
--- Depois do 016_ia_acoes.sql: se rodar este arquivo de novo, rode o 016 logo em seguida (ele traz a ia_reservar atual).
+-- Depois do 016 e do 017: se rodar este arquivo de novo, rode o 016 e o 017 logo em seguida (eles trazem a ia_reservar
+-- e a ia_totais_mes atuais).
 -- Tudo dentro de uma transação: se qualquer comando falhar, nada fica criado pela metade.
 begin;
 

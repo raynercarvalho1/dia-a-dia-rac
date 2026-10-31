@@ -852,6 +852,42 @@ test("painel: conferência das incertas dentro do painel, com campo vazio, valid
   assert.match(rec, /p_valor_usd > 100/); assert.match(rec, /dono = auth\.uid\(\)/);
 });
 
+/* ---------- SQL 017: "Por módulo" com as regras do comprometido ---------- */
+const sql17 = fs.readFileSync(new URL("supabase/017_ia_por_modulo.sql", raiz), "utf8").replace(/\r\n/g, "\n");
+const semComent = (t) => t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/--.*$/gm, "");
+const espacos = (t) => t.replace(/\s+/g, " ").trim();
+function casePorModulo(t) { const m = /'por_modulo'[\s\S]*?(sum\(case u\.estado[\s\S]*?end\))/.exec(semComent(t)); return m ? m[1] : ""; }
+function caseComprometido(t) { const m = /function public\.ia_comprometido_usd[\s\S]*?(sum\(case u\.estado[\s\S]*?end\))/.exec(semComent(t)); return m ? m[1] : ""; }
+
+test("SQL 017: pendente, numa transação, só recria ia_totais_mes (nenhuma tabela, política ou dado)", () => {
+  assert.match(sql17, /^-- status: pendente/);
+  const s = semComent(sql17);
+  assert.match(s, /^\s*begin;/m); assert.match(s, /commit;\s*$/); assert.ok(!/^(rollback|savepoint)/im.test(s));
+  assert.deepEqual([...s.matchAll(/create or replace function public\.(\w+)/g)].map((m) => m[1]), ["ia_totais_mes"]);
+  assert.ok(!/create (table|policy|index)|alter table|drop |insert |update |delete |grant [^;]*to anon|garmin/i.test(s), "só a função");
+  assert.match(s, /returns jsonb\s+language sql stable security definer set search_path = ''/);
+  assert.match(s, /revoke all on function public\.ia_totais_mes\(\) from public, anon, authenticated;/);
+  assert.match(s, /grant execute on function public\.ia_totais_mes\(\) to authenticated;/);
+});
+
+test("SQL 017: o por módulo usa exatamente a regra de ia_comprometido_usd (a soma dos módulos é o comprometido)", () => {
+  const novo = casePorModulo(sql17), regra = caseComprometido(sql);
+  assert.ok(novo && regra, "achei as duas contas");
+  assert.equal(espacos(novo.replace(/d\.dono/g, "DONO")), espacos(regra.replace(/p_dono/g, "DONO")), "mesma conta, estado por estado");
+  /* a versão antiga (015) somava estimado ou a reserva e contava a reserva das conferidas como não cobradas */
+  assert.match(semComent(sql), /sum\(coalesce\(u\.estimado_usd, u\.reservado_usd\)\) v/);
+  assert.ok(!/sum\(coalesce\(u\.estimado_usd, u\.reservado_usd\)\) v/.test(semComent(sql17)));
+  assert.match(novo, /when 'reconciliado' then case when u\.reconciliado_cobrado then coalesce\(u\.reconciliado_usd, u\.reservado_usd\) else 0 end/);
+  assert.match(novo, /c\.fator_correcao/);
+});
+
+test("SQL 017: os outros campos de ia_totais_mes ficam idênticos aos do 015", () => {
+  const corpo = (t) => { const m = /function public\.ia_totais_mes\(\)[\s\S]*?\$\$([\s\S]*?)\$\$;/.exec(semComent(t)); return m ? m[1] : ""; };
+  const sem = (t) => espacos(corpo(t).replace(/'por_modulo'[\s\S]*?'\{\}'::jsonb\),/, "POR_MODULO,"));
+  assert.ok(corpo(sql17) && corpo(sql));
+  assert.equal(sem(sql17), sem(sql));
+});
+
 /* ---------- chaves do próprio Supabase (P1 da auditoria da Fase C): mesmo padrão da função garmin ---------- */
 const ambienteCom = (vars) => (nome) => vars[nome];
 

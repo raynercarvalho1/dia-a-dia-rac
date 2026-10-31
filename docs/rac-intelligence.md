@@ -120,16 +120,23 @@ reservado ──► enviando ──► concluido            (resposta da API: su
   INSERT); `ia_uso` o dono lê a casa, o membro lê o seu, ninguém grava pelo site; `ia_precos` leitura; `ia_cobranca` só o dono.
 - **Quem pode usar a IA:** só a casa que tem linha em `ia_config`, e essa linha só nasce pelo SQL Editor (Fase B).
   Uma conta nova (sem ser membro de uma casa, o RAC a trata como dona de uma casa vazia) não tem linha, não consegue
-  criar uma e recebe só DEMO: não reserva orçamento nem chama a Anthropic. Há testes para isso.
+  criar uma e recebe só DEMO: não reserva orçamento e não faz nenhuma chamada à Anthropic (nem a contagem). Há testes.
+- **Dois tipos de chamada à Anthropic** (o fluxo REAL é: ler configuração → preço → contagem → reserva → envio → geração):
+  - **Contagem de tokens** (`messages.countTokens`): gratuita; acontece **antes** da reserva, para calcular o valor a reservar.
+  - **Geração** (`messages.create`): a única que pode gerar cobrança; só acontece **depois** de `ia_reservar` aprovar a
+    reserva e de a chamada ser marcada como `enviando`.
 - **Duas camadas para o modo REAL:**
-  1. **Função rac-ia:** sem linha em `ia_config`, ou com ela fora do modo REAL, responde DEMO antes de buscar preço,
-     contar tokens, reservar ou chamar a Anthropic.
+  1. **Função rac-ia:** sem linha em `ia_config`, ou com ela fora do modo REAL no momento da leitura, responde DEMO antes
+     de buscar o preço, contar tokens, reservar ou gerar: nenhuma chamada à Anthropic.
   2. **Banco:** `ia_reservar` também exige, logo depois da trava e antes da idempotência, dos limites, do teto e da
      gravação, que exista a linha da casa em `ia_config` com `modo = 'REAL'`. Sem linha devolve `configuracao_ausente`;
      com outro modo, `modo_demo`; nos dois casos não grava nada. Assim os valores padrão de `ia_teto_usd` (R$ 50 quando
-     falta a linha) nunca servem de autorização, e um dono que volta para DEMO bloqueia na hora até a chamada que a
-     função já tinha começado.
-  Os testes conferem a estrutura de `ia_reservar` (as verificações, a ordem e o caminho REAL) e falham com a versão antiga.
+     falta a linha) nunca servem de autorização, e **não há geração paga sem configuração REAL no momento da reserva**.
+  - **A janela entre as duas camadas:** se a função leu REAL, contou os tokens e só então o dono voltou para DEMO (ou a
+    configuração sumiu), o banco recusa a reserva. Nesse caso **a contagem gratuita já aconteceu**, mas não há reserva
+    gravada nem geração paga. A segunda camada não impede a contagem: impede a geração paga.
+  Os testes conferem a estrutura de `ia_reservar` (as verificações, a ordem e o caminho REAL) e falham com a versão antiga;
+  e, no fluxo, contam separado as contagens e as gerações, e a ordem: contagem → reserva aprovada → envio → geração.
 - A migração roda inteira dentro de `begin … commit` (se algo falhar, nada fica pela metade) e não mexe em tabelas,
   funções ou políticas existentes: só cria e altera objetos `ia_*` (a leitura de `membros` pelo servidor já vem do 014).
 - `ia_uso` não guarda conteúdo (texto, foto, resposta): só números, códigos, módulo, ação, modelo e horários.
@@ -195,7 +202,8 @@ confere o login sozinha).
   contrato e tamanhos, validação das respostas, instruções contra conteúdo malicioso, DEMO, provedor com cliente falso
   (uma tentativa, JSON obrigatório, sem fallbacks), fluxo completo com banco e provedor falsos (DEMO não grava, sem
   chave vira DEMO, casa limitada, REAL completo, tempo esgotado fica incerto e não repete, 5xx/rede incertos,
-  orçamento esgotado e repetição não chamam a IA, resposta inválida não preenche nada, contagem por excesso),
+  orçamento esgotado e repetição não fazem a geração paga (a contagem gratuita vem antes da reserva), resposta inválida
+  não preenche nada, contagem por excesso, a geração só depois de uma reserva aprovada),
   concorrência (30 chamadas ao mesmo tempo nunca passam do teto; sem a trava o teste falha), SQL (search_path, EXECUTE,
   RLS, nenhuma expiração, sem INSERT em `ia_config`, `begin … commit`, `on delete set null`, nada fora dos objetos `ia_*`),
   conta nova sem configuração só em DEMO, a casa (Fernanda) usando as ações liberadas, o Sistema só com UPDATE, e segredos.

@@ -234,6 +234,9 @@ function bancoFalso(opcoes = {}) {
     async marcarIncerto(id, erro) { log.push("incerto"); const l = linhas.find((x) => x.id === id); if (l?.estado !== "enviando") return false; Object.assign(l, { estado: "incerto", erro }); return true; },
   };
 }
+/* dois tipos de chamada à Anthropic, contados separados:
+   contagens = contagem de tokens (gratuita; acontece ANTES da reserva, no caminho REAL)
+   chamadas  = geração (a que pode cobrar; só depois de uma reserva aprovada pelo banco) */
 function provedorFalso(fazer, contar = 2100) {
   const p = { chamadas: 0, contagens: 0, nome: "falso",
     async contarTokens() { p.contagens++; if (contar instanceof Error) throw { tipo: "rede" }; return contar; },
@@ -257,16 +260,17 @@ test("fluxo: sem a chave no servidor tudo vira DEMO, sem quebrar nada", async ()
   assert.equal(b.linhas.length, 0);
 });
 
-test("fluxo: sem as tabelas ainda (antes da Fase B) responde erro de configuração, sem chamar a IA", async () => {
+test("fluxo: sem as tabelas ainda (antes da Fase B) responde erro de configuração, sem nenhuma chamada à Anthropic", async () => {
   const pv = provedorFalso(okAbast);
   const r = await atenderPedido("rayner", pedido(), { banco: bancoFalso({ semTabela: true }), provedor: pv });
-  assert.equal(r.corpo.erro.codigo, "configuracao"); assert.equal(pv.chamadas, 0);
+  assert.equal(r.corpo.erro.codigo, "configuracao");
+  assert.equal(pv.contagens, 0, "nem a contagem gratuita"); assert.equal(pv.chamadas, 0, "nem a geração");
 });
 
 test("fluxo: papel casa usa só as ações liberadas para a casa (Fernanda)", async () => {
   const pv = provedorFalso(okAbast);
   const nega = await atenderPedido("fernanda", pedido(), { banco: bancoFalso({ cfg: { modo: "REAL", acoes_casa: ["mercado.nota"] } }), provedor: pv });
-  assert.equal(nega.status, 403); assert.equal(pv.chamadas, 0);
+  assert.equal(nega.status, 403); assert.equal(pv.contagens + pv.chamadas, 0, "recusada antes de qualquer chamada à Anthropic");
   const libera = await atenderPedido("fernanda", pedido(), { banco: bancoFalso({ cfg: { modo: "REAL" } }), provedor: pv });
   assert.equal(libera.corpo.ok, true);
 });
@@ -301,15 +305,17 @@ test("fluxo: erro 5xx e de rede ficam incertos; 400 e 429 concluem sem custo", a
   }
 });
 
-test("fluxo: orçamento esgotado, repetição e chamada em andamento não chamam a IA (E e F)", async () => {
+test("fluxo: orçamento esgotado e repetição não fazem a geração paga (a contagem gratuita vem antes da reserva) (E e F)", async () => {
   const pv = provedorFalso(okAbast);
   const esg = await atenderPedido("rayner", pedido(), { banco: bancoFalso({ teto: 0.000001 }), provedor: pv });
   assert.equal(esg.corpo.erro.codigo, "orcamento_esgotado"); assert.equal(esg.status, 402);
+  assert.equal(pv.contagens, 1, "a contagem gratuita aconteceu antes da reserva"); assert.equal(pv.chamadas, 0, "sem geração paga");
   const b = bancoFalso(), p1 = pedido();
   await atenderPedido("rayner", p1, { banco: b, provedor: pv });
   const rep = await atenderPedido("rayner", p1, { banco: b, provedor: pv });
   assert.equal(rep.corpo.erro.codigo, "repetida");
-  assert.equal(pv.chamadas, 1, "a repetição não gerou outra chamada");
+  assert.equal(pv.chamadas, 1, "a repetição não gerou outra geração paga");
+  assert.equal(pv.contagens, 3, "cada pedido conta tokens (gratuito) antes de a reserva ser recusada ou aprovada");
 });
 
 test("fluxo: resposta fora do formato ou recusada conta o uso, mas não preenche nada", async () => {
@@ -521,17 +527,39 @@ test("banco: a conferência pega a implementação antiga (sem as verificações
   assert.ok(problemasReservar(s.replace("pg_catalog.pg_advisory_xact_lock(", "pg_catalog.pg_sleep_x(")).some((x) => /trava/.test(x)));
 });
 
-test("duas camadas: se o banco estiver sem configuração ou em DEMO na hora da reserva, nada é chamado nem gravado", async () => {
-  /* a função leu REAL, mas na hora da reserva o dono já tinha voltado para DEMO (ou apagado a configuração) */
+test("duas camadas: se a configuração mudar entre a leitura e a reserva, o banco barra a geração paga (a contagem gratuita já aconteceu)", async () => {
+  /* a janela: 1) a função lê REAL; 2) conta os tokens na Anthropic (gratuito); 3) o dono volta para DEMO ou a
+     configuração some; 4) ia_reservar recusa. Resultado: nenhuma reserva e nenhuma geração; a contagem, sim. */
   for (const [naReserva, codigo, status] of [[{ modo: "DEMO" }, "modo_demo", 409], [null, "configuracao_ausente", 503]]) {
     const b = bancoFalso({ cfg: { modo: "REAL" }, cfgNaReserva: naReserva }), pv = provedorFalso(okAbast);
     const r = await atenderPedido("rayner", pedido(), { banco: b, provedor: pv });
     assert.equal(r.status, status); assert.equal(r.corpo.erro.codigo, codigo); assert.equal(r.corpo.ok, false);
-    assert.equal(pv.chamadas, 0, "sem chamada à Anthropic"); assert.equal(b.linhas.length, 0, "sem reserva gravada");
+    assert.equal(pv.contagens, 1, "a contagem de tokens (gratuita) aconteceu antes da reserva");
+    assert.equal(pv.chamadas, 0, "sem geração paga"); assert.equal(b.linhas.length, 0, "sem reserva gravada");
     assert.ok(!b.log.includes("envio"));
+    assert.deepEqual(b.log.filter((x) => ["preco", "reservar"].includes(x)), ["preco", "reservar"], "ordem do fluxo mantida");
   }
-  /* com o banco em REAL, segue normalmente */
+  /* com o banco em REAL, segue normalmente: uma contagem e uma geração, depois da reserva */
   const b = bancoFalso({ cfg: { modo: "REAL" } }), pv = provedorFalso(okAbast);
   assert.equal((await atenderPedido("rayner", pedido(), { banco: b, provedor: pv })).corpo.ok, true);
-  assert.equal(pv.chamadas, 1);
+  assert.equal(pv.contagens, 1); assert.equal(pv.chamadas, 1);
+});
+
+test("a geração (a chamada que pode cobrar) só acontece depois de uma reserva aprovada", async () => {
+  /* banco e provedor gravam a ordem dos eventos numa linha só */
+  const ordem = [];
+  const b = bancoFalso({ cfg: { modo: "REAL" } });
+  const reservar = b.reservar.bind(b), marcarEnvio = b.marcarEnvio.bind(b);
+  b.reservar = (a) => reservar(a).then((r) => { ordem.push(r.ok ? "reserva_aprovada" : "reserva_recusada"); return r; });
+  b.marcarEnvio = (id) => marcarEnvio(id).then((r) => { ordem.push("envio_marcado"); return r; });
+  const pv = provedorFalso(async () => { ordem.push("geracao"); return okAbast(); });
+  const contar = pv.contarTokens; pv.contarTokens = (...x) => { ordem.push("contagem"); return contar(...x); };
+  await atenderPedido("rayner", pedido(), { banco: b, provedor: pv });
+  assert.deepEqual(ordem, ["contagem", "reserva_aprovada", "envio_marcado", "geracao"]);
+  /* reserva recusada: a lista termina na recusa, sem geração */
+  ordem.length = 0;
+  const b2 = bancoFalso({ cfg: { modo: "REAL" }, cfgNaReserva: { modo: "DEMO" } });
+  const r2 = b2.reservar.bind(b2); b2.reservar = (a) => r2(a).then((r) => { ordem.push(r.ok ? "reserva_aprovada" : "reserva_recusada"); return r; });
+  await atenderPedido("rayner", pedido(), { banco: b2, provedor: pv });
+  assert.deepEqual(ordem, ["contagem", "reserva_recusada"]);
 });
